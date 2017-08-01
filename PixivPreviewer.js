@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Pixiv动图预览
 // @namespace
-// @version      0.35
+// @version      0.36
 // @description  在搜索页右侧显示预览图(非动图适用)，分辨率低慎用。View preview of anime(pictures also supported.)
 // @author       Ocrosoft
 // @match        https://www.pixiv.net/search.php*
@@ -72,7 +72,7 @@ function clearOtherElements(){
     }
     // 2
     var anime=false;
-    if($('.player').children('canvas').length>0)anime=true;
+    if($('.player')/*.children('canvas')*/.length>0)anime=true;
 
     if(anime)downloadAnime('.works_display');
     if(!anime){
