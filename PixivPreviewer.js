@@ -209,6 +209,7 @@ function activePreview() {
                         imgsOrigin[i] = imgsOrigin[i].replace('_master1200', '');
                     }
                     viewImages(imgs, 0, imgsOrigin);
+                    return;
                 } catch (e) {
                     // empty
                 }
@@ -271,25 +272,110 @@ function activePreview() {
     var downloadButton = document.createElement('li');
     downloadButton.innerHTML = '<i class="_icon-12 _icon-up" style="transform: rotateX(180deg);border-radius: 100%;"></i>';
     downloadButton.className = 'item';
-    $(downloadButton).css('margin-bottom', '10px');
+    $(downloadButton).css({ 'margin-bottom': '10px', 'opacity': '0.2' });
     $('#back-to-top').parent()[0].insertBefore(downloadButton, $($('#back-to-top').parent()[0]).children()[0]);
+    // 点击开闭下载模式
     $(downloadButton).click(function () {
-        log($(downloadButton).css('opacity'));
         if ($(downloadButton).css('opacity') == '0.2') {
             $(downloadButton).css('opacity', '0.5');
             $($(downloadButton).children()[0]).css({ 'background': 'green' });
-
-            var t = $('._layout-thumbnail').parent();
+            // 开启下载模式
+            var t = $('._layout-thumbnail').parent().parent();
             for (var i = 0; i < t.length; ++i) {
-                // 表示是否选中的图标
-                var checkIcon = new Image();
-                checkIcon.src = 'https://pan.baidu.com/box-static/disk-system/widget/pageModule/list/img/checkbox_72f2a5e.png';
-                $(checkIcon).css({ 'position': 'absolute', 'top': '0px', 'left': '0px', 'display': 'none' });
-                t[i].appendChild(checkIcon);
+                // 新的容器
+                var checkDiv = document.createElement('div');
+                // 覆盖在<a>上面的图
+                var layer = new Image();
+                layer.src = 'https://source.pixiv.net/www/images/common/transparent.gif';
+                checkDiv.appendChild(layer);
+                // 插入Div
+                t[i].insertBefore(checkDiv, $(t[i]).children()[0]);
+                // <a>移动进Div
+                checkDiv.appendChild($(t[i]).children()[1]);
+                $(layer).css({ 'height': $(layer).parent().css('height'), 'width': $(layer).parent().css('width'), 'position': 'absolute', 'z-index': '999999' });
+                $(layer).click(function () {
+                    if ($(this).parent().children('a').children('img')[0].src.indexOf('unchecked')!=-1) {
+                        $(this).parent().children('a').children('img')[0].src = 'https://raw.githubusercontent.com/Ocrosoft/PixivPreviewer/master/checked.png';
+                    } else {
+                        $(this).parent().children('a').children('img')[0].src = 'https://raw.githubusercontent.com/Ocrosoft/PixivPreviewer/master/unchecked.png';
+                    }
+                });
             }
         } else {
             $(downloadButton).css('opacity', '0.2');
             $($(downloadButton).children()[0]).css({ 'background': '' });
+            // 关闭下载模式
+            var imgOriginList = []; var linkList = []; var imgCount = 0;
+            var t = $('._layout-thumbnail').parent().parent().parent();
+            for (var i = 0; i < t.length; ++i) {
+                if ($(t[i]).children('div').children('a').children('img')[0].src.indexOf('unchecked') == -1) {
+                    var imgNode = $(t[i]).find('._layout-thumbnail').children('img')[0];
+                    // 多图
+                    if ($(imgNode.parentNode.parentNode).hasClass('multiple')) {
+                        linkList.push('https://www.pixiv.net/member_illust.php?mode=manga&illust_id=' +
+                            $(imgNode).attr('data-id'));
+                    }
+                    // 单图
+                    else {
+                        linkList.push('https://www.pixiv.net/member_illust.php?mode=medium&illust_id=' +
+                            $(imgNode).attr('data-id'));
+                    }
+                }
+                t[i].insertBefore($($(t[i]).children()[0]).children()[1], $(t[i]).children()[0]);
+                $(t[i]).children('div').remove();
+            }
+            var xmlHttp = new XMLHttpRequest();
+            xmlHttp.onreadystatechange = function () {
+                if (xmlHttp.readyState == 4 && xmlHttp.status == 200) {
+                    var resText = xmlHttp.responseText;
+                    // 单图
+                    try {
+                        // 取得图片地址
+                        // 预览图
+                        var imgSource = RegExp('<div class="_layout-thumbnail ui-modal-trigger">[^>]*>').
+                            exec(resText)[0].split('<')[2].split('\"')[1];
+                        // 原图
+                        var imgOrigin = RegExp('<div class="_illust_modal.*class="original-image').
+                            exec(resText)[0].split('data-src="')[1].split('\"')[0];
+                        imgOriginList.push(imgOrigin);
+                    } catch (e) {
+                        // empty
+                    }
+                    // 多图
+                    try {
+                        var img, imgs = [];
+                        var reg = new RegExp('https://i.pximg.net/img-master[^\"]*', 'g');
+                        while ((img = reg.exec(resText.split('<section class=\"manga\">')[1].
+                            split('</section>')[0])) !== null) {
+                            imgs.push(img[0]);
+                        }
+                        // 推出来的原图URL，暂时没有想到效率高的办法（imgs.length 次xmlHttpRequest）
+                        var imgsOrigin = [];
+                        for (var i = 0; i < imgs.length; ++i) {
+                            imgsOrigin.push(imgs[i].replace('img-master', 'img-original'));
+                            imgsOrigin[i] = imgsOrigin[i].replace('_master1200', '');
+                            imgOriginList.push(imgsOrigin[i]);
+                        }
+                    } catch (e) {
+                        // empty
+                    }
+                    if (++imgCount == linkList.length) {
+                        log(imgOriginList);
+                        var s = '';
+                        $(imgOriginList).each(function () {
+                            s += this + '\n';
+                        });
+                        prompt('复制到下载工具下载', s);
+                    } else {
+                        xmlHttp.open('GET', linkList[imgCount], true);
+                        xmlHttp.send(null);
+                    }
+                }
+            }
+            if (linkList.length != 0) {
+                xmlHttp.open('GET', linkList[0], true);
+                xmlHttp.send(null);
+            }
         }
     });
     // 主要功能
@@ -298,6 +384,13 @@ function activePreview() {
         if (!$(t[t.length - 1]).hasClass('prev')) {
             // 开启预览
             activePreview();
+            // 表示是否选中的图标
+            $('._layout-thumbnail').parent().each(function () {
+                var checkIcon = new Image();
+                checkIcon.src = 'https://raw.githubusercontent.com/Ocrosoft/PixivPreviewer/master/unchecked.png';
+                $(checkIcon).css({ 'position': 'absolute', 'top': '0px', 'left': '0px' });
+                this.appendChild(checkIcon);
+            });
         }
     }, 500);
 })();
