@@ -265,11 +265,38 @@ function activePreview() {
         var newHeight = 580 / width * height;
         $('canvas').css({ 'height': newHeight + 'px', 'width': 580 + 'px' });
         window.parent.iframeLoaded(newHeight, 580);
+        return;
     }
+    // 下载模式按钮
+    var downloadButton = document.createElement('li');
+    downloadButton.innerHTML = '<i class="_icon-12 _icon-up" style="transform: rotateX(180deg);border-radius: 100%;"></i>';
+    downloadButton.className = 'item';
+    $(downloadButton).css('margin-bottom', '10px');
+    $('#back-to-top').parent()[0].insertBefore(downloadButton, $($('#back-to-top').parent()[0]).children()[0]);
+    $(downloadButton).click(function () {
+        log($(downloadButton).css('opacity'));
+        if ($(downloadButton).css('opacity') == '0.2') {
+            $(downloadButton).css('opacity', '0.5');
+            $($(downloadButton).children()[0]).css({ 'background': 'green' });
+
+            var t = $('._layout-thumbnail').parent();
+            for (var i = 0; i < t.length; ++i) {
+                // 表示是否选中的图标
+                var checkIcon = new Image();
+                checkIcon.src = 'https://pan.baidu.com/box-static/disk-system/widget/pageModule/list/img/checkbox_72f2a5e.png';
+                $(checkIcon).css({ 'position': 'absolute', 'top': '0px', 'left': '0px', 'display': 'none' });
+                t[i].appendChild(checkIcon);
+            }
+        } else {
+            $(downloadButton).css('opacity', '0.2');
+            $($(downloadButton).children()[0]).css({ 'background': '' });
+        }
+    });
     // 主要功能
     setInterval(function () {
         var t = $('._layout-thumbnail');
         if (!$(t[t.length - 1]).hasClass('prev')) {
+            // 开启预览
             activePreview();
         }
     }, 500);
