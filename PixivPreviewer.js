@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         PixivPreviewer
 // @namespace
-// @version      1.00
+// @version      1.11
 // @description  在搜索页显示较大的预览图（请注意阅读详细信息）。Show preview of pictures in serach page.
 // @author       Ocrosoft
 // @match        https://www.pixiv.net/search.php*
@@ -11,6 +11,7 @@
 // @grant        none
 // @require      http://code.jquery.com/jquery-2.1.4.min.js
 // @namespace
+// @namespace 
 // ==/UserScript==
 
 var mousePos;
@@ -22,6 +23,9 @@ function log(text) {
 function activePreview() {
     $('._layout-thumbnail').parent().mouseover(function (e) {
         if (e.ctrlKey) {
+            return;
+        }
+        if ($(e.relatedTarget.parentNode).hasClass('pixivPreview')) {
             return;
         }
         var imgNode = this.children[0];
@@ -141,15 +145,7 @@ function activePreview() {
                     $(originIcon).css({ 'display': 'none' });
                 }
                 // 调整图片位置
-                var divX = mousePos.x, divY = mousePos.y;
-                if (mousePos.x > screenWidth / 2) {
-                    divX -= $(loadImg).css('width').split('px')[0];
-                }
-                if ((mousePos.y - document.body.scrollTop) >
-                    screenHeight / 2) {
-                    divY -= $(loadImg).css('height').split('px')[0];
-                }
-                $(previewDiv).css({ 'left': divX + 'px', 'top': divY + 'px' });
+                adjustDivPos(loadImg, previewDiv, screenWidth, screenHeight);
                 // 第一次显示预览时将图片列表添加到末尾
                 if ($(previewDiv).children('script').length == 0) {
                     var s = document.createElement('script');
@@ -240,11 +236,15 @@ function activePreview() {
         xmlHttp.send(null);
     });
     $('._layout-thumbnail').parent().mouseout(function (e) {
-        //if (true) return;
         // 鼠标移动到预览图上
         if ($(e.relatedTarget).hasClass('pixivPreview') || $(e.relatedTarget).parents().hasClass('pixivPreview')) {
-            $('.pixivPreview').mouseleave(function () {
-                $('.pixivPreview').remove();
+            $('.pixivPreview').mouseleave(function (ev) {
+                if ($(ev.relatedTarget).hasClass('_work')) {
+                    // empty
+                }
+                else {
+                    $('.pixivPreview').remove();
+                }
             });
         }
         // 非预览图上
@@ -252,7 +252,30 @@ function activePreview() {
             $('.pixivPreview').remove();
         }
     });
+    $('._layout-thumbnail').parent().mousemove(function (e) {
+        if (e.ctrlKey) {
+            return;
+        }
+        var screenWidth = document.documentElement.clientWidth;
+        var screenHeight = document.documentElement.clientHeight;
+        mousePos.x = e.pageX; mousePos.y = e.pageY;
+        adjustDivPos($('.pixivPreview').children('img')[1], $('.pixivPreview')[0], screenWidth, screenHeight);
+    });
     $('._layout-thumbnail').addClass('prev');
+}
+function adjustDivPos(loadImg,previewDiv,screenWidth, screenHeight) {
+    // 调整图片位置
+    var divX = mousePos.x + 5, divY = mousePos.y + 5;
+    if (mousePos.x > screenWidth / 2) {
+        divX -= $(loadImg).css('width').split('px')[0];
+        divX -= 10;
+    }
+    if ((mousePos.y - document.body.scrollTop) >
+        screenHeight / 2) {
+        divY -= $(loadImg).css('height').split('px')[0];
+        divY -= 10;
+    }
+    $(previewDiv).css({ 'left': divX + 'px', 'top': divY + 'px' });
 }
 
 (function () {
@@ -280,6 +303,9 @@ function activePreview() {
             $(downloadButton).css('opacity', '0.5');
             $($(downloadButton).children()[0]).css({ 'background': 'green' });
             // 开启下载模式
+            $('._layout-thumbnail').each(function () {
+                $($(this).parent().children('img')[0]).css('display', '');
+            }); // 显示多选框
             var t = $('._layout-thumbnail').parent().parent();
             for (var i = 0; i < t.length; ++i) {
                 // 新的容器
@@ -294,7 +320,7 @@ function activePreview() {
                 checkDiv.appendChild($(t[i]).children()[1]);
                 $(layer).css({ 'height': $(layer).parent().css('height'), 'width': $(layer).parent().css('width'), 'position': 'absolute', 'z-index': '999999' });
                 $(layer).click(function () {
-                    if ($(this).parent().children('a').children('img')[0].src.indexOf('unchecked')!=-1) {
+                    if ($(this).parent().children('a').children('img')[0].src.indexOf('unchecked') != -1) {
                         $(this).parent().children('a').children('img')[0].src = 'https://raw.githubusercontent.com/Ocrosoft/PixivPreviewer/master/checked.png';
                     } else {
                         $(this).parent().children('a').children('img')[0].src = 'https://raw.githubusercontent.com/Ocrosoft/PixivPreviewer/master/unchecked.png';
@@ -360,7 +386,10 @@ function activePreview() {
                         // empty
                     }
                     if (++imgCount == linkList.length) {
-                        log(imgOriginList);
+                        $('._layout-thumbnail').each(function () {
+                            $(this).parent().children('img')[0].src = 'https://raw.githubusercontent.com/Ocrosoft/PixivPreviewer/master/unchecked.png';
+                            $($(this).parent().children('img')[0]).css('display', 'none');
+                        });
                         var s = '';
                         $(imgOriginList).each(function () {
                             s += this + '\n';
@@ -371,10 +400,14 @@ function activePreview() {
                         xmlHttp.send(null);
                     }
                 }
-            }
+            };
             if (linkList.length != 0) {
                 xmlHttp.open('GET', linkList[0], true);
                 xmlHttp.send(null);
+            } else {
+                $('._layout-thumbnail').each(function () {
+                    $($(this).parent().children('img')[0]).css('display', 'none');
+                });
             }
         }
     });
@@ -388,7 +421,7 @@ function activePreview() {
             $('._layout-thumbnail').parent().each(function () {
                 var checkIcon = new Image();
                 checkIcon.src = 'https://raw.githubusercontent.com/Ocrosoft/PixivPreviewer/master/unchecked.png';
-                $(checkIcon).css({ 'position': 'absolute', 'top': '0px', 'left': '0px' });
+                $(checkIcon).css({ 'position': 'absolute', 'top': '0px', 'left': '0px', 'display': 'none' });
                 this.appendChild(checkIcon);
             });
         }
