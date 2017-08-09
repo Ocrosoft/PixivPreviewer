@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         PixivPreviewer
 // @namespace
-// @version      1.12
+// @version      1.13
 // @description  在搜索页显示较大的预览图（请注意阅读详细信息）。Show preview of pictures in serach page.
 // @author       Ocrosoft
 // @match        https://www.pixiv.net/search.php*
@@ -439,6 +439,8 @@ function adjustDivPos(loadImg,previewDiv,screenWidth, screenHeight) {
     setInterval(function () {
         var t = $('._layout-thumbnail');
         if (!$(t[t.length - 1]).hasClass('prev')) {
+            // 临时修复上方翻页消失问题
+            $('.column-order-menu')[0].innerHTML = $('.column-order-menu')[1].innerHTML;
             // 开启预览
             activePreview();
             // 表示是否选中的图标
