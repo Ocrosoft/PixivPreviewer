@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         PixivPreviewer
 // @namespace
-// @version      1.11
+// @version      1.12
 // @description  在搜索页显示较大的预览图（请注意阅读详细信息）。Show preview of pictures in serach page.
 // @author       Ocrosoft
 // @match        https://www.pixiv.net/search.php*
@@ -336,8 +336,13 @@ function adjustDivPos(loadImg,previewDiv,screenWidth, screenHeight) {
             for (var i = 0; i < t.length; ++i) {
                 if ($(t[i]).children('div').children('a').children('img')[0].src.indexOf('unchecked') == -1) {
                     var imgNode = $(t[i]).find('._layout-thumbnail').children('img')[0];
+                    // 动图
+                    if ($(imgNode.parentNode.parentNode).hasClass('ugoku-illust')) {
+                        linkList.push('https://www.pixiv.net/member_illust.php?mode=medium&illust_id=' +
+                            $(imgNode).attr('data-id'));
+                    }
                     // 多图
-                    if ($(imgNode.parentNode.parentNode).hasClass('multiple')) {
+                    else if ($(imgNode.parentNode.parentNode).hasClass('multiple')) {
                         linkList.push('https://www.pixiv.net/member_illust.php?mode=manga&illust_id=' +
                             $(imgNode).attr('data-id'));
                     }
@@ -354,36 +359,55 @@ function adjustDivPos(loadImg,previewDiv,screenWidth, screenHeight) {
             xmlHttp.onreadystatechange = function () {
                 if (xmlHttp.readyState == 4 && xmlHttp.status == 200) {
                     var resText = xmlHttp.responseText;
-                    // 单图
-                    try {
-                        // 取得图片地址
-                        // 预览图
-                        var imgSource = RegExp('<div class="_layout-thumbnail ui-modal-trigger">[^>]*>').
-                            exec(resText)[0].split('<')[2].split('\"')[1];
-                        // 原图
-                        var imgOrigin = RegExp('<div class="_illust_modal.*class="original-image').
-                            exec(resText)[0].split('data-src="')[1].split('\"')[0];
-                        imgOriginList.push(imgOrigin);
-                    } catch (e) {
-                        // empty
-                    }
-                    // 多图
-                    try {
-                        var img, imgs = [];
-                        var reg = new RegExp('https://i.pximg.net/img-master[^\"]*', 'g');
-                        while ((img = reg.exec(resText.split('<section class=\"manga\">')[1].
-                            split('</section>')[0])) !== null) {
-                            imgs.push(img[0]);
+                    // 先尝试匹配动图，再尝试匹配单图，最后匹配多图
+                    // while (true) 用来跳出匹配，避免后面的 if 不执行
+                    while (true) {
+                        // 动图
+                        try {
+                            var src = RegExp(' <script>pixiv.context.illustId.*</script>').exec(resText)[0];
+                            var reg = new RegExp('http[^"]*', 'g');
+                            var normal = reg.exec(src)[0], full = reg.exec(src)[0];
+                            while (full.indexOf('\\') != -1) full = full.replace('\\', '');
+                            if (full) {
+                                imgOriginList.push(full);
+                                break;
+                            }
+                        } catch (e) {
+                            // empty
                         }
-                        // 推出来的原图URL，暂时没有想到效率高的办法（imgs.length 次xmlHttpRequest）
-                        var imgsOrigin = [];
-                        for (var i = 0; i < imgs.length; ++i) {
-                            imgsOrigin.push(imgs[i].replace('img-master', 'img-original'));
-                            imgsOrigin[i] = imgsOrigin[i].replace('_master1200', '');
-                            imgOriginList.push(imgsOrigin[i]);
+                        // 单图
+                        try {
+                            // 取得图片地址
+                            // 预览图
+                            var imgSource = RegExp('<div class="_layout-thumbnail ui-modal-trigger">[^>]*>').
+                                exec(resText)[0].split('<')[2].split('\"')[1];
+                            // 原图
+                            var imgOrigin = RegExp('<div class="_illust_modal.*class="original-image').
+                                exec(resText)[0].split('data-src="')[1].split('\"')[0];
+                            imgOriginList.push(imgOrigin);
+                            break;
+                        } catch (e) {
+                            // empty
                         }
-                    } catch (e) {
-                        // empty
+                        // 多图
+                        try {
+                            var img, imgs = [];
+                            var reg = new RegExp('https://i.pximg.net/img-master[^\"]*', 'g');
+                            while ((img = reg.exec(resText.split('<section class=\"manga\">')[1].
+                                split('</section>')[0])) !== null) {
+                                imgs.push(img[0]);
+                            }
+                            // 推出来的原图URL，暂时没有想到效率高的办法（imgs.length 次xmlHttpRequest）
+                            var imgsOrigin = [];
+                            for (var i = 0; i < imgs.length; ++i) {
+                                imgsOrigin.push(imgs[i].replace('img-master', 'img-original'));
+                                imgsOrigin[i] = imgsOrigin[i].replace('_master1200', '');
+                                imgOriginList.push(imgsOrigin[i]);
+                            }
+                            break;
+                        } catch (e) {
+                            // empty
+                        }
                     }
                     if (++imgCount == linkList.length) {
                         $('._layout-thumbnail').each(function () {
