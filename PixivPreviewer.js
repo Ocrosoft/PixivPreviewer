@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         PixivPreviewer
 // @namespace
-// @version      1.19
+// @version      1.20
 // @description  显示大图预览，按热门度排序(pixiv_sk)，批量下载。View Preview, Sort by favorite numbers, Bulk download.(仅搜索排行页生效, Only available in search and rank page)
 // @author       Ocrosoft
 // @match        https://www.pixiv.net/search.php*
@@ -10,15 +10,28 @@
 // @match        https://www.pixiv.net/ranking.php*
 // @grant        none
 // @require      http://code.jquery.com/jquery-2.1.4.min.js
-// @namespace
-// @namespace 
+// @namespace https://github.com/Ocrosoft/PixivPreviewer
 // ==/UserScript==
 
 function log(text) {
     console.log(text);
 }
 /**
- * ---------------------------------------- 以下为 全局 部分 ----------------------------------------
+ * ---------------------------------------- 以下为 设置 部分 ----------------------------------------
+ */
+// 注意: 设置部分以 Cookie 为准，此处表示没有 Cookie 时的默认设置
+// 是否开启预览功能
+var ENABLE_PREVIEW = true;
+// 是否开启排序功能
+var ENABLE_SORT = true;
+// 每次加载的页数
+var GETTING_PAGE_COUNT = 3;
+// 收藏量在此以下的不显示
+var FAV_FILTER = 3;
+// true，使用新标签页打开图片；false，保持默认
+var IS_LINK_BLANK = true;
+/**
+ * ---------------------------------------- 以下为 预览功能 部分 ----------------------------------------
  */
 /**
 * 节点结构
@@ -53,7 +66,7 @@ function getImageElements() {
         $(picNode[i]).attr('data-id', imgData[i].illustId);
     }
 }
-// 动图预览在相关页面调用的函数(自动执行，非动图页面无操作)[属于预览功能]
+// 动图预览在相关页面调用的函数(自动执行，非动图页面无操作)
 (function animePreview() {
     // 普通查看转换为全屏查看
     if (location.href.indexOf('medium') != -1 && location.href.indexOf('animePreview') != -1) {
@@ -70,7 +83,7 @@ function getImageElements() {
         return;
     }
 })();
-// iframe 加载完成时调用（动图预览）[属于预览功能]
+// iframe 加载完成时调用（动图预览）
 // arg: canvas 元素高，canvas 元素宽
 function iframeLoaded(height, width) {
     $('.pixivPreview').children('iframe').css({ 'width': width + 20 + 'px', 'height': height + 20 + 'px' });
@@ -89,9 +102,6 @@ function iframeLoaded(height, width) {
     $('.pixivPreview').children('iframe').css('display', '');
     $('.pixivPreview').children('img').remove();
 }
-/**
- * ---------------------------------------- 以下为 预览功能 部分 ----------------------------------------
- */
 function pixivPreviewer() {
     // 开启预览功能
     function activePreview() {
@@ -549,6 +559,7 @@ function pixivPreviewer() {
                     $(picHref).each(function () {
                         $(this.lastChild).css('display', 'none');
                     });
+                    $('#fb-root')[0].outerHTML = '<div id="fb-root"></div>';
                 }
             }
         });
@@ -566,12 +577,6 @@ function pixivPreviewer() {
  * ---------------------------------------- 以下为 排序功能 部分 ----------------------------------------
  */
 function pixiv_sk(callback) {
-    // 每次加载的页数
-    var GETTING_PAGE_COUNT = 3;
-    // 收藏量在此以下的不显示
-    var FAV_FILTER = 3;
-    // true，使用新标签页打开图片；false，保持默认
-    var IS_LINK_BLANK = true;
     // 加载中图片
     var LOADING_IMG = 'https://raw.githubusercontent.com/shikato/pixiv_sk/master/loading.gif';
     // 不合理的设定
@@ -806,11 +811,110 @@ function pixiv_sk(callback) {
     }
 }
 /**
+ * ---------------------------------------- 以下为 Cookie 部分 ----------------------------------------
+ */
+// 设置 Cookie
+// arg: Cookie 名称，Cookie 值
+function setCookie(name, value) {
+    var Days = 30;
+    var exp = new Date();
+    exp.setTime(exp.getTime() + Days * 24 * 60 * 60 * 1000);
+    document.cookie = name + "=" + escape(value) + ";expires=" + exp.toGMTString();
+}
+// 读取 Cookie
+// arg: Cookie 名称
+function getCookie(name) {
+    var arr, reg = new RegExp("(^| )" + name + "=([^;]*)(;|$)");
+    if (arr = document.cookie.match(reg))
+        return unescape(arr[2]);
+    else
+        return null;
+}
+/**
  * ---------------------------------------- 以下为 主函数 部分 ----------------------------------------
  */
 (function main() {
-    if (location.href.indexOf('member_illust.php') != -1) {
+    if (location.href.indexOf('member_illust.php?mode') != -1) {
         return;
+    }
+    if ($('._layout-thumbnail').length != 0) {
+        log('检测到旧版P站，自动使用v1.13版PixivPreviewer和最新版pixiv_sk');
+        var oldVersion = 'https://www.ocrosoft.com/PixivPreviewer113.js';
+        var ovScript = document.createElement('script');
+        ovScript.src = oldVersion;
+        document.body.appendChild(ovScript);
+        var pixiv_skScript = document.createElement('script');
+        pixiv_skScript.src = 'https://greasyfork.org/scripts/2247-pixiv-sk/code/pixiv_sk.user.js';
+        document.body.appendChild(pixiv_skScript);
+        return;
+    }
+    // 读取设置
+    var settings = getCookie('pixivPreviewerSetting');
+    if (settings == null) {
+        var screenWidth = document.documentElement.clientWidth;
+        var screenHeight = document.documentElement.clientHeight;
+        // 首次使用
+        var guide = document.createElement('div');
+        guide.id = 'pp-guide';
+        document.body.appendChild(guide);
+        guide.innerHTML = '<p style="text-align:center;color:white;font-size:50px;">您是第一次使用<br/>是否愿意花费30秒<br/>阅读帮助及进行相关设置？<br/></p>';
+        $($(guide).children()).css('margin-top', parseInt(screenHeight) / 10 + 'px');
+        // 按钮
+        var button = document.createElement('li');
+        $(button).addClass('_order-item _clickable');
+        $(button).css('color', 'white');
+        $(guide).find('p')[0].appendChild(button);
+        $(guide).find('p')[0].appendChild(button.cloneNode(false));
+        $(guide).find('p')[0].appendChild(button.cloneNode(false));
+        // 三个按钮
+        var li = $(guide).find('li');
+        li[0].innerText = '是，阅读帮助并配置'; $(li[0]).attr('bgc', '#127bb1');
+        li[1].innerText = '是，但仅进行配置'; $(li[1]).attr('bgc', '#12cdcd');
+        li[2].innerText = '否，使用默认设置'; $(li[2]).attr('bgc', '#ff7e48');
+        li.css({ 'margin-right': '10px', 'margin-top': '80px', 'font-size': '18px', 'width': '180px' });
+        li.each(function () {
+            $(this).css('background-color', $(this).attr('bgc'));
+        });
+        li.mouseover(function () {
+            $(this).css({ 'background-color': '#127bff' });
+        });
+        li.mouseout(function () {
+            $(this).css({ 'background-color': $(this).attr('bgc') });
+        });
+        // 按钮的点击事件
+        $(li[0]).click(function () {
+            //
+        });
+        $(li[1]).click(function () {
+            //
+        });
+        $(li[2]).click(function () {
+            $(guide).remove();
+        });
+       
+        $(guide).css({
+            'width': screenWidth + 'px', 'height': screenHeight + 'px', 'position': 'fixed',
+            'z-index': 999999, 'background-color': 'rgba(0,0,0,0.8)',
+            'left': '0px', 'top': '0px'
+        });
+
+        settings = {
+            'enablePreview': ENABLE_PREVIEW,
+            'enableSort': ENABLE_SORT,
+            'pageCount': GETTING_PAGE_COUNT,
+            'favFilter': FAV_FILTER,
+            'linkBlank': IS_LINK_BLANK
+        };
+        setCookie('pixivPreviewerSetting', JSON.stringify(settings));
+    }
+    else {
+        settings = eval('[' + settings + ']')[0];
+        ENABLE_PREVIEW = settings.enablePreview;
+        ENABLE_SORT = settings.enableSort;
+        GETTING_PAGE_COUNT = settings.pageCount;
+        FAV_FILTER = settings.favFilter;
+        IS_LINK_BLANK = settings.linkBlank;
+        //log(settings);
     }
     // 预览，下载
     var itv = setInterval(function () {
@@ -818,7 +922,15 @@ function pixiv_sk(callback) {
             getImageElements();
             // 排序
             if (picDiv.length > 0) {
-                pixiv_sk(pixivPreviewer); // 排序完成后调用预览
+                if (ENABLE_SORT && ENABLE_PREVIEW) {
+                    pixiv_sk(pixivPreviewer); // 排序完成后调用预览
+                }
+                else if (ENABLE_SORT) {
+                    pixiv_sk(); // 仅排序
+                }
+                else if (ENABLE_PREVIEW) {
+                    pixivPreviewer();
+                }
                 clearInterval(itv);
             }
         }
