@@ -102,6 +102,17 @@ function iframeLoaded(height, width) {
     $('.pixivPreview').children('iframe').css('display', '');
     $('.pixivPreview').children('img').remove();
 }
+// 测试图片是否有效
+function validateImage(url) {
+    var img = new Image();
+    var finished = 0;
+    img.addEventListener('error', function () { finished = -1; })
+    img.addEventListener('load', function () { finished = 1; })
+    img.src = url;
+    //while (finished === 0);
+    if (finished == 1) return true;
+    else return false;
+}
 function pixivPreviewer() {
     // 开启预览功能
     function activePreview() {
@@ -305,8 +316,9 @@ function pixivPreviewer() {
                         for (var i = 0; i < imgs.length; ++i) {
                             imgsOrigin.push(imgs[i].replace('img-master', 'img-original'));
                             imgsOrigin[i] = imgsOrigin[i].replace('_master1200', '');
-                            // ?
-                            //imgsOrigin[i] = imgsOrigin[i].replace('.jpg', '.png');
+                            if (!validateImage(imgsOrigin[i])) {
+                                imgsOrigin[i] = imgsOrigin[i].replace('.jpg', '.png');
+                            }
                         }
                         viewImages(imgs, 0, imgsOrigin);
                         return;
@@ -520,8 +532,9 @@ function pixivPreviewer() {
                                 for (var i = 0; i < imgs.length; ++i) {
                                     imgsOrigin.push(imgs[i].replace('img-master', 'img-original'));
                                     imgsOrigin[i] = imgsOrigin[i].replace('_master1200', '');
-                                    // ?
-                                    imgsOrigin[i] = imgsOrigin[i].replace('.jpg', '.png');
+                                    if (!validateImage(imgsOrigin[i])) {
+                                        imgsOrigin[i] = imgsOrigin[i].replace('.jpg', '.png');
+                                    }
                                     imgOriginList.push(imgsOrigin[i]);
                                 }
                                 break;
