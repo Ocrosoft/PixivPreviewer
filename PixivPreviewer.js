@@ -2,7 +2,7 @@
 // @name         PixivPreviewer
 // @namespace
 // @version      1.19
-// @description  在搜索页显示较大的预览图（请注意阅读详细信息）。Show preview of pictures in serach page.
+// @description  显示大图预览，按热门度排序(pixiv_sk)，批量下载。View Preview, Sort by favorite numbers, Bulk download.(仅搜索排行页生效, Only available in search and rank page)
 // @author       Ocrosoft
 // @match        https://www.pixiv.net/search.php*
 // @match        https://www.pixiv.net/member_illust.php?mode=medium*
@@ -675,7 +675,7 @@ function pixiv_sk(callback) {
             $('.ads_area_no_margin')[0].outerHTML = $('.pager-container')[0].parentNode.outerHTML;
         }*/
         try { $('.column-order-menu')[0].innerHTML = $('.column-order-menu')[1].innerHTML; }
-        catch(e) { }
+        catch (e) { }
         if (mCurrentPage === 1) {
             $('.pager-container').empty().append(
                 '<a href="' + mCurrentUrl + '" style="margin-right:15px;">&lt;&lt;</a>'
@@ -735,6 +735,10 @@ function pixiv_sk(callback) {
             div = $('#js-mount-point-search-result-list').children()[0].lastChild;
             // 图片的 <a> 标签
             var a = $(div).children('figure').children('div').children('a')[0];
+            $(a).attr('href', $(a).attr('href').split('id=')[0] + 'id=' + mWorks[i].illustId);
+            if (IS_LINK_BLANK) {
+                $(a).attr('target', '_blank');
+            }
             // 移除多图/动图标签
             $(a).children('div').remove();
             // 如果是多图添加多图标签
