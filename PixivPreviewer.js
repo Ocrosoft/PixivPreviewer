@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Pixiv Previewer
 // @namespace
-// @version      1.23
+// @version      1.24
 // @description  显示大图预览，按热门度排序(pixiv_sk)，批量下载。View Preview, Sort by favorite numbers, Bulk download.(仅搜索排行页生效, Only available in search and rank page)
 // @author       Ocrosoft
 // @match        https://www.pixiv.net/search.php*
@@ -977,7 +977,7 @@ function addSettingButton() {
         ovScript.src = oldVersion;
         document.body.appendChild(ovScript);
         var pixiv_skScript = document.createElement('script');
-        pixiv_skScript.src = 'https://greasyfork.org/scripts/2247-pixiv-sk/code/pixiv_sk.user.js';
+        pixiv_skScript.src = 'https://www.ocrosoft.com/pixiv_sk_nogoogle.js';
         document.body.appendChild(pixiv_skScript);
         return;
     }
