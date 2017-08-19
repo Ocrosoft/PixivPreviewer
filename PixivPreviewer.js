@@ -1,16 +1,15 @@
-//==UserScript ==
-// @name         PixivPreviewer
+// ==UserScript==
+// @name         Pixiv Previewer
 // @namespace
-// @version      1.22
+// @version      1.23
 // @description  显示大图预览，按热门度排序(pixiv_sk)，批量下载。View Preview, Sort by favorite numbers, Bulk download.(仅搜索排行页生效, Only available in search and rank page)
 // @author       Ocrosoft
 // @match        https://www.pixiv.net/search.php*
-// @match        https://www.pixiv.net/member_illust.php?mode=medium*
-// @match        https://www.pixiv.net/member_illust.php?mode=ugoira_view*
+// @match        https://www.pixiv.net/member_illust.php?mode=*
 // @match        https://www.pixiv.net/ranking.php*
 // @grant        none
 // @require      http://code.jquery.com/jquery-2.1.4.min.js
-// @namespace https://github.com/Ocrosoft/PixivPreviewer
+// @namespace    https://github.com/Ocrosoft/PixivPreviewer
 // ==/UserScript==
 
 function log(text) {
@@ -68,6 +67,12 @@ function getImageElements() {
 }
 // 动图预览在相关页面调用的函数(自动执行，非动图页面无操作)
 (function animePreview() {
+    // 动图下载
+    if (location.href.indexOf('medium') != -1) {
+        var script = document.createElement('script');
+        script.src = 'https://greasyfork.org/scripts/30681-pixiv%E5%8A%A8%E5%9B%BE%E4%B8%8B%E8%BD%BD/code/Pixiv%E5%8A%A8%E5%9B%BE%E4%B8%8B%E8%BD%BD.user.js';
+        document.body.appendChild(script);
+    }
     // 普通查看转换为全屏查看
     if (location.href.indexOf('medium') != -1 && location.href.indexOf('animePreview') != -1) {
         location.href = location.href.replace('medium', 'ugoira_view');
@@ -79,7 +84,18 @@ function getImageElements() {
         var width = parseInt($('canvas').css('width').split('px'));
         var newHeight = 580 / width * height;
         $('canvas').css({ 'height': newHeight + 'px', 'width': 580 + 'px' });
-        window.parent.iframeLoaded(newHeight, 580);
+        var div = document.createElement('div');
+        $(div).addClass('embed');
+        div.innerHTML = '<dl><form class="_comment-form" style="width:100%;text-align:center;"><input id="dl_full" type="button" value="全屏版" class="submit-button" style="width:45%; padding:0px;margin-left:5px;"></form></dl>';
+        $('canvas').parent()[0].appendChild(div);
+        window.parent.iframeLoaded(newHeight + 25, 580);
+        var reg = new RegExp('src.*zip');
+        var t = $('html')[0].innerHTML;
+        var full = reg.exec(t)[0];
+        full = full.split(':"')[1];
+        $('#dl_full').click(function () {
+            window.open(full);
+        });
         return;
     }
 })();
