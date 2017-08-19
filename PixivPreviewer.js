@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Pixiv Previewer
 // @namespace
-// @version      1.25
+// @version      1.26
 // @description  显示大图预览，按热门度排序(pixiv_sk)，批量下载。View Preview, Sort by favorite numbers, Bulk download.(仅搜索排行页生效, Only available in search and rank page)
 // @author       Ocrosoft
 // @match        https://www.pixiv.net/search.php*
@@ -46,6 +46,7 @@ var dataDiv, picList, picDiv = [], picHref = [], picNode = []; // 相关元素�
 var dataStr; // 更新后图片信息使用 json 保存在了 dataDiv 的 data-items 属性中
 var imgData; // 保存解析后的 json
 var mousePos; // 鼠标位置
+var SORT_END = false; // 是否排序完成
 // 获取相关的元素
 function getImageElements() {
     $('.popular-introduction').remove();
@@ -587,6 +588,9 @@ function pixivPreviewer() {
                     $(picHref).each(function () {
                         $(this.lastChild).css('display', 'none');
                     });
+                    $(picDiv).each(function () {
+                        this.lastChild.remove();
+                    });
                     $('#fb-root')[0].outerHTML = '<div id="fb-root"></div>';
                 }
             }
@@ -830,6 +834,7 @@ function pixiv_sk(callback) {
             }
         }
         // 恢复显示
+        SORT_END = true;
         $('.column-search-result').children('div').show();
         if (callback) {
             callback();
@@ -958,6 +963,103 @@ function addSettingButton() {
         showSetting();
     });
 }
+// 帮助
+function guideStep(step) {
+    $('#pp-guide').children().remove();
+    $('#pp-guide').css('z-index', '999997');
+    var step1 = function () {
+        $(picDiv[0]).css({ 'position': 'absolute', 'z-index': '999998' });
+        $('#pp-guide')[0].innerHTML =
+            '<p style="text-align:center;color:white;font-size:25px;">' +
+            '将鼠标移动到图片上，稍等片刻便会出现预览图<br/>' +
+            '如果不想显示预览图，可以按住 <span style="color:#127bb1;">Ctrl</span> 键<br/>' +
+            '这时鼠标移动到图片上便<span style="color:#127bb1;">不会出现</span>预览图<br/>' +
+            '<a id="nextStep" href="javascript:;">点击继续</a>' +
+            '</p>';
+        $('#nextStep').click(function () {
+            step2();
+        });
+    };
+    var step2 = function () {
+        $('#pp-guide')[0].innerHTML =
+            '<p style="text-align:center;color:white;font-size:25px;">' +
+            '按住 <span style="color:#127bb1;">Ctrl</span> 再点击预览图，可以切换成<span style="color:#127bb1;">原图模式</span><br/>' +
+            '原图模式下右键保存就是最清晰的图片<br/>' +
+            '原图模式会在预览图右下角显示一个笑脸<br/>' +
+            '按住 Shift 点击预览图，或点击笑脸，可以用新标签页打开原图<br/>' +
+            '<a id="nextStep" href="javascript:;">点击继续</a>' +
+            '</p>';
+        $('#nextStep').click(function () {
+            step3();
+        });
+    };
+    var step3 = function () {
+        $('#pp-guide')[0].innerHTML =
+            '<p style="text-align:center;color:white;font-size:25px;">' +
+            '预览图会动鼠标不容易移上去？<br/>' +
+            '按住 <span style="color:#127bb1;">Ctrl</span> 键预览图就<span style="color:#127bb1;">不会跟随</span>鼠标移动了<br/>' +
+            '<a id="nextStep" href="javascript:;">点击继续</a>' +
+            '</p>';
+        $('#nextStep').click(function () {
+            step4();
+        });
+    };
+    var step4 = function () {
+        $('#pp-guide')[0].innerHTML =
+            '<p style="text-align:center;color:white;font-size:25px;">' +
+            '右上角有显示张数的作品(多图)<br/>' +
+            '直接<span style="color:#127bb1;">点击预览图</span>就能查看下一张图片<br/>' +
+            '当然如果不是多图，直接点击预览图没有任何效果<br/>' +
+            '<a id="nextStep" href="javascript:;">点击继续</a>' +
+            '</p>';
+        $('#nextStep').click(function () {
+            step5();
+        });
+    };
+    var step5 = function () {
+        $(picDiv[0]).css({ 'position': 'absolute', 'z-index': '999998' });
+        $(picDiv[1]).css({ 'position': 'absolute', 'z-index': '999998' });
+        $(picDiv[2]).css({ 'position': 'absolute', 'z-index': '999998' });
+        $(picDiv[3]).css({ 'position': 'absolute', 'z-index': '999998' });
+        $('._toolmenu').css({ 'z-index': '999998' });
+        $('#pp-guide')[0].innerHTML =
+            '<p style="text-align:center;color:white;font-size:25px;">' +
+            '点击右下角的<span style="color:#127bb1;">向下按钮</span>进入<span style="color:#127bb1;">批量下载模式</span><br/>' +
+            '尝试<span style="color:#127bb1;">勾选</span>下方的部分图片，完成后<span style="color:#127bb1;">再次点击</span>该按钮<br/>' +
+            '处理完成后将会弹出下载地址<br/>' +
+            '<a id="nextStep" href="javascript:;">点击继续</a>' +
+            '</p>';
+        $('#nextStep').click(function () {
+            step6();
+        });
+    };
+    var step6=function (){
+        $(picDiv[0]).css({ 'position': '', 'z-index': '' });
+        $(picDiv[1]).css({ 'position': '', 'z-index': '' });
+        $(picDiv[2]).css({ 'position': '', 'z-index': '' });
+        $(picDiv[3]).css({ 'position': '', 'z-index': '' });
+        $('._toolmenu').css({ 'z-index': '' });
+        $('#pp-guide')[0].innerHTML =
+            '<p style="text-align:center;color:white;font-size:25px;">' +
+            '预览功能到这里就介绍完毕了<br/>' +
+            '排序功能并没有什么可以介绍的<br/>' +
+            '接下来将进入到设置页面<br/>' +
+            '如果以后需要修改设置，可以点击<span style="color:#127bb1;">右下角的齿轮按钮</span><br/>' +
+            '<a id="nextStep" href="javascript:;">点击继续</a>' +
+            '</p>';
+        $('#nextStep').click(function () {
+            $('#pp-guide').remove();
+            showSetting();
+        });
+    }
+    var itv = setInterval(function () {
+        if (SORT_END) {
+            $('#pp-guide').children().remove();
+            step1();
+            clearInterval(itv);
+        }
+    }, 500);
+}
 /**
  * ---------------------------------------- 以下为 主函数 部分 ----------------------------------------
  */
@@ -1007,7 +1109,7 @@ function addSettingButton() {
     addSettingButton();
     // 读取设置
     var settings = getCookie('pixivPreviewerSetting');
-    if (settings === null || settings == 'null') {
+    if (true || settings === null || settings == 'null') {
         var screenWidth = document.documentElement.clientWidth;
         var screenHeight = document.documentElement.clientHeight;
         settings = {
@@ -1047,7 +1149,7 @@ function addSettingButton() {
         });
         // 按钮的点击事件
         $(li[0]).click(function () { // 是
-            alert('还要肝活动，帮助功能先留着吧_(:зゝ∠)_，现在请选择第二项，以后更新了在设置中重置脚本还是可以看...');
+            guideStep();
         });
         $(li[1]).click(function () { // 是，仅设置
             showSetting(settings);
