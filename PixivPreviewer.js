@@ -1,7 +1,7 @@
 //==UserScript ==
 // @name         PixivPreviewer
 // @namespace
-// @version      1.21
+// @version      1.22
 // @description  显示大图预览，按热门度排序(pixiv_sk)，批量下载。View Preview, Sort by favorite numbers, Bulk download.(仅搜索排行页生效, Only available in search and rank page)
 // @author       Ocrosoft
 // @match        https://www.pixiv.net/search.php*
@@ -104,13 +104,13 @@ function iframeLoaded(height, width) {
 }
 // 测试图片是否有效
 function validateImage(url) {
-    var img = new Image();
-    var finished = 0;
-    img.addEventListener('error', function () { finished = -1; })
-    img.addEventListener('load', function () { finished = 1; })
-    img.src = url;
-    //while (finished === 0);
-    if (finished == 1) return true;
+    url = url.replace('manga', 'manga_big');
+    url += '&page=0';
+    var xmlHttp = new XMLHttpRequest();
+    xmlHttp.open('GET', url, false);
+    xmlHttp.send(null);
+    var src = $($(xmlHttp.responseText)[$(xmlHttp.responseText).length - 1]).attr('src');
+    if (src.indexOf('.png') == -1) return true;
     else return false;
 }
 function pixivPreviewer() {
@@ -313,12 +313,12 @@ function pixivPreviewer() {
                         }
                         // 推出来的原图URL，暂时没有想到效率高的办法（imgs.length 次xmlHttpRequest）
                         var imgsOrigin = [];
+                        var is_jpg = validateImage(xmlHttp.responseURL);
+                        log(is_jpg);
                         for (var i = 0; i < imgs.length; ++i) {
                             imgsOrigin.push(imgs[i].replace('img-master', 'img-original'));
                             imgsOrigin[i] = imgsOrigin[i].replace('_master1200', '');
-                            if (!validateImage(imgsOrigin[i])) {
-                                imgsOrigin[i] = imgsOrigin[i].replace('.jpg', '.png');
-                            }
+                            if (!is_jpg) imgsOrigin[i] = imgsOrigin[i].replace('.jpg', '.png');
                         }
                         viewImages(imgs, 0, imgsOrigin);
                         return;
@@ -529,12 +529,11 @@ function pixivPreviewer() {
                                 }
                                 // 推出来的原图URL，暂时没有想到效率高的办法（imgs.length 次xmlHttpRequest）
                                 var imgsOrigin = [];
+                                var is_jpg = validateImage(xmlHttp.responseURL);
                                 for (var i = 0; i < imgs.length; ++i) {
                                     imgsOrigin.push(imgs[i].replace('img-master', 'img-original'));
                                     imgsOrigin[i] = imgsOrigin[i].replace('_master1200', '');
-                                    if (!validateImage(imgsOrigin[i])) {
-                                        imgsOrigin[i] = imgsOrigin[i].replace('.jpg', '.png');
-                                    }
+                                    if (!is_jpg) imgsOrigin[i] = imgsOrigin[i].replace('.jpg', '.png');
                                     imgOriginList.push(imgsOrigin[i]);
                                 }
                                 break;
