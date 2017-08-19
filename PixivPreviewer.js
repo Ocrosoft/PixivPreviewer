@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Pixiv Previewer
 // @namespace
-// @version      1.26
+// @version      1.27
 // @description  显示大图预览，按热门度排序(pixiv_sk)，批量下载。View Preview, Sort by favorite numbers, Bulk download.(仅搜索排行页生效, Only available in search and rank page)
 // @author       Ocrosoft
 // @match        https://www.pixiv.net/search.php*
@@ -331,7 +331,6 @@ function pixivPreviewer() {
                         // 推出来的原图URL，暂时没有想到效率高的办法（imgs.length 次xmlHttpRequest）
                         var imgsOrigin = [];
                         var is_jpg = validateImage(xmlHttp.responseURL);
-                        log(is_jpg);
                         for (var i = 0; i < imgs.length; ++i) {
                             imgsOrigin.push(imgs[i].replace('img-master', 'img-original'));
                             imgsOrigin[i] = imgsOrigin[i].replace('_master1200', '');
@@ -755,7 +754,6 @@ function pixiv_sk(callback) {
         }
         mWorks = tmp;
         filterAndSort();
-        log(mWorks);
         $('#js-mount-point-search-result-list').attr('data-items', JSON.stringify(mWorks));
 
         var divs = $($('#js-mount-point-search-result-list').children()[0]).children();
@@ -1095,7 +1093,6 @@ function guideStep(step) {
                 }
             }, 1000);
         }
-        //log('检测到旧版P站，自动使用v1.13版PixivPreviewer和最新版pixiv_sk');
         var oldVersion = 'https://www.ocrosoft.com/PixivPreviewer113.js';
         var ovScript = document.createElement('script');
         ovScript.src = oldVersion;
@@ -1109,7 +1106,7 @@ function guideStep(step) {
     addSettingButton();
     // 读取设置
     var settings = getCookie('pixivPreviewerSetting');
-    if (true || settings === null || settings == 'null') {
+    if (settings === null || settings == 'null') {
         var screenWidth = document.documentElement.clientWidth;
         var screenHeight = document.documentElement.clientHeight;
         settings = {
