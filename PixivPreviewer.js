@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Pixiv Previewer
 // @namespace
-// @version      1.27
+// @version      1.29
 // @description  显示大图预览，按热门度排序(pixiv_sk)，批量下载。View Preview, Sort by favorite numbers, Bulk download.(仅搜索排行页生效, Only available in search and rank page)
 // @author       Ocrosoft
 // @match        https://www.pixiv.net/search.php*
@@ -311,10 +311,10 @@ function pixivPreviewer() {
                         // 取得图片地址
                         // 预览图
                         var imgSource = RegExp('<div class="_layout-thumbnail ui-modal-trigger">[^>]*>').
-                            exec(resText)[0].split('<')[2].split('\"')[1];
+                        exec(resText)[0].split('<')[2].split('\"')[1];
                         // 原图
                         var imgOrigin = RegExp('<div class="_illust_modal.*class="original-image').
-                            exec(resText)[0].split('data-src="')[1].split('\"')[0];
+                        exec(resText)[0].split('data-src="')[1].split('\"')[0];
                         viewImages([imgSource], 0, [imgOrigin]);
                         return;
                     } catch (e) {
@@ -325,7 +325,7 @@ function pixivPreviewer() {
                         var img, imgs = [];
                         var reg = new RegExp('https://i.pximg.net/img-master[^\"]*', 'g');
                         while ((img = reg.exec(resText.split('<section class=\"manga\">')[1].
-                            split('</section>')[0])) !== null) {
+                                               split('</section>')[0])) !== null) {
                             imgs.push(img[0]);
                         }
                         // 推出来的原图URL，暂时没有想到效率高的办法（imgs.length 次xmlHttpRequest）
@@ -359,12 +359,12 @@ function pixivPreviewer() {
             // 多图， pageCount 不为1
             else if (imgData[dataIndex].pageCount != 1) {
                 xmlHttp.open('GET', 'https://www.pixiv.net/member_illust.php?mode=manga&illust_id=' +
-                    $(picNode[dataIndex]).attr('data-id'), true);
+                             $(picNode[dataIndex]).attr('data-id'), true);
             }
             // 单图
             else {
                 xmlHttp.open('GET', 'https://www.pixiv.net/member_illust.php?mode=medium&illust_id=' +
-                    $(picNode[dataIndex]).attr('data-id'), true);
+                             $(picNode[dataIndex]).attr('data-id'), true);
             }
             xmlHttp.send(null);
         });
@@ -489,15 +489,15 @@ function pixivPreviewer() {
                     if (picHref[i].lastChild.src.indexOf('unchecked') != -1) continue;
                     if (imgData[i].illustType == 2) {
                         linkList.push('https://www.pixiv.net/member_illust.php?mode=medium&illust_id=' +
-                            $(picNode[i]).attr('data-id'));
+                                      $(picNode[i]).attr('data-id'));
                     }
                     else if (imgData[i].pageCount != 1) {
                         linkList.push('https://www.pixiv.net/member_illust.php?mode=manga&illust_id=' +
-                            $(picNode[i]).attr('data-id'));
+                                      $(picNode[i]).attr('data-id'));
                     }
                     else {
                         linkList.push('https://www.pixiv.net/member_illust.php?mode=medium&illust_id=' +
-                            $(picNode[i]).attr('data-id'));
+                                      $(picNode[i]).attr('data-id'));
                     }
                 }
                 $('#per')[0].innerText = '1/' + linkList.length;
@@ -526,10 +526,10 @@ function pixivPreviewer() {
                                 // 取得图片地址
                                 // 预览图
                                 var imgSource = RegExp('<div class="_layout-thumbnail ui-modal-trigger">[^>]*>').
-                                    exec(resText)[0].split('<')[2].split('\"')[1];
+                                exec(resText)[0].split('<')[2].split('\"')[1];
                                 // 原图
                                 var imgOrigin = RegExp('<div class="_illust_modal.*class="original-image').
-                                    exec(resText)[0].split('data-src="')[1].split('\"')[0];
+                                exec(resText)[0].split('data-src="')[1].split('\"')[0];
                                 imgOriginList.push(imgOrigin);
                                 break;
                             } catch (e) {
@@ -540,7 +540,7 @@ function pixivPreviewer() {
                                 var img, imgs = [];
                                 var reg = new RegExp('https://i.pximg.net/img-master[^\"]*', 'g');
                                 while ((img = reg.exec(resText.split('<section class=\"manga\">')[1].
-                                    split('</section>')[0])) !== null) {
+                                                       split('</section>')[0])) !== null) {
                                     imgs.push(img[0]);
                                 }
                                 // 推出来的原图URL，暂时没有想到效率高的办法（imgs.length 次xmlHttpRequest）
@@ -864,7 +864,7 @@ function getCookie(name) {
  */
 // 显示设置
 function showSetting(settings) {
-    if (!settings) {
+    if (!settings || settings == 'null') {
         settings = getCookie('pixivPreviewerSetting');
         settings = eval('[' + settings + ']')[0];
     }
@@ -1047,7 +1047,14 @@ function guideStep(step) {
             '</p>';
         $('#nextStep').click(function () {
             $('#pp-guide').remove();
-            showSetting();
+            var settings = {
+                'enablePreview': ENABLE_PREVIEW.toString(),
+                'enableSort': ENABLE_SORT.toString(),
+                'pageCount': GETTING_PAGE_COUNT.toString(),
+                'favFilter': FAV_FILTER.toString(),
+                'linkBlank': IS_LINK_BLANK.toString()
+            };
+            showSetting(settings);
         });
     }
     var itv = setInterval(function () {
@@ -1070,7 +1077,16 @@ function guideStep(step) {
     $('.multi-ads-area').remove();
     $('.ad-footer').remove();
     if ($('._layout-thumbnail').length !== 0) {
-        if (getCookie('pixivPreviewerSetting') === null || getCookie('pixivPreviewerSetting') == 'null') {
+        if (!getCookie('pixivPreviewerSetting') || getCookie('pixivPreviewerSetting') == 'null') {
+            var settings = {
+                'enablePreview': ENABLE_PREVIEW.toString(),
+                'enableSort': ENABLE_SORT.toString(),
+                'pageCount': GETTING_PAGE_COUNT.toString(),
+                'favFilter': FAV_FILTER.toString(),
+                'linkBlank': IS_LINK_BLANK.toString()
+            };
+            setCookie('pixivPreviewerSetting', JSON.stringify(settings));
+
             if ($('#pp-guide').length === 0) {
                 var guide = document.createElement('div');
                 guide.id = 'pp-guide';
@@ -1082,7 +1098,7 @@ function guideStep(step) {
                 });
             }
             var guide = $('#pp-guide')[0];
-            guide.innerHTML = '<p style="text-align:center;color:white;font-size:50px;padding-top:50px;">检测到正在使用旧版P站(每行5件作品)<br/>建议升级到新版(每行4件作品)<br/><br/>不升级不会影响使用<br/>但部分脚本功能将无法使用<br/><br/>升级方法<br/>安装最新版的谷歌浏览器并清除缓存即可<br/><br/>此提示将在 <span id="countDown">15</span> 秒后消失并不再提示</p>';
+            guide.innerHTML = '<p style="text-align:center;color:white;font-size:25px;padding-top:50px;">检测到正在使用旧版P站(每行5件作品)<br/>建议升级到新版(每行4件作品)<br/><br/>不升级不会影响使用<br/>但部分脚本功能将无法使用<br/><br/>升级方法<br/>安装最新版的谷歌浏览器并清除缓存及Cookie即可<br/><br/>此提示将在 <span id="countDown">15</span> 秒后消失并不再提示</p>';
             var cd = setInterval(function () {
                 var val = $('#countDown')[0].innerText;
                 val = parseInt(val) - 1;
@@ -1100,13 +1116,14 @@ function guideStep(step) {
         var pixiv_skScript = document.createElement('script');
         pixiv_skScript.src = 'https://www.ocrosoft.com/pixiv_sk_nogoogle.js';
         document.body.appendChild(pixiv_skScript);
+        setCookie()
         return;
     }
     // 设置按钮
     addSettingButton();
     // 读取设置
     var settings = getCookie('pixivPreviewerSetting');
-    if (settings === null || settings == 'null') {
+    if (!settings || settings == 'null') {
         var screenWidth = document.documentElement.clientWidth;
         var screenHeight = document.documentElement.clientHeight;
         settings = {
