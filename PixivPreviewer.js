@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Pixiv Previewer
 // @namespace
-// @version      1.29
+// @version      1.30
 // @description  显示大图预览，按热门度排序(pixiv_sk)，批量下载。View Preview, Sort by favorite numbers, Bulk download.(仅搜索排行页生效, Only available in search and rank page)
 // @author       Ocrosoft
 // @match        https://www.pixiv.net/search.php*
@@ -747,6 +747,7 @@ function pixiv_sk(callback) {
     function clearAndUpdateWorks() {
         var tmp = [];
         for (var i = 0; i < mWorks.length; i++) {
+            if(!mWorks[i])continue;
             var imgsOnePage = eval(mWorks[i]);
             for (var j = 0; j < imgsOnePage.length; j++) {
                 tmp.push(imgsOnePage[j]);
@@ -830,6 +831,9 @@ function pixiv_sk(callback) {
                 ul.appendChild(li);
                 li.outerHTML = '<li style="position: relative;"><ul class="count-list"><li><a href="/bookmark_detail.php?illust_id=' + mWorks[i].illustId + '" class="_ui-tooltip bookmark-count" data-tooltip="' + mWorks[i].bookmarkCount + '件のブックマーク"><i class="_icon sprites-bookmark-badge"></i>' + mWorks[i].bookmarkCount + '</a></li></ul></li>';
             }
+        }
+        if (mWorks.length === 0){
+            $('.column-search-result')[0].innerHTML = '<div class="_no-item">未找到任何相关结果</div>';
         }
         // 恢复显示
         SORT_END = true;
