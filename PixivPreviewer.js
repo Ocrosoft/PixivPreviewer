@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Pixiv Previewer
 // @namespace
-// @version      1.30
+// @version      1.31
 // @description  显示大图预览，按热门度排序(pixiv_sk)，批量下载。View Preview, Sort by favorite numbers, Bulk download.(仅搜索排行页生效, Only available in search and rank page)
 // @author       Ocrosoft
 // @match        https://www.pixiv.net/search.php*
@@ -50,6 +50,7 @@ var SORT_END = false; // 是否排序完成
 // 获取相关的元素
 function getImageElements() {
     $('.popular-introduction').remove();
+    $('._popular-introduction').remove(); // 移除热门图片
     dataDiv = $('#js-mount-point-search-result-list');
     dataStr = dataDiv.attr('data-items');
     imgData = eval(dataStr);
@@ -1072,7 +1073,7 @@ function guideStep(step) {
 /**
  * ---------------------------------------- 以下为 主函数 部分 ----------------------------------------
  */
-(function main() {
+$(document).ready(function (){
     if (location.href.indexOf('member_illust.php?mode') != -1) {
         return;
     }
@@ -1080,7 +1081,7 @@ function guideStep(step) {
     $('.ads_area_no_margin').remove(); // 移除广告
     $('.multi-ads-area').remove();
     $('.ad-footer').remove();
-    if ($('._layout-thumbnail').length !== 0) {
+    if ($('#js-mount-point-search-result-list').length === 0) {
         if (!getCookie('pixivPreviewerSetting') || getCookie('pixivPreviewerSetting') == 'null') {
             var settings = {
                 'enablePreview': ENABLE_PREVIEW.toString(),
@@ -1214,4 +1215,4 @@ function guideStep(step) {
             clearInterval(itv);
         }
     }, 500);
-})();
+});
