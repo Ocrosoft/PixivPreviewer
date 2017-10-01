@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Pixiv Previewer
 // @namespace
-// @version      1.31
+// @version      1.32
 // @description  显示大图预览，按热门度排序(pixiv_sk)，批量下载。View Preview, Sort by favorite numbers, Bulk download.(仅搜索排行页生效, Only available in search and rank page)
 // @author       Ocrosoft
 // @match        https://www.pixiv.net/search.php*
@@ -49,8 +49,9 @@ var mousePos; // 鼠标位置
 var SORT_END = false; // 是否排序完成
 // 获取相关的元素
 function getImageElements() {
-    $('.popular-introduction').remove();
-    $('._popular-introduction').remove(); // 移除热门图片
+    //$('.popular-introduction').remove();
+    //$('._premium-lead-popular-d-body').remove();
+    //$('._popular-introduction').remove(); // 移除热门图片，P站怎么这么多操作
     dataDiv = $('#js-mount-point-search-result-list');
     dataStr = dataDiv.attr('data-items');
     imgData = eval(dataStr);
@@ -58,6 +59,11 @@ function getImageElements() {
     var pics = $(picList).children();
     picDiv = [], picHref = [], picNode = [];
     for (var i = 0; i < pics.length; i++) {
+        if(pics[i].className != pics[0].className){
+            pics[i].remove();
+            pics.splice(i--,1);
+            continue;
+        }
         picDiv.push(pics[i].childNodes[0].childNodes[0]);
         $(picDiv[i]).attr('data-index', i);
         picHref.push(picDiv[i].childNodes[0]);
@@ -1211,6 +1217,7 @@ $(document).ready(function (){
             }
         }
         catch (e) {
+            console.log(e);
             alert('出现错误!');
             clearInterval(itv);
         }
