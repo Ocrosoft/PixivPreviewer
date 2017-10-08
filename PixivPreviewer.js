@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name         Pixiv Previewer
 // @namespace
-// @version      1.32
+// @version      1.33
 // @description  显示大图预览，按热门度排序(pixiv_sk)，批量下载。View Preview, Sort by favorite numbers, Bulk download.(仅搜索排行页生效, Only available in search and rank page)
 // @author       Ocrosoft
 // @match        https://www.pixiv.net/search.php*
@@ -52,8 +52,9 @@ function getImageElements() {
     //$('.popular-introduction').remove();
     //$('._premium-lead-popular-d-body').remove();
     //$('._popular-introduction').remove(); // 移除热门图片，P站怎么这么多操作
-    dataDiv = $('#js-mount-point-search-result-list');
-    dataStr = dataDiv.attr('data-items');
+    dataDiv = $('#js-react-search-mid');
+    infoDiv = $('#js-mount-point-search-result-list')
+    dataStr = infoDiv.attr('data-items');
     imgData = eval(dataStr);
     picList = dataDiv.children()[0];
     var pics = $(picList).children();
@@ -76,7 +77,7 @@ function getImageElements() {
 // 动图预览在相关页面调用的函数(自动执行，非动图页面无操作)
 (function animePreview() {
     // 动图下载
-    if (location.href.indexOf('medium') != -1) {
+    if (location.href.indexOf('medium') != -1 && $('._ugoku-illust-player-container').length > 0) {
         var script = document.createElement('script');
         script.src = 'https://greasyfork.org/scripts/30681-pixiv%E5%8A%A8%E5%9B%BE%E4%B8%8B%E8%BD%BD/code/Pixiv%E5%8A%A8%E5%9B%BE%E4%B8%8B%E8%BD%BD.user.js';
         document.body.appendChild(script);
@@ -704,8 +705,8 @@ function pixiv_sk(callback) {
 
     if (GETTING_PAGE_COUNT > 1) {
         // 显示加载中图片
-        $('.column-search-result').children('div').hide();
-        $('.column-search-result').prepend(
+        $('#js-react-search-mid').children('div').hide();
+        $('#js-react-search-mid').prepend(
             '<div id="loading" style="width:50px;margin-left:auto;margin-right:auto;">'
             + '<img src="' + LOADING_IMG + '" /></div>'
         );
@@ -764,16 +765,16 @@ function pixiv_sk(callback) {
         filterAndSort();
         $('#js-mount-point-search-result-list').attr('data-items', JSON.stringify(mWorks));
 
-        var divs = $($('#js-mount-point-search-result-list').children()[0]).children();
+        var divs = $($('#js-react-search-mid').children()[0]).children();
         var divHTML = divs[0].outerHTML;
-        $('#js-mount-point-search-result-list').children('div').empty();
+        $('#js-react-search-mid').children('div').empty();
         for (var i = 0; i < mWorks.length; i++) {
             // 新建一个 DIV
             var div = document.createElement('div');
-            $('#js-mount-point-search-result-list').children('div').append(div);
+            $('#js-react-search-mid').children('div').append(div);
             div.outerHTML = divHTML;
             // 修改 outerHTML 后要重新获取对象
-            div = $('#js-mount-point-search-result-list').children()[0].lastChild;
+            div = $('#js-react-search-mid').children()[0].lastChild;
             // 图片的 <a> 标签
             var a = $(div).children('figure').children('div').children('a')[0];
             $(a).attr('href', $(a).attr('href').split('id=')[0] + 'id=' + mWorks[i].illustId);
@@ -844,7 +845,7 @@ function pixiv_sk(callback) {
         }
         // 恢复显示
         SORT_END = true;
-        $('.column-search-result').children('div').show();
+        $('#js-react-search-mid').children('div').show();
         if (callback) {
             callback();
         }
@@ -1083,10 +1084,12 @@ $(document).ready(function (){
     if (location.href.indexOf('member_illust.php?mode') != -1) {
         return;
     }
-    $('.popular-introduction').remove(); // 移除热门图片
-    $('.ads_area_no_margin').remove(); // 移除广告
+    $('.popular-introduction').remove();
+    $('.ads_area_no_margin').remove();
     $('.multi-ads-area').remove();
     $('.ad-footer').remove();
+    $('._premium-lead-tag-search-bar').remove();
+
     if ($('#js-mount-point-search-result-list').length === 0) {
         if (!getCookie('pixivPreviewerSetting') || getCookie('pixivPreviewerSetting') == 'null') {
             var settings = {
