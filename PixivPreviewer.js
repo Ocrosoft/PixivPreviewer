@@ -89,44 +89,39 @@ function getImageElements() {
     }
     // 全图预览调节并返回 canvas 大小
     if (location.href.indexOf('ugoira_view') != -1 && location.href.indexOf('animePreview') != -1) {
-        var height = parseInt($('canvas').css('height').split('px'));
-        var width = parseInt($('canvas').css('width').split('px'));
-        var newHeight = 580 / width * height;
-        $('canvas').css({ 'height': newHeight + 'px', 'width': 580 + 'px' });
-        var div = document.createElement('div');
-        $(div).addClass('embed');
-        div.innerHTML = '<dl><form class="_comment-form" style="width:100%;text-align:center;"><input id="dl_full" type="button" value="全屏版" class="submit-button" style="width:45%; padding:0px;margin-left:5px;"></form></dl>';
-        $('canvas').parent()[0].appendChild(div);
-        window.parent.iframeLoaded(newHeight + 25, 580);
-        var reg = new RegExp('src.*zip');
-        var t = $('html')[0].innerHTML;
-        var full = reg.exec(t)[0];
-        full = full.split(':"')[1];
-        $('#dl_full').click(function () {
-            window.open(full);
+        $(document).ready(function(){
+            var height = parseInt($('canvas').css('height').split('px'));
+            var width = parseInt($('canvas').css('width').split('px'));
+            var newHeight = window.parent.document.documentElement.clientHeight / 2;
+            var newWidth = newHeight / height * width;
+            $('canvas').css({ 'height': newHeight + 'px', 'width': newWidth + 'px' });
+            var div = document.createElement('div');
+            $(div).addClass('embed');
+            div.innerHTML = '<dl><form class="_comment-form" style="width:100%;text-align:center;"><input id="dl_full" type="button" value="全屏版" class="submit-button" style="width:45%; padding:0px;margin-left:5px;"></form></dl>';
+            $('canvas').parent()[0].appendChild(div);
+            window.parent.iframeLoaded(newHeight + 25, newWidth + 25);
+            var reg = new RegExp('src.*zip');
+            var t = $('html')[0].innerHTML;
+            var full = reg.exec(t)[0];
+            full = full.split(':"')[1];
+            $('#dl_full').click(function () {
+                window.open(full);
+            });
         });
         return;
     }
 })();
 // iframe 加载完成时调用（动图预览）
 // arg: canvas 元素高，canvas 元素宽
-function iframeLoaded(height, width) {
+/*function iframeLoaded(height, width) {
     $('.pixivPreview').children('iframe').css({ 'width': width + 20 + 'px', 'height': height + 20 + 'px' });
-    // 调整位置
-    var divX = mousePos.x, divY = mousePos.y;
-    var screenWidth = document.documentElement.clientWidth;
-    var screenHeight = document.documentElement.clientHeight;
-    if (mousePos.x > screenWidth / 2) {
-        divX -= width;
-    }
-    if ((mousePos.y - document.body.scrollTop) >
-        screenHeight / 2) {
-        divY -= height;
-    }
     $('.pixivPreview').css({ 'left': divX + 'px', 'top': divY + 'px' });
     $('.pixivPreview').children('iframe').css('display', '');
     $('.pixivPreview').children('img').remove();
-}
+}*/
+var callbackScript = document.createElement('script');
+callbackScript.innerHTML = "function iframeLoaded(height,width){$('.pixivPreview').children('iframe').css({'width':width+20+'px','height':height+20+'px'});$('.pixivPreview').children('iframe').css('display','');$('.pixivPreview').children('img').remove()}";
+document.body.appendChild(callbackScript);
 // 测试图片是否有效
 function validateImage(url) {
     url = url.replace('manga', 'manga_big');
@@ -711,12 +706,6 @@ function pixiv_sk(callback) {
             + '<img src="' + LOADING_IMG + '" /></div>'
         );
 
-        // 翻页部分
-        /*if ($('.pager-container').length == 1) {
-            $('.ads_area_no_margin')[0].outerHTML = $('.pager-container')[0].parentNode.outerHTML;
-        }*/
-        try { $('.column-order-menu')[0].innerHTML = $('.column-order-menu')[1].innerHTML; }
-        catch (e) { }
         if (mCurrentPage === 1) {
             $('.pager-container').empty().append(
                 '<a href="' + mCurrentUrl + '" style="margin-right:15px;">&lt;&lt;</a>'
@@ -845,6 +834,12 @@ function pixiv_sk(callback) {
         }
         // 恢复显示
         SORT_END = true;
+        // 翻页部分
+        if ($('#js-react-search-mid').parent().children('.column-order-menu')) {
+            $('#js-react-search-mid').parent()[0].insertBefore(($('#js-react-search-mid').parent().children('.column-order-menu')[0].cloneNode(true)),$('#js-react-search-mid')[0]);
+        }
+        //try { $('.column-order-menu')[0].innerHTML = $('.column-order-menu')[1].innerHTML; }
+        //catch (e) { }
         $('#js-react-search-mid').children('div').show();
         if (callback) {
             callback();
@@ -967,8 +962,9 @@ function addSettingButton() {
     var toolbar = $('._toolmenu')[0];
     toolbar.appendChild(toolbar.firstChild.cloneNode(true));
     toolbar.lastChild.innerHTML = '<i class="_icon-12" style="border-radius: 100%;background:url(\'https://raw.githubusercontent.com/Ocrosoft/PixivPreviewer/master/settings.png\') top / cover no-repeat; "></i>';
+    $(toolbar.lastChild)[0].className = 'item';
     $(toolbar.lastChild).css('margin-top', '10px');
-    $(toolbar.lastChild).css('opacity', '');
+    $(toolbar.lastChild).css('opacity', '0.8');
     $(toolbar.lastChild).click(function () {
         showSetting();
     });
