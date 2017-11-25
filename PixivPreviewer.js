@@ -1,14 +1,15 @@
 // ==UserScript==
 // @name         Pixiv Previewer
 // @namespace
-// @version      1.34
+// @version      1.39
 // @description  显示大图预览，按热门度排序(pixiv_sk)，批量下载。View Preview, Sort by favorite numbers, Bulk download.(仅搜索排行页生效, Only available in search and rank page)
 // @author       Ocrosoft
 // @match        https://www.pixiv.net/search.php*
 // @match        https://www.pixiv.net/member_illust.php?mode=*
 // @match        https://www.pixiv.net/ranking.php*
+// @match        https://www.pixiv.net/member_illust.php?id=*
 // @grant        none
-// @require      http://code.jquery.com/jquery-2.1.4.min.js
+
 // @namespace    https://github.com/Ocrosoft/PixivPreviewer
 // ==/UserScript==
 
@@ -101,8 +102,8 @@ function getImageElements() {
             $('canvas').parent()[0].appendChild(div);
             window.parent.iframeLoaded(newHeight + 25, newWidth + 25);
             var reg = new RegExp('src.*zip');
-            var t = $('html')[0].innerHTML;
-            var full = reg.exec(t)[0];
+            var tmp = $('html')[0].innerHTML;
+            var full = reg.exec(tmp)[0];
             full = full.split(':"')[1];
             $('#dl_full').click(function () {
                 window.open(full);
@@ -836,7 +837,9 @@ function pixiv_sk(callback) {
         SORT_END = true;
         // 翻页部分
         if ($('#js-react-search-mid').parent().children('.column-order-menu')) {
-            $('#js-react-search-mid').parent()[0].insertBefore(($('#js-react-search-mid').parent().children('.column-order-menu')[0].cloneNode(true)),$('#js-react-search-mid')[0]);
+            try{
+                $('#js-react-search-mid').parent()[0].insertBefore(($('#js-react-search-mid').parent().children('.column-order-menu')[0].cloneNode(true)),$('#js-react-search-mid')[0]);
+            } catch(e) {}
         }
         //try { $('.column-order-menu')[0].innerHTML = $('.column-order-menu')[1].innerHTML; }
         //catch (e) { }
@@ -953,7 +956,7 @@ function showSetting(settings) {
     guide.lastChild.appendChild(document.createElement('br'));
     // 刷新声明
     var span = document.createElement('span');
-    span.innerText = '*新的设置将在页面刷新后生效';
+    span.innerHTML = '<p>*新的设置将在页面刷新后生效<br/>**排序功能只在搜索页生效</p>';
     $(span).css('font-size', '10px');
     guide.lastChild.appendChild(span);
 }
@@ -1119,6 +1122,14 @@ $(document).ready(function (){
                 }
             }, 1000);
         }
+        if(location.href.indexOf('search.php') == -1){
+            addSettingButton();
+        }
+        var settings = eval('[' + getCookie('pixivPreviewerSetting') + ']')[0];
+        var previewEnabled = settings.enablePreview == 'true' ? true : false;
+        if(!previewEnabled){
+            return;
+        }
         var oldVersion = 'https://www.ocrosoft.com/PixivPreviewer113.js';
         var ovScript = document.createElement('script');
         ovScript.src = oldVersion;
@@ -1126,7 +1137,6 @@ $(document).ready(function (){
         var pixiv_skScript = document.createElement('script');
         pixiv_skScript.src = 'https://www.ocrosoft.com/pixiv_sk_nogoogle.js';
         document.body.appendChild(pixiv_skScript);
-        setCookie()
         return;
     }
     // 设置按钮
