@@ -1,12 +1,13 @@
 // ==UserScript==
 // @name         Pixiv Previewer
 // @namespace
-// @version      1.39
+// @version      1.44
 // @description  显示大图预览，按热门度排序(pixiv_sk)，批量下载。View Preview, Sort by favorite numbers, Bulk download.(仅搜索排行页生效, Only available in search and rank page)
 // @author       Ocrosoft
 // @match        https://www.pixiv.net/search.php*
 // @match        https://www.pixiv.net/member_illust.php?mode=*
 // @match        https://www.pixiv.net/ranking.php*
+// @match        https://www.pixiv.net/member.php?id=*
 // @match        https://www.pixiv.net/member_illust.php?id=*
 // @grant        none
 
@@ -35,31 +36,28 @@ var IS_LINK_BLANK = true;
  */
 /**
 * 节点结构
+* section, [dataDiv]
 * -div, [picList]
 * --div
 * ---figure
 * ----div, [picDiv]
 * -----a, [picHref]
-* ------img(图片节点), [picNode]
 * -----div(菜单)
 */
-var dataDiv, picList, picDiv = [], picHref = [], picNode = []; // 相关元素，含义见上
+var dataDiv, picList, picDiv = [], picHref = []; // 相关元素，含义见上
 var dataStr; // 更新后图片信息使用 json 保存在了 dataDiv 的 data-items 属性中
 var imgData; // 保存解析后的 json
 var mousePos; // 鼠标位置
 var SORT_END = false; // 是否排序完成
 // 获取相关的元素
 function getImageElements() {
-    //$('.popular-introduction').remove();
-    //$('._premium-lead-popular-d-body').remove();
-    //$('._popular-introduction').remove(); // 移除热门图片，P站怎么这么多操作
     dataDiv = $('#js-react-search-mid');
     infoDiv = $('#js-mount-point-search-result-list')
     dataStr = infoDiv.attr('data-items');
     imgData = eval(dataStr);
     picList = dataDiv.children()[0];
     var pics = $(picList).children();
-    picDiv = [], picHref = [], picNode = [];
+    picDiv = [], picHref = [];
     for (var i = 0; i < pics.length; i++) {
         if(pics[i].className != pics[0].className){
             pics[i].remove();
@@ -70,9 +68,7 @@ function getImageElements() {
         $(picDiv[i]).attr('data-index', i);
         picHref.push(picDiv[i].childNodes[0]);
         $(picHref[i]).attr('data-index', i);
-        picNode.push($(picHref[i]).children('img')[0]);
-        $(picNode[i]).attr('data-index', i);
-        $(picNode[i]).attr('data-id', imgData[i].illustId);
+        $(picHref[i]).attr('data-id', imgData[i].illustId);
     }
 }
 // 动图预览在相关页面调用的函数(自动执行，非动图页面无操作)
@@ -114,12 +110,6 @@ function getImageElements() {
 })();
 // iframe 加载完成时调用（动图预览）
 // arg: canvas 元素高，canvas 元素宽
-/*function iframeLoaded(height, width) {
-    $('.pixivPreview').children('iframe').css({ 'width': width + 20 + 'px', 'height': height + 20 + 'px' });
-    $('.pixivPreview').css({ 'left': divX + 'px', 'top': divY + 'px' });
-    $('.pixivPreview').children('iframe').css('display', '');
-    $('.pixivPreview').children('img').remove();
-}*/
 var callbackScript = document.createElement('script');
 callbackScript.innerHTML = "function iframeLoaded(height,width){$('.pixivPreview').children('iframe').css({'width':width+20+'px','height':height+20+'px'});$('.pixivPreview').children('iframe').css('display','');$('.pixivPreview').children('img').remove()}";
 document.body.appendChild(callbackScript);
@@ -152,7 +142,7 @@ function pixivPreviewer() {
             // 图片索引
             var dataIndex = $(this).attr('data-index');
             // 图片节点
-            var imgNode = picNode[dataIndex];
+            //var imgNode = picNode[dataIndex];
             // 鼠标位置
             mousePos = { x: e.pageX, y: e.pageY };
             // 预览 Div
@@ -351,7 +341,7 @@ function pixivPreviewer() {
             if (imgData[dataIndex].illustType == 2) {
                 $(previewDiv).children().remove();
                 previewDiv.innerHTML = '<iframe width="600px" height="50%" src="https://www.pixiv.net/member_illust.php?mode=ugoira_view&illust_id=' +
-                    $(picNode[dataIndex]).attr('data-id') + '#animePreview"/>';
+                    $(picHref[dataIndex]).attr('data-id') + '#animePreview"/>';
                 $(previewDiv).children('iframe').css('display', 'none');
                 $(previewDiv).children('iframe').attr('data-index', dataIndex);
                 var loadingImg = new Image();
@@ -363,12 +353,12 @@ function pixivPreviewer() {
             // 多图， pageCount 不为1
             else if (imgData[dataIndex].pageCount != 1) {
                 xmlHttp.open('GET', 'https://www.pixiv.net/member_illust.php?mode=manga&illust_id=' +
-                             $(picNode[dataIndex]).attr('data-id'), true);
+                             $(picHref[dataIndex]).attr('data-id'), true);
             }
             // 单图
             else {
                 xmlHttp.open('GET', 'https://www.pixiv.net/member_illust.php?mode=medium&illust_id=' +
-                             $(picNode[dataIndex]).attr('data-id'), true);
+                             $(picHref[dataIndex]).attr('data-id'), true);
             }
             xmlHttp.send(null);
         });
@@ -493,15 +483,15 @@ function pixivPreviewer() {
                     if (picHref[i].lastChild.src.indexOf('unchecked') != -1) continue;
                     if (imgData[i].illustType == 2) {
                         linkList.push('https://www.pixiv.net/member_illust.php?mode=medium&illust_id=' +
-                                      $(picNode[i]).attr('data-id'));
+                                      $(picHref[i]).attr('data-id'));
                     }
                     else if (imgData[i].pageCount != 1) {
                         linkList.push('https://www.pixiv.net/member_illust.php?mode=manga&illust_id=' +
-                                      $(picNode[i]).attr('data-id'));
+                                      $(picHref[i]).attr('data-id'));
                     }
                     else {
                         linkList.push('https://www.pixiv.net/member_illust.php?mode=medium&illust_id=' +
-                                      $(picNode[i]).attr('data-id'));
+                                      $(picHref[i]).attr('data-id'));
                     }
                 }
                 $('#per')[0].innerText = '1/' + linkList.length;
@@ -629,7 +619,7 @@ function pixiv_sk(callback) {
     var getWorks = function (onloadCallback) {
         // 更新 URL
         var url = mCurrentUrl;
-        if (mCurrentPage === 1) {
+        if (mCurrentPage === 1 && mCurrentUrl.indexOf('p=1') == -1) {
             url += ('&p=' + mCurrentPage);
         } else {
             url = mCurrentUrl.replace(/p=\d+/, 'p=' + mCurrentPage);
@@ -707,18 +697,27 @@ function pixiv_sk(callback) {
             + '<img src="' + LOADING_IMG + '" /></div>'
         );
 
-        if (mCurrentPage === 1) {
-            $('.pager-container').empty().append(
-                '<a href="' + mCurrentUrl + '" style="margin-right:15px;">&lt;&lt;</a>'
-                + '<a href="' + mCurrentUrl + '&p=' + (mCurrentPage + GETTING_PAGE_COUNT) + '">&gt;</a>'
-            );
-        }
-        else {
-            $('.pager-container').empty().append(
-                '<a href="' + mCurrentUrl.replace(/&p=\d+/, '') + '" style="margin-right:15px;">&lt;&lt;</a>'
-                + '<a href="' + mCurrentUrl.replace(/p=\d+/, 'p=' + (mCurrentPage - GETTING_PAGE_COUNT)) + '" style="margin-right:10px;">&lt;</a>'
-                + '<a href="' + mCurrentUrl.replace(/p=\d+/, 'p=' + (mCurrentPage + GETTING_PAGE_COUNT)) + '" style="margin-right:10px;">&gt;</a>'
-            );
+        if(GETTING_PAGE_COUNT != 1) {
+            if (mCurrentPage === 1) {
+                if(mCurrentUrl.indexOf('p=1') == -1) {
+                    $('.pager-container').empty().append(
+                        '<a href="' + mCurrentUrl + '" style="margin-right:15px;">&lt;&lt;</a>'
+                        + '<a href="' + mCurrentUrl + '&p=' + (mCurrentPage + GETTING_PAGE_COUNT) + '">&gt;</a>'
+                    );
+                } else {
+                    $('.pager-container').empty().append(
+                        '<a href="' + mCurrentUrl + '" style="margin-right:15px;">&lt;&lt;</a>'
+                        + '<a href="' + mCurrentUrl.replace(/p=\d+/, 'p=' + (mCurrentPage + GETTING_PAGE_COUNT)) + '" style="margin-right:10px;">&gt;</a>'
+                    );
+                }
+            }
+            else {
+                $('.pager-container').empty().append(
+                    '<a href="' + mCurrentUrl.replace(/&p=\d+/, '') + '" style="margin-right:15px;">&lt;&lt;</a>'
+                    + '<a href="' + mCurrentUrl.replace(/p=\d+/, 'p=' + (mCurrentPage - GETTING_PAGE_COUNT)) + '" style="margin-right:10px;">&lt;</a>'
+                    + '<a href="' + mCurrentUrl.replace(/p=\d+/, 'p=' + (mCurrentPage + GETTING_PAGE_COUNT)) + '" style="margin-right:10px;">&gt;</a>'
+                );
+            }
         }
 
         var onloadCallback = function (req) {
@@ -792,12 +791,12 @@ function pixiv_sk(callback) {
                 a.appendChild(animeDiv);
             }
             // 图片 <img> 标签
-            $($(a).children('img')[0]).attr('data-src', mWorks[i].url);
-            $($(a).children('img')[0]).attr('src', mWorks[i].url);
+            $(a).css('background-image', 'url(' + mWorks[i].url + ')');
+            $(a).css('background-size', 'cover');
             if (parseInt(mWorks[i].width) > parseInt(mWorks[i].height)) {
-                $($(a).children('img')[0]).attr({ 'width': '198px', 'height': '' });
+                $(a).css({ 'width': '198px', 'height': 198.0 / mWorks[i].width * mWorks[i].height + 'px' });
             } else {
-                $($(a).children('img')[0]).attr({ 'width': '', 'height': '198px' });
+                $(a).css({ 'height': '198px', 'width':198.0 / mWorks[i].height * mWorks[i].width +  'px' });
             }
             // 喜欢按钮 <div> 标签
             $($(a).parent().children('div').children('div')[0]).attr('data-id', mWorks[i].illustId);
@@ -841,8 +840,6 @@ function pixiv_sk(callback) {
                 $('#js-react-search-mid').parent()[0].insertBefore(($('#js-react-search-mid').parent().children('.column-order-menu')[0].cloneNode(true)),$('#js-react-search-mid')[0]);
             } catch(e) {}
         }
-        //try { $('.column-order-menu')[0].innerHTML = $('.column-order-menu')[1].innerHTML; }
-        //catch (e) { }
         $('#js-react-search-mid').children('div').show();
         if (callback) {
             callback();
@@ -1080,16 +1077,19 @@ function guideStep(step) {
  * ---------------------------------------- 以下为 主函数 部分 ----------------------------------------
  */
 $(document).ready(function (){
-    if (location.href.indexOf('member_illust.php?mode') != -1) {
+    // 作品详情页不操作，由animePreview()处理
+    if(location.href.indexOf('member_illust.php?mode') != -1) {
         return;
     }
+
     $('.popular-introduction').remove();
     $('.ads_area_no_margin').remove();
     $('.multi-ads-area').remove();
     $('.ad-footer').remove();
     $('._premium-lead-tag-search-bar').remove();
 
-    if ($('#js-mount-point-search-result-list').length === 0) {
+    // 只在搜索页检测旧版P站
+    if (location.href.indexOf('search.php') != -1 && $('#js-mount-point-search-result-list').length === 0) {
         if (!getCookie('pixivPreviewerSetting') || getCookie('pixivPreviewerSetting') == 'null') {
             var settings = {
                 'enablePreview': ENABLE_PREVIEW.toString(),
@@ -1100,6 +1100,7 @@ $(document).ready(function (){
             };
             setCookie('pixivPreviewerSetting', JSON.stringify(settings));
 
+            // 显示旧版P站提示
             if ($('#pp-guide').length === 0) {
                 var guide = document.createElement('div');
                 guide.id = 'pp-guide';
@@ -1122,9 +1123,7 @@ $(document).ready(function (){
                 }
             }, 1000);
         }
-        if(location.href.indexOf('search.php') == -1){
-            addSettingButton();
-        }
+        // 使用旧版的脚本
         var settings = eval('[' + getCookie('pixivPreviewerSetting') + ']')[0];
         var previewEnabled = settings.enablePreview == 'true' ? true : false;
         if(!previewEnabled){
@@ -1209,6 +1208,16 @@ $(document).ready(function (){
     }
     // 预览，下载
     var itv = setInterval(function () {
+        // 作品页使用旧版脚本实现预览
+        if(location.href.indexOf('.php?id=') != -1) {
+            if(ENABLE_PREVIEW) {
+                var oldVersion = 'https://www.ocrosoft.com/PixivPreviewer113.js';
+                var ovScript = document.createElement('script');
+                ovScript.src = oldVersion;
+                document.body.appendChild(ovScript);
+            }
+            clearInterval(itv);
+        }
         try {
             getImageElements();
             // 排序
