@@ -1,28 +1,32 @@
 // ==UserScript==
 // @name         Pixiv Previewer
 // @namespace
-// @version      1.44
-// @description  显示大图预览，按热门度排序(pixiv_sk)，批量下载。View Preview, Sort by favorite numbers, Bulk download.(仅搜索排行页生效, Only available in search and rank page)
+// @version      1.66
+// @description  显示大图预览，按热门度排序(pixiv_sk)。Show Preview, Sort by favorite numbers(pixiv_sk).
 // @author       Ocrosoft
 // @match        https://www.pixiv.net/search.php*
+// @match        https://www.pixiv.net/member_illust.php?id=*
 // @match        https://www.pixiv.net/member_illust.php?mode=*
 // @match        https://www.pixiv.net/ranking.php*
-// @match        https://www.pixiv.net/member.php?id=*
-// @match        https://www.pixiv.net/member_illust.php?id=*
+// @match        https://www.pixiv.net/bookmark_new_illust.php*
+// @match        https://www.pixiv.net/discovery*
+// @match        https://www.pixiv.net
+// @match        https://www.pixiv.net/new_illust.php*
 // @grant        none
-
 // @namespace    https://github.com/Ocrosoft/PixivPreviewer
 // ==/UserScript==
 
-function log(text) {
-    console.log(text);
-}
+//function $(){}
+
 /**
  * ---------------------------------------- 以下为 设置 部分 ----------------------------------------
+ * -------------------------------------------- Settings --------------------------------------------
  */
-// 注意: 设置部分以 Cookie 为准，此处表示没有 Cookie 时的默认设置
+// 注意: 修改设置请使用设置页面，此处修改无效
 // 是否开启预览功能
 var ENABLE_PREVIEW = true;
+// 预览的图片质量，0：普通；1：原图
+var PREVIEW_QUALITY = 0;
 // 是否开启排序功能
 var ENABLE_SORT = true;
 // 每次加载的页数
@@ -31,11 +35,15 @@ var GETTING_PAGE_COUNT = 3;
 var FAV_FILTER = 3;
 // true，使用新标签页打开图片；false，保持默认
 var IS_LINK_BLANK = true;
+// 语言，根据页面自动确定，其他不支持的语言默认使用简体中文，可以修改成1使用English
+// 0：简体中文
+// 1：English
+var lang = 0; // zh_CN
 /**
  * ---------------------------------------- 以下为 预览功能 部分 ----------------------------------------
  */
 /**
-* 节点结构
+* 搜索页、发现页节点结构
 * section, [dataDiv]
 * -div, [picList]
 * --div
@@ -43,21 +51,60 @@ var IS_LINK_BLANK = true;
 * ----div, [picDiv]
 * -----a, [picHref]
 * -----div(菜单)
+* ==================
+* 关注页节点结构
+* div, [dataDiv], [infoDiv]
+* -div, [picList]
+* --div,
+* ---figure
+* ----div, [picDiv]
+* -----a, [picHref]
+* -----div(菜单)
+* ==================
+* 作品页、主页节点结构
+* div, [dataDiv]
+* -ul, [picList]
+* --li
+* ---a, [picHref]
+* ----div, [picDiv]
+* -----img
+* -----div(菜单)
+* 排行榜页
+* div, [dataDiv]
+* -div, [picList]
+* --section
+* ---div(这是排名)
+* ---div
+* ----a, [picHref]
+* -----div, [picDiv]
+* ------img
+* ------div(菜单)
 */
-var dataDiv, picList, picDiv = [], picHref = []; // 相关元素，含义见上
+var SearchPage = 0, FollowPage = 1, DiscoveryPage = 2, MemberPage = 3, HomePage = 4, RankingPage = 5, NewIllustPage = 6; // 页面Id
+var CurrentPage = SearchPage; // 该页面属于什么页面
+var dataDivSelector = ['#js-react-search-mid', '#js-mount-point-latest-following', '#js-mount-point-discovery', '...', '...', '...', '...'];
+var infoDivSelector = ['#js-mount-point-search-result-list', '#js-mount-point-latest-following', '...', '...', '...', '...', '...'];
+
+var dataDiv, infoDiv, picList, picDiv = [], picHref = []; // 相关元素，含义见上
 var dataStr; // 更新后图片信息使用 json 保存在了 dataDiv 的 data-items 属性中
 var imgData; // 保存解析后的 json
 var mousePos; // 鼠标位置
 var SORT_END = false; // 是否排序完成
+var show_origin = false; // 默认预览使用原图
+var i;
 // 获取相关的元素
 function getImageElements() {
-    dataDiv = $('#js-react-search-mid');
-    infoDiv = $('#js-mount-point-search-result-list')
+    if (infoDivSelector[CurrentPage] == '...') {
+        return;
+    }
+    dataDiv = $(dataDivSelector[CurrentPage]);
+    infoDiv = $(infoDivSelector[CurrentPage]);
     dataStr = infoDiv.attr('data-items');
     imgData = eval(dataStr);
     picList = dataDiv.children()[0];
     var pics = $(picList).children();
-    picDiv = [], picHref = [];
+    picDiv = [];
+    picHref = [];
     for (var i = 0; i < pics.length; i++) {
         if(pics[i].className != pics[0].className){
             pics[i].remove();
@@ -76,7 +123,7 @@ function getImageElements() {
     // 动图下载
     if (location.href.indexOf('medium') != -1 && $('._ugoku-illust-player-container').length > 0) {
         var script = document.createElement('script');
-        script.src = 'https://greasyfork.org/scripts/30681-pixiv%E5%8A%A8%E5%9B%BE%E4%B8%8B%E8%BD%BD/code/Pixiv%E5%8A%A8%E5%9B%BE%E4%B8%8B%E8%BD%BD.user.js';
+        script.src = 'https://greasyfork.org/scripts/30681/code/Pixiv.user.js';
         document.body.appendChild(script);
     }
     // 普通查看转换为全屏查看
@@ -86,32 +133,71 @@ function getImageElements() {
     }
     // 全图预览调节并返回 canvas 大小
     if (location.href.indexOf('ugoira_view') != -1 && location.href.indexOf('animePreview') != -1) {
-        $(document).ready(function(){
-            var height = parseInt($('canvas').css('height').split('px'));
-            var width = parseInt($('canvas').css('width').split('px'));
-            var newHeight = window.parent.document.documentElement.clientHeight / 2;
-            var newWidth = newHeight / height * width;
-            $('canvas').css({ 'height': newHeight + 'px', 'width': newWidth + 'px' });
-            var div = document.createElement('div');
-            $(div).addClass('embed');
-            div.innerHTML = '<dl><form class="_comment-form" style="width:100%;text-align:center;"><input id="dl_full" type="button" value="全屏版" class="submit-button" style="width:45%; padding:0px;margin-left:5px;"></form></dl>';
-            $('canvas').parent()[0].appendChild(div);
-            window.parent.iframeLoaded(newHeight + 25, newWidth + 25);
-            var reg = new RegExp('src.*zip');
-            var tmp = $('html')[0].innerHTML;
-            var full = reg.exec(tmp)[0];
-            full = full.split(':"')[1];
-            $('#dl_full').click(function () {
-                window.open(full);
-            });
-        });
+        var itv = setInterval(function(){
+            if ($('canvas').length > 0) {
+                clearInterval(itv);
+                var e, mouseX, mouseY, screenWidth, screenHeight, height, width, newHeight, newWidth, scale;
+                scale = 1.0;
+                mouseY = screenHeight = location.href.split('animePreview')[1];
+                mouseX = mouseY.split(',')[0];
+                mouseY = mouseY.split(',')[1];
+                screenWidth = screenHeight.split(',')[2];
+                screenHeight = screenHeight.split(',')[3];
+                height = parseInt($('canvas').css('height').split('px'));
+                width = parseInt($('canvas').css('width').split('px'));
+
+                if (height > width) {
+                    newHeight = screenHeight;
+                    newWidth = newHeight / height * width;
+                    if (mouseX > screenWidth / 2) {
+                        while (newWidth * scale > mouseX - 5) {
+                            scale -= 0.01;
+                        }
+                    } else {
+                        while (newWidth * scale > screenWidth - mouseX - 5) {
+                            scale -= 0.01;
+                        }
+                    }
+                    newHeight *= scale;
+                    newWidth *= scale;
+                } else {
+                    if (mouseX > screenWidth / 2) {
+                        newWidth = mouseX - 5;
+                    } else {
+                        newWidth = screenWidth - mouseX - 5;
+                    }
+                    newHeight = newWidth / width * height;
+                    while (newHeight * scale > screenHeight) {
+                        scale -= 0.01;
+                    }
+                    newHeight *= scale;
+                    newWidth *= scale;
+                }
+                newHeight -= 50;
+                newWidth -= 25;
+
+                $('canvas').css({ 'height': newHeight + 'px', 'width': newWidth + 'px' });
+                var div = document.createElement('div');
+                $(div).addClass('embed');
+                div.innerHTML = '<dl><form class="_comment-form" style="width:100%;text-align:center;"><input id="dl_full" type="button" value="全屏版" class="submit-button" style="width:45%; padding:0px;margin-left:5px;"></form></dl>';
+                $('canvas').parent()[0].appendChild(div);
+                window.parent.iframeLoaded(newHeight + 25, newWidth + 25);
+                var reg = new RegExp('src.*zip');
+                var tmp = $('html')[0].innerHTML;
+                var full = reg.exec(tmp)[0];
+                full = full.split(':"')[1];
+                $('#dl_full').click(function () {
+                    window.open(full);
+                });
+            }
+        }, 500);
         return;
     }
 })();
 // iframe 加载完成时调用（动图预览）
 // arg: canvas 元素高，canvas 元素宽
 var callbackScript = document.createElement('script');
-callbackScript.innerHTML = "function iframeLoaded(height,width){$('.pixivPreview').children('iframe').css({'width':width+20+'px','height':height+20+'px'});$('.pixivPreview').children('iframe').css('display','');$('.pixivPreview').children('img').remove()}";
+callbackScript.innerHTML = "function iframeLoaded(height,width){$('.pixivPreview').children('iframe').attr({'width':width,'height':height});$('.pixivPreview').children('iframe').css('display','');$('.pixivPreview').children('img').remove();}";
 document.body.appendChild(callbackScript);
 // 测试图片是否有效
 function validateImage(url) {
@@ -124,6 +210,12 @@ function validateImage(url) {
     if (src.indexOf('.png') == -1) return true;
     else return false;
 }
+function preLoad(urls) {
+    for (i = 0; i < urls.length; i++) {
+        var image = new Image();
+        image.src = urls[i];
+    }
+}
 function pixivPreviewer() {
     // 开启预览功能
     function activePreview() {
@@ -133,16 +225,21 @@ function pixivPreviewer() {
             if (e.ctrlKey) {
                 return;
             }
-            // 从预览图移动到图片上，不应再次显示
-            try {
-                if ($(e.relatedTarget.parentNode).hasClass('pixivPreview')) {
-                    return;
-                }
-            } catch (e) { }
             // 图片索引
             var dataIndex = $(this).attr('data-index');
-            // 图片节点
-            //var imgNode = picNode[dataIndex];
+            // 从预览图移动到图片上，不应再次显示
+            var tar = $(e.relatedTarget);
+            var fFromPreviewElement = false;
+            for (var i = 0; i < 3; i++) {
+                if (tar.hasClass('pixivPreview') && tar.attr('data-index') == dataIndex) {
+                    fFromPreviewElement = true;
+                    break;
+                }
+                tar = tar.parent();
+            }
+            if (fFromPreviewElement) {
+                return;
+            }
             // 鼠标位置
             mousePos = { x: e.pageX, y: e.pageY };
             // 预览 Div
@@ -161,7 +258,7 @@ function pixivPreviewer() {
             previewDiv.appendChild(loadingImg);
             // 要显示的预览图节点
             var loadImg = new Image();
-            $(loadImg).attr('data-index', dataIndex);
+            $(loadImg).attr('data-index', dataIndex).css({'height':'0px', 'width':'0px'});
             previewDiv.appendChild(loadImg);
             // 表示显示的是原图的图标
             var originIcon = new Image();
@@ -174,6 +271,10 @@ function pixivPreviewer() {
                 window.open($(previewDiv).children('img')[1].src);
             });
             $(previewDiv).css({ 'left': mousePos.x + 'px', 'top': mousePos.y + 'px' });
+            if ($(picDiv[dataIndex]).find('._work').length > 0){
+                $($(picDiv[dataIndex]).find('._work')[0]).addClass('prev');
+            }
+            else $(picDiv[dataIndex]).addClass('prev');
 
             // 显示预览图
             // args: 图片地址数组，下标，原图地址数组
@@ -188,11 +289,8 @@ function pixivPreviewer() {
                     loadImg.addEventListener('click', function (ev) {
                         // 按住 Ctrl 来回切换原图
                         if (ev.ctrlKey) {
-                            if (loadImg.src.indexOf('origin') == -1) {
-                                viewImages(allImgsOrigin, parseInt($($('.pixivPreview').children('img')[1]).attr('img-index')), allImgs);
-                            } else {
-                                viewImages(allImgs, parseInt($($('.pixivPreview').children('img')[1]).attr('img-index')), allImgsOrigin);
-                            }
+                            show_origin = !show_origin;
+                            viewImages(imgs, index, imgsOrigin);
                         }
                         // 按住 Shift 点击图片新标签页打开原图
                         else if (ev.shiftKey) {
@@ -207,10 +305,9 @@ function pixivPreviewer() {
                         var newIndex = parseInt($($('.pixivPreview').children('img')[1]).attr('img-index')) + 1;
                         if (newIndex == allImgs.length) newIndex = 0;
                         $('.pixivPreview').children('div').children('div').children('span')[0].innerHTML = (newIndex + 1) + '/' + allImgs.length;
-                        if (loadImg.src.indexOf('origin') == -1) {
-                            viewImages(allImgs, newIndex, allImgsOrigin);
-                        } else {
-                            viewImages(allImgsOrigin, newIndex, allImgs);
+                        viewImages(allImgs, newIndex, allImgsOrigin);
+                        if (newIndex + 3 <= allImgs.length) {
+                            preLoad((show_origin ? allImgsOrigin : allImgs).slice(newIndex + 3, newIndex + 4));
                         }
                     });
                 }
@@ -220,46 +317,33 @@ function pixivPreviewer() {
                     var iconDiv = document.createElement('div');
                     iconDiv.innerHTML = '<div class="page-count"><div class="icon"></div><span>1/' + imgs.length + '</span></div>';
                     $(iconDiv).addClass('_work');
-                    $(iconDiv).css({ 'position': 'absolute', 'top': '0px', 'display': 'none' });
+                    $(iconDiv).css({ 'position': 'absolute', 'top': '0px', 'display': 'none', 'right': '0px'});
                     $(iconDiv).attr('data-index', dataIndex);
                     $(iconDiv.childNodes).attr('data-index', dataIndex);
                     previewDiv.appendChild(iconDiv);
                 }
 
                 // 预加载
-                loadImg.src = '';
-                $(loadImg).css({ 'width': '', 'height': '', 'display': 'none' });
+                //if (loadImg.src == '') {
+                    loadImg.src = '';
+                    $(loadImg).css({ 'display': 'none', 'height':'', 'width':'' });
+                //}
                 $(loadingImg).css('display', '');
                 $(originIcon).css('display', 'none');
                 $(iconDiv).css({ 'display': 'none' });
                 // 图片预加载完成
                 loadImg.addEventListener('load', function () {
-                    if (loadImg.src.indexOf('githubusercontent') != -1) return;
+                    if (loadImg.src == '') return;
                     // 调整图片大小
-                    var width = loadImg.width, screenWidth = document.documentElement.clientWidth;
-                    var height = loadImg.height, screenHeight = document.documentElement.clientHeight;
+                    var screenWidth = document.documentElement.clientWidth;
+                    var screenHeight = document.documentElement.clientHeight;
                     var viewHeight, viewWidth;
-                    // 长图
-                    if (height > width) {
-                        viewHeight = screenHeight / 2;
-                        viewWidth = viewHeight / height * width;
-                        var scale = 1.0;
-                        while (viewWidth * scale > screenWidth / 2) {
-                            scale -= 0.01;
-                        }
-                    }
-                    // 宽图
-                    else {
-                        viewWidth = screenWidth / 2;
-                        viewHeight = viewWidth / width * height;
-                        var scale = 1.0;
-                        while (viewHeight * scale > screenHeight / 2) {
-                            scale -= 0.01;
-                        }
-                    }
-                    $(loadImg).css({ 'height': viewHeight * scale + 'px', 'width': viewWidth * scale + 'px' });
-                    $(previewDiv).css({ 'height': viewHeight * scale + 'px', 'width': viewWidth * scale + 'px' });
-                    $(loadingImg).css({ 'left': viewWidth * scale / 2 - 24 + 'px', 'top': viewHeight * scale / 2 - 24 + 'px' });
+                    // 调整图片位置和大小
+                    var ret = adjustDivPos(loadImg, previewDiv, screenWidth, screenHeight);
+                    viewWidth = ret[0];
+                    viewHeight = ret[1];
+
+                    $(loadingImg).css({ 'left': viewWidth / 2 - 24 + 'px', 'top': viewHeight / 2 - 24 + 'px' });
                     $(loadImg).css('display', '');
                     $(loadingImg).css('display', 'none');
                     $(iconDiv).css({ 'display': '' });
@@ -268,8 +352,6 @@ function pixivPreviewer() {
                     } else {
                         $(originIcon).css({ 'display': 'none' });
                     }
-                    // 调整图片位置
-                    adjustDivPos(loadImg, previewDiv, screenWidth, screenHeight);
                     // 第一次显示预览时将图片列表添加到末尾
                     if ($(previewDiv).children('script').length == 0) {
                         var s = document.createElement('script');
@@ -283,7 +365,7 @@ function pixivPreviewer() {
                         // 输出原图URL
                         tmp += "var allImgsOrigin=['";
                         tmp += imgsOrigin[0];
-                        for (var i = 1; i < imgsOrigin.length; ++i) {
+                        for (i = 1; i < imgsOrigin.length; ++i) {
                             tmp += "','" + imgsOrigin[i];
                         }
                         tmp += "'];";
@@ -293,7 +375,7 @@ function pixivPreviewer() {
                     }
                 });
                 $(loadImg).attr('img-index', index);
-                loadImg.src = imgs[index];
+                loadImg.src = show_origin ? imgsOrigin[index] : imgs[index];
             }
             // 进行 http 请求，获取预览图链接
             var xmlHttp = new XMLHttpRequest();
@@ -331,6 +413,11 @@ function pixivPreviewer() {
                             if (!is_jpg) imgsOrigin[i] = imgsOrigin[i].replace('.jpg', '.png');
                         }
                         viewImages(imgs, 0, imgsOrigin);
+                        // 显示第0张，预加载1,2,3张
+                        var urls = show_origin ? imgsOrigin : imgs;
+                        if (urls.length > 4) urls = urls.slice(1, 4);
+                        else urls = urls.slice(1);
+                        preLoad(urls);
                         return;
                     } catch (e) {
                         // empty
@@ -340,11 +427,13 @@ function pixivPreviewer() {
             // 动图，illustType 值为2
             if (imgData[dataIndex].illustType == 2) {
                 $(previewDiv).children().remove();
+                var screenWidth = document.documentElement.clientWidth;
+                var screenHeight = document.documentElement.clientHeight;
                 previewDiv.innerHTML = '<iframe width="600px" height="50%" src="https://www.pixiv.net/member_illust.php?mode=ugoira_view&illust_id=' +
-                    $(picHref[dataIndex]).attr('data-id') + '#animePreview"/>';
+                    $(picHref[dataIndex]).attr('data-id') + '#animePreview' + mousePos.x + ',' + mousePos.y + ',' + screenWidth + ',' + screenHeight + '"/>';
                 $(previewDiv).children('iframe').css('display', 'none');
                 $(previewDiv).children('iframe').attr('data-index', dataIndex);
-                var loadingImg = new Image();
+                loadingImg = new Image();
                 loadingImg.src = 'https://raw.githubusercontent.com/shikato/pixiv_sk/master/loading.gif';
                 $(loadingImg).css('position', 'absolute');
                 previewDiv.appendChild(loadingImg);
@@ -364,20 +453,38 @@ function pixivPreviewer() {
         });
         // 鼠标移出图片
         $(picHref).mouseout(function (e) {
+            var tar = $(e.relatedTarget);
+            var fIsPreviewElement = false;
             // 鼠标移动到预览图上
-            if ($(e.relatedTarget).attr('data-index') == $(this).attr('data-index')) {
+            for (var i = 0; i < 3; i++) { // 最多上溯3次
+                if (tar.hasClass('pixivPreview')/* || tar.hasClass('prev')*/) {
+                    fIsPreviewElement = true;
+                    break;
+                }
+                tar = tar.parent();
+            }
+            if (fIsPreviewElement) {
                 $('.pixivPreview').mouseleave(function (ev) {
-                    if ($(ev.relatedTarget).attr('data-index') == $(this).attr('data-index')) {
-                        // empty
+                    var tar = $(ev.relatedTarget);
+                    if (ev.relatedTarget == null) return;
+                    var fIsHasClassPrev = false;
+                    for (var i = 0; i < 3; i++) { // 最多上溯3次
+                        if (tar.hasClass('prev') || tar.hasClass('pixivPreview')) {
+                            fIsHasClassPrev = true;
+                            break;
+                        }
+                        tar = tar.parent();
                     }
-                    else {
+                    if (!fIsHasClassPrev) {
                         $('.pixivPreview').remove();
+                        $('.prev').removeClass('prev');
                     }
                 });
             }
             // 非预览图上
             else {
                 $('.pixivPreview').remove();
+                $('.prev').removeClass('prev');
             }
         });
         // 鼠标移动，调整预览图位置
@@ -388,220 +495,88 @@ function pixivPreviewer() {
             var screenWidth = document.documentElement.clientWidth;
             var screenHeight = document.documentElement.clientHeight;
             mousePos.x = e.pageX; mousePos.y = e.pageY;
-            adjustDivPos($('.pixivPreview').children('img')[1], $('.pixivPreview')[0], screenWidth, screenHeight);
+            if ($('.pixivPreview').find('iframe').length > 0) {
+                adjustDivPos($('.pixivPreview').children('iframe')[0], $('.pixivPreview')[0], screenWidth, screenHeight);
+            }
+            else {
+                adjustDivPos($('.pixivPreview').children('img')[1], $('.pixivPreview')[0], screenWidth, screenHeight);
+            }
         });
         // 添加执行标记
-        $(picDiv).addClass('prev');
+        //$(picDiv).addClass('prev');
     }
     // 调整预览 Div 的位置
     // arg: Div 中 <img> 标签，预览 Div，屏幕可视区宽，屏幕可视区高
     function adjustDivPos(loadImg, previewDiv, screenWidth, screenHeight) {
-        // 调整图片位置
+        var st = document.body.scrollTop + document.documentElement.scrollTop;
         var divX = mousePos.x + 5, divY = mousePos.y + 5;
-        if (mousePos.x > screenWidth / 2) {
-            try {
-                divX -= $(loadImg).css('width').split('px')[0];
-            }
-            catch (e) {
-                divX -= 24;
-            }
-            divX -= 10;
-        }
-        if ((mousePos.y - document.body.scrollTop) >
-            screenHeight / 2) {
-            try {
-                divY -= $(loadImg).css('height').split('px')[0];
-            }
-            catch (e) {
-                divY -= 24;
-            }
-            divY -= 10;
-        }
-        $(previewDiv).css({ 'left': divX + 'px', 'top': divY + 'px' });
-    }
-    // 添加多选框，加在 downloadButton() 中容易与其他脚本冲突
-    function downloadMultiSelector() {
-        // 表示是否选中的图标
-        $(picHref).each(function () {
-            var checkIcon = new Image();
-            checkIcon.src = 'https://raw.githubusercontent.com/Ocrosoft/PixivPreviewer/master/unchecked.png';
-            $(checkIcon).css({ 'position': 'absolute', 'top': '0px', 'left': '0px', 'display': 'none' });
-            this.appendChild(checkIcon);
-        });
-    }
-    // 添加下载按钮
-    function downloadButton() {
-        // 其他页面不启用
-        if (location.href.indexOf('member_illust') != -1) return;
-        // 下载模式按钮
-        var downloadButton = document.createElement('li');
-        downloadButton.innerHTML = '<i class="_icon-12 _icon-up" style="transform: rotateX(180deg);border-radius: 100%;"></i>';
-        downloadButton.className = 'item';
-        $(downloadButton).css({ 'margin-bottom': '10px', 'opacity': '0.2' });
-        $('#back-to-top').parent()[0].insertBefore(downloadButton, $($('#back-to-top').parent()[0]).children()[0]);
-        // 点击开闭下载模式
-        $(downloadButton).click(function () {
-            if ($(downloadButton).css('opacity') == '0.2') {
-                $(downloadButton).css('opacity', '0.5');
-                $($(downloadButton).children()[0]).css({ 'background': 'green' });
-                // 开启下载模式
-                // 显示多选框
-                $(picHref).each(function () {
-                    $(this.lastChild).css('display', '');
-                });
-                for (var i = 0; i < picDiv.length; ++i) {
-                    // 覆盖在<a>上面的图
-                    var layer = new Image();
-                    layer.src = 'https://source.pixiv.net/www/images/common/transparent.gif';
-                    $(layer).attr('data-index', i);
-                    picDiv[i].appendChild(layer);
-                    $(layer).css({ 'height': $(layer).parent().css('height'), 'width': $(layer).parent().css('width'), 'position': 'absolute', 'z-index': '999999' });
-                    $(layer).click(function () {
-                        if (picHref[$(this).attr('data-index')].lastChild.src.indexOf('unchecked') != -1) {
-                            picHref[$(this).attr('data-index')].lastChild.src = 'https://raw.githubusercontent.com/Ocrosoft/PixivPreviewer/master/checked.png';
-                        } else {
-                            picHref[$(this).attr('data-index')].lastChild.src = 'https://raw.githubusercontent.com/Ocrosoft/PixivPreviewer/master/unchecked.png';
-                        }
-                    });
+        // 调整图片大小
+        var height, width, newHeight, newWidth, scale = 1.0;
+        height = loadImg.height;
+        width = loadImg.width;
+        // 长图
+        if (height > width) {
+            // 计算宽高
+            newHeight = screenHeight;
+            newWidth = newHeight / height * width;
+            if (mousePos.x > screenWidth / 2) {
+                while (newWidth * scale > mousePos.x - 5) {
+                    scale -= 0.01;
                 }
             } else {
-                $(downloadButton).css('opacity', '0.2');
-                $($(downloadButton).children()[0]).css({ 'background': '' });
-                // 添加覆盖提示层
-                var screenWidth = document.documentElement.clientWidth;
-                var screenHeight = document.documentElement.clientHeight;
-                $('#fb-root')[0].innerHTML = '<p style="text-align:center;color:white;font-size:50px;">处理中<br/><span id="per">1/1</span></p>';
-                $($('#fb-root').children()).css('margin-top', parseInt(screenHeight) / 2 - 40 + 'px');
-                $('#fb-root').css({
-                    'width': screenWidth + 'px', 'height': screenHeight + 'px', 'position': 'fixed',
-                    'z-index': 999999, 'background-color': 'rgba(0,0,0,0.8)',
-                    'left': '0px', 'top': '0px'
-                });
-                // 关闭下载模式
-                var imgOriginList = []; var linkList = []; var imgCount = 0;
-                for (var i = 0; i < picHref.length; ++i) {
-                    if (picHref[i].lastChild.src.indexOf('unchecked') != -1) continue;
-                    if (imgData[i].illustType == 2) {
-                        linkList.push('https://www.pixiv.net/member_illust.php?mode=medium&illust_id=' +
-                                      $(picHref[i]).attr('data-id'));
-                    }
-                    else if (imgData[i].pageCount != 1) {
-                        linkList.push('https://www.pixiv.net/member_illust.php?mode=manga&illust_id=' +
-                                      $(picHref[i]).attr('data-id'));
-                    }
-                    else {
-                        linkList.push('https://www.pixiv.net/member_illust.php?mode=medium&illust_id=' +
-                                      $(picHref[i]).attr('data-id'));
-                    }
-                }
-                $('#per')[0].innerText = '1/' + linkList.length;
-                var xmlHttp = new XMLHttpRequest();
-                xmlHttp.onreadystatechange = function () {
-                    if (xmlHttp.readyState == 4 && xmlHttp.status == 200) {
-                        var resText = xmlHttp.responseText;
-                        // 先尝试匹配动图，再尝试匹配单图，最后匹配多图
-                        // while (true) 用来跳出匹配，避免后面的 if 不执行
-                        while (true) {
-                            // 动图
-                            try {
-                                var src = RegExp(' <script>pixiv.context.illustId.*</script>').exec(resText)[0];
-                                var reg = new RegExp('http[^"]*', 'g');
-                                var normal = reg.exec(src)[0], full = reg.exec(src)[0];
-                                while (full.indexOf('\\') != -1) full = full.replace('\\', '');
-                                if (full) {
-                                    imgOriginList.push(full);
-                                    break;
-                                }
-                            } catch (e) {
-                                // empty
-                            }
-                            // 单图
-                            try {
-                                // 取得图片地址
-                                // 预览图
-                                var imgSource = RegExp('<div class="_layout-thumbnail ui-modal-trigger">[^>]*>').
-                                exec(resText)[0].split('<')[2].split('\"')[1];
-                                // 原图
-                                var imgOrigin = RegExp('<div class="_illust_modal.*class="original-image').
-                                exec(resText)[0].split('data-src="')[1].split('\"')[0];
-                                imgOriginList.push(imgOrigin);
-                                break;
-                            } catch (e) {
-                                // empty
-                            }
-                            // 多图
-                            try {
-                                var img, imgs = [];
-                                var reg = new RegExp('https://i.pximg.net/img-master[^\"]*', 'g');
-                                while ((img = reg.exec(resText.split('<section class=\"manga\">')[1].
-                                                       split('</section>')[0])) !== null) {
-                                    imgs.push(img[0]);
-                                }
-                                // 推出来的原图URL，暂时没有想到效率高的办法（imgs.length 次xmlHttpRequest）
-                                var imgsOrigin = [];
-                                var is_jpg = validateImage(xmlHttp.responseURL);
-                                for (var i = 0; i < imgs.length; ++i) {
-                                    imgsOrigin.push(imgs[i].replace('img-master', 'img-original'));
-                                    imgsOrigin[i] = imgsOrigin[i].replace('_master1200', '');
-                                    if (!is_jpg) imgsOrigin[i] = imgsOrigin[i].replace('.jpg', '.png');
-                                    imgOriginList.push(imgsOrigin[i]);
-                                }
-                                break;
-                            } catch (e) {
-                                // empty
-                            }
-                        }
-                        if (++imgCount == linkList.length) {
-                            // 隐藏多选框
-                            $(picHref).each(function () {
-                                this.lastChild.src = 'https://raw.githubusercontent.com/Ocrosoft/PixivPreviewer/master/unchecked.png';
-                                $(this.lastChild).css('display', 'none');
-                            });
-                            $(picDiv).each(function () {
-                                this.lastChild.remove();
-                            });
-                            var s = '';
-                            $(imgOriginList).each(function () {
-                                s += this + '\n';
-                            });
-                            prompt('复制到下载工具下载', s);
-                            $('#fb-root')[0].outerHTML = '<div id="fb-root"></div>';
-                        } else {
-                            $('#per')[0].innerText = (imgCount + 1) + '/' + linkList.length;
-                            xmlHttp.open('GET', linkList[imgCount], true);
-                            xmlHttp.send(null);
-                        }
-                    }
-                };
-                if (linkList.length != 0) {
-                    xmlHttp.open('GET', linkList[0], true);
-                    xmlHttp.send(null);
-                } else {
-                    // 隐藏多选框
-                    $(picHref).each(function () {
-                        $(this.lastChild).css('display', 'none');
-                    });
-                    $(picDiv).each(function () {
-                        this.lastChild.remove();
-                    });
-                    $('#fb-root')[0].outerHTML = '<div id="fb-root"></div>';
+                while (newWidth * scale > screenWidth - mousePos.x - 5) {
+                    scale -= 0.01;
                 }
             }
-        });
+            newHeight *= scale;
+            newWidth *= scale;
+            // 设置新的宽高
+            $(loadImg).css({'height':newHeight + 'px', 'width': newWidth + 'px'});
+        } else {
+            // 计算宽高
+            if (mousePos.x > screenWidth / 2) {
+                newWidth = mousePos.x - 5;
+            } else {
+                newWidth = screenWidth - mousePos.x - 5;
+            }
+            newHeight = newWidth / width * height;
+            while (newHeight * scale > screenHeight) {
+                scale -= 0.01;
+            }
+            newHeight *= scale;
+            newWidth *= scale;
+            // 设置新的宽高
+            $(loadImg).css({'height': newHeight + 'px', 'width': newWidth + 'px'});
+        }
+        // 调整DIV的位置
+        if (mousePos.x > screenWidth / 2) {
+            divX = mousePos.x - 5 - newWidth;
+            divY = st;
+        } else {
+            divX = mousePos.x + 5;
+            divY = st;
+        }
+        $(previewDiv).css({ 'left': divX + 'px', 'top': divY + 'px', 'width': newWidth, 'height': newHeight});
+        // 返回新的宽高
+        return [newWidth, newHeight];
     }
 
     getImageElements();
     // 开启预览
     activePreview();
-    // 添加多选框
-    downloadMultiSelector();
-    // 添加下载按钮
-    downloadButton();
 }
 /**
  * ---------------------------------------- 以下为 排序功能 部分 ----------------------------------------
  */
 function pixiv_sk(callback) {
+    // 仅搜索页启用
+    if (CurrentPage != SearchPage) {
+        if (callback) {
+            callback();
+        }
+        return;
+    }
+
     // 加载中图片
     var LOADING_IMG = 'https://raw.githubusercontent.com/shikato/pixiv_sk/master/loading.gif';
     // 不合理的设定
@@ -691,12 +666,13 @@ function pixiv_sk(callback) {
 
     if (GETTING_PAGE_COUNT > 1) {
         // 显示加载中图片
-        $('#js-react-search-mid').children('div').hide();
-        $('#js-react-search-mid').prepend(
+        $(dataDivSelector[CurrentPage]).children('div').hide();
+        $(dataDivSelector[CurrentPage]).prepend(
             '<div id="loading" style="width:50px;margin-left:auto;margin-right:auto;">'
             + '<img src="' + LOADING_IMG + '" /></div>'
         );
 
+        // 翻页
         if(GETTING_PAGE_COUNT != 1) {
             if (mCurrentPage === 1) {
                 if(mCurrentUrl.indexOf('p=1') == -1) {
@@ -721,7 +697,7 @@ function pixiv_sk(callback) {
         }
 
         var onloadCallback = function (req) {
-            mWorks.push($(req.responseText).find('#js-mount-point-search-result-list').attr('data-items'));
+            mWorks.push($(req.responseText).find(infoDivSelector[CurrentPage]).attr('data-items'));
 
             mCurrentPage++;
             mCurrentGettingPageCount++;
@@ -737,7 +713,7 @@ function pixiv_sk(callback) {
         getWorks(onloadCallback);
     }
     else {
-        mWorks.push($('#js-mount-point-search-result-list').attr('data-items'));
+        mWorks.push($(infoDivSelector[CurrentPage]).attr('data-items'));
         clearAndUpdateWorks(mWorks);
     }
 
@@ -752,18 +728,18 @@ function pixiv_sk(callback) {
         }
         mWorks = tmp;
         filterAndSort();
-        $('#js-mount-point-search-result-list').attr('data-items', JSON.stringify(mWorks));
+        $(infoDivSelector[CurrentPage]).attr('data-items', JSON.stringify(mWorks));
 
-        var divs = $($('#js-react-search-mid').children()[0]).children();
+        var divs = $($(dataDivSelector[CurrentPage]).children()[0]).children();
         var divHTML = divs[0].outerHTML;
         $('#js-react-search-mid').children('div').empty();
-        for (var i = 0; i < mWorks.length; i++) {
+        for (i = 0; i < mWorks.length; i++) {
             // 新建一个 DIV
             var div = document.createElement('div');
-            $('#js-react-search-mid').children('div').append(div);
+            $(dataDivSelector[CurrentPage]).children('div').append(div);
             div.outerHTML = divHTML;
             // 修改 outerHTML 后要重新获取对象
-            div = $('#js-react-search-mid').children()[0].lastChild;
+            div = $(dataDivSelector[CurrentPage]).children()[0].lastChild;
             // 图片的 <a> 标签
             var a = $(div).children('figure').children('div').children('a')[0];
             $(a).attr('href', $(a).attr('href').split('id=')[0] + 'id=' + mWorks[i].illustId);
@@ -796,7 +772,7 @@ function pixiv_sk(callback) {
             if (parseInt(mWorks[i].width) > parseInt(mWorks[i].height)) {
                 $(a).css({ 'width': '198px', 'height': 198.0 / mWorks[i].width * mWorks[i].height + 'px' });
             } else {
-                $(a).css({ 'height': '198px', 'width':198.0 / mWorks[i].height * mWorks[i].width +  'px' });
+                $(a).css({ 'height': '198px', 'width':198.0 / mWorks[i].height * mWorks[i].width + 'px' });
             }
             // 喜欢按钮 <div> 标签
             $($(a).parent().children('div').children('div')[0]).attr('data-id', mWorks[i].illustId);
@@ -835,12 +811,13 @@ function pixiv_sk(callback) {
         // 恢复显示
         SORT_END = true;
         // 翻页部分
-        if ($('#js-react-search-mid').parent().children('.column-order-menu')) {
+        if ($(dataDivSelector[CurrentPage]).parent().children('.column-order-menu')) {
             try{
-                $('#js-react-search-mid').parent()[0].insertBefore(($('#js-react-search-mid').parent().children('.column-order-menu')[0].cloneNode(true)),$('#js-react-search-mid')[0]);
+                $(dataDivSelector[CurrentPage]).parent()[0].insertBefore(($(dataDivSelector[CurrentPage]).parent().children('.column-order-menu')[0].cloneNode(true)),$(dataDivSelector[CurrentPage])[0]);
             } catch(e) {}
         }
-        $('#js-react-search-mid').children('div').show();
+        $(dataDivSelector[CurrentPage]).children('div').show();
+
         if (callback) {
             callback();
         }
@@ -861,24 +838,43 @@ function setCookie(name, value) {
 // arg: Cookie 名称
 function getCookie(name) {
     var arr, reg = new RegExp("(^| )" + name + "=([^;]*)(;|$)");
-    if (arr = document.cookie.match(reg))
+    if (arr = document.cookie.match(reg)) {
         return unescape(arr[2]);
-    else
+    }
+    else {
         return null;
+    }
+}
+// 读取设置
+function getSettings() {
+    var settings = getCookie('pixivPreviewerSetting');
+    if (!settings || settings == 'null') {
+        return null;
+    }
+    settings = eval('[' + settings + ']')[0];
+
+    if (!settings.previewQuality) {
+        alert('更新后如果发现预览模糊，请到设置中将“预览功能图片质量”选项修改为“原图”');
+        settings.previewQuality = '0';
+        setCookie('pixivPreviewerSetting', JSON.stringify(settings));
+    }
+
+    return settings;
 }
 /**
  * ---------------------------------------- 以下为 教程设置 部分 ----------------------------------------
  */
 // 显示设置
 function showSetting(settings) {
+    var guide;
+
     if (!settings || settings == 'null') {
-        settings = getCookie('pixivPreviewerSetting');
-        settings = eval('[' + settings + ']')[0];
+        settings = getSettings();
     }
     var screenWidth = document.documentElement.clientWidth;
     var screenHeight = document.documentElement.clientHeight;
     if ($('#pp-guide').length === 0) {
-        var guide = document.createElement('div');
+        guide = document.createElement('div');
         guide.id = 'pp-guide';
         document.body.appendChild(guide);
         $(guide).css({
@@ -887,12 +883,21 @@ function showSetting(settings) {
             'left': '0px', 'top': '0px'
         });
     }
-    var guide = $('#pp-guide')[0];
+    guide = $('#pp-guide')[0];
+
+    if ($('.home').children()[0].innerText == 'Home') {
+        lang = 1; // en_US
+    }
+    // 中文
     var settingHTML =
         '<p style="text-align:center;color:white;font-size:25px;">' +
+        '<span style="position:absolute; right:1%; top:1%; cursor: pointer;" id="pp-close">X</span>' +
         '<span>是否开启预览功能 </span>' +
         '<label><input id="inputEnablePreview" type="radio" name="enablePreview" value="true" checked="">开启&nbsp</label>' +
         '<label><input id="inputEnablePreview2" type="radio" name="enablePreview" value="false">关闭</label><br>' +
+        '<span>预览功能图片质量 </span>' +
+        '<label><input id="inputPreviewQuality" type="radio" name="previewQuality" value="0" checked="">普通&nbsp</label>' +
+        '<label><input id="inputPreviewQuality2" type="radio" name="previewQuality" value="1">原图</label><br>' +
         '<span>是否开启排序功能 </span>' +
         '<label><input id="inputEnableSort" type="radio" name="enableSort" value="true" checked="">开启&nbsp</label>' +
         '<label><input id="inputEnableSort2" type="radio" name="enableSort" value="false">关闭</label><br>' +
@@ -904,11 +909,37 @@ function showSetting(settings) {
         '<span>是否使用新标签页打开图片 </span>' +
         '<label><input id="inputHrefBlank" type="radio" name="hrefBlank" value="true" checked="">开启&nbsp</label>' +
         '<label><input id="inputHrefBlank2" type="radio" name="hrefBlank" value="false">关闭</label><br><br><br></p>';
+    // 英文
+    if (lang == 1) {
+        settingHTML =
+            '<p style="text-align:center;color:white;font-size:25px;">' +
+            '<span style="position:absolute; right:1%; top:1%; cursor: pointer;" id="pp-close">X</span>' +
+            '<span>Preview Works </span>' +
+            '<label><input id="inputEnablePreview" type="radio" name="enablePreview" value="true" checked="">On&nbsp</label>' +
+            '<label><input id="inputEnablePreview2" type="radio" name="enablePreview" value="false">Off</label><br>' +
+            '<span>Preview Quality </span>' +
+            '<label><input id="inputPreviewQuality" type="radio" name="previewQuality" value="0" checked="">Normal&nbsp</label>' +
+            '<label><input id="inputPreviewQuality2" type="radio" name="previewQuality" value="1">Origin</label><br>' +
+            '<span>Sort by favorite </span>' +
+            '<label><input id="inputEnableSort" type="radio" name="enableSort" value="true" checked="">On&nbsp</label>' +
+            '<label><input id="inputEnableSort2" type="radio" name="enableSort" value="false">Off</label><br>' +
+            '<br><span>Following settings take effect when "Sort" is On</span><br>' +
+            '<span>The number of pages loaded each time</span>' +
+            '<input type="text" style="height:28px;position:relative;top:-5px;left:5px;width:135px;text-align:center;" id="inputPageCount"><br>' +
+            '<span>Hide work which favorite number lower than</span>' +
+            '<input type="text" style="height:28px;position:relative;top:-5px;left:5px;width:135px;text-align:center;" id="inputFilter"><br>' +
+            '<span>Open work with a new browser tab </span>' +
+            '<label><input id="inputHrefBlank" type="radio" name="hrefBlank" value="true" checked="">On&nbsp</label>' +
+            '<label><input id="inputHrefBlank2" type="radio" name="hrefBlank" value="false">Off</label><br><br><br></p>';
+    }
+
     guide.innerHTML = settingHTML;
     guide = $('#pp-guide')[0];
     $(guide).children().css('margin-top', parseInt(screenHeight) / 5 + 'px');
     if (settings.enablePreview == 'true') $(guide).find('#inputEnablePreview').attr('checked', true);
     else $(guide).find('#inputEnablePreview2').attr('checked', true);
+    if (settings.previewQuality == '0') $(guide).find('#inputPreviewQuality').attr('checked', true);
+    else $(guide).find('#inputPreviewQuality2').attr('checked', true);
     if (settings.enableSort == 'true') $(guide).find('#inputEnableSort').attr('checked', true);
     else $(guide).find('#inputEnableSort2').attr('checked', true);
     $(guide).find('#inputPageCount').attr('value', settings.pageCount);
@@ -926,6 +957,7 @@ function showSetting(settings) {
     $(button).click(function () {
         settings = {
             'enablePreview': $("input[name='enablePreview']:checked").val(),
+            'previewQuality': $("input[name='previewQuality']:checked").val(),
             'enableSort': $("input[name='enableSort']:checked").val(),
             'pageCount': $('#inputPageCount').val(),
             'favFilter': $('#inputFilter').val(),
@@ -933,8 +965,12 @@ function showSetting(settings) {
         };
         setCookie('pixivPreviewerSetting', JSON.stringify(settings));
         $(guide).remove();
+        location.href = location.href;
     });
     button.innerText = '保存设置';
+    if (lang == 1) {
+        button.innerText = 'Save';
+    }
     // 重置按钮
     button = document.createElement('li');
     $(button).addClass('_order-item _clickable');
@@ -944,16 +980,35 @@ function showSetting(settings) {
     $(button).mouseover(function () { $(this).css({ 'background-color': 'red' }); });
     $(button).mouseout(function () { $(this).css({ 'background-color': $(this).attr('bgc') }); });
     $(button).click(function () {
-        if (confirm("这会删除所有设置，相当于重新安装脚本，确定吗？")) {
+        var comfirmText = "这会删除所有设置，相当于重新安装脚本，确定吗？";
+        if (lang == 1) {
+            comfirmText = 'Settings will be set to default, are you sure?'
+        }
+        if (confirm(comfirmText)) {
             setCookie('pixivPreviewerSetting', null);
+            location.href = location.href;
         }
         $(guide).remove();
     });
     button.innerText = '重置脚本';
+    if (lang == 1) {
+        button.innerText = 'Reset';
+    }
     guide.lastChild.appendChild(document.createElement('br'));
+    // 关闭按钮
+    $('#pp-close').bind('mouseover', function(){
+        $(this).css('color', 'rgb(18, 123, 255)');
+    }).bind('mouseout', function(){
+        $(this).css('color', '');
+    }).bind('click', function(){
+        $(guide).remove();
+    });
     // 刷新声明
     var span = document.createElement('span');
-    span.innerHTML = '<p>*新的设置将在页面刷新后生效<br/>**排序功能只在搜索页生效</p>';
+    span.innerHTML = '<p><br/>*保存或重置后会自动刷新使设置生效<br/>*排序功能只在搜索页生效</p>';
+    if (lang == 1) {
+        span.innerHTML = '<p><br/>*Save or Reset will refresh this page.<br/>*Sort only available in search Page.</p>';
+    }
     $(span).css('font-size', '10px');
     guide.lastChild.appendChild(span);
 }
@@ -1019,7 +1074,8 @@ function guideStep(step) {
             '<a id="nextStep" href="javascript:;">点击继续</a>' +
             '</p>';
         $('#nextStep').click(function () {
-            step5();
+            //step5();
+            step6();
         });
     };
     var step5 = function () {
@@ -1057,6 +1113,7 @@ function guideStep(step) {
             $('#pp-guide').remove();
             var settings = {
                 'enablePreview': ENABLE_PREVIEW.toString(),
+                'previewQuality': PREVIEW_QUALITY.toString(),
                 'enableSort': ENABLE_SORT.toString(),
                 'pageCount': GETTING_PAGE_COUNT.toString(),
                 'favFilter': FAV_FILTER.toString(),
@@ -1088,65 +1145,16 @@ $(document).ready(function (){
     $('.ad-footer').remove();
     $('._premium-lead-tag-search-bar').remove();
 
-    // 只在搜索页检测旧版P站
-    if (location.href.indexOf('search.php') != -1 && $('#js-mount-point-search-result-list').length === 0) {
-        if (!getCookie('pixivPreviewerSetting') || getCookie('pixivPreviewerSetting') == 'null') {
-            var settings = {
-                'enablePreview': ENABLE_PREVIEW.toString(),
-                'enableSort': ENABLE_SORT.toString(),
-                'pageCount': GETTING_PAGE_COUNT.toString(),
-                'favFilter': FAV_FILTER.toString(),
-                'linkBlank': IS_LINK_BLANK.toString()
-            };
-            setCookie('pixivPreviewerSetting', JSON.stringify(settings));
-
-            // 显示旧版P站提示
-            if ($('#pp-guide').length === 0) {
-                var guide = document.createElement('div');
-                guide.id = 'pp-guide';
-                document.body.appendChild(guide);
-                $(guide).css({
-                    'width': '100%', 'height': '100%', 'position': 'fixed',
-                    'z-index': 999999, 'background-color': 'rgba(0,0,0,0.8)',
-                    'left': '0px', 'top': '0px'
-                });
-            }
-            var guide = $('#pp-guide')[0];
-            guide.innerHTML = '<p style="text-align:center;color:white;font-size:25px;padding-top:50px;">检测到正在使用旧版P站(每行5件作品)<br/>建议升级到新版(每行4件作品)<br/><br/>不升级不会影响使用<br/>但部分脚本功能将无法使用<br/><br/>升级方法<br/>安装最新版的谷歌浏览器并清除缓存及Cookie即可<br/><br/>此提示将在 <span id="countDown">15</span> 秒后消失并不再提示</p>';
-            var cd = setInterval(function () {
-                var val = $('#countDown')[0].innerText;
-                val = parseInt(val) - 1;
-                $('#countDown')[0].innerText = val;
-                if (val <= 0) {
-                    clearInterval(cd);
-                    $('#pp-guide').remove();
-                }
-            }, 1000);
-        }
-        // 使用旧版的脚本
-        var settings = eval('[' + getCookie('pixivPreviewerSetting') + ']')[0];
-        var previewEnabled = settings.enablePreview == 'true' ? true : false;
-        if(!previewEnabled){
-            return;
-        }
-        var oldVersion = 'https://www.ocrosoft.com/PixivPreviewer113.js';
-        var ovScript = document.createElement('script');
-        ovScript.src = oldVersion;
-        document.body.appendChild(ovScript);
-        var pixiv_skScript = document.createElement('script');
-        pixiv_skScript.src = 'https://www.ocrosoft.com/pixiv_sk_nogoogle.js';
-        document.body.appendChild(pixiv_skScript);
-        return;
-    }
     // 设置按钮
     addSettingButton();
     // 读取设置
-    var settings = getCookie('pixivPreviewerSetting');
-    if (!settings || settings == 'null') {
+    var settings = getSettings();
+    if (!settings) {
         var screenWidth = document.documentElement.clientWidth;
         var screenHeight = document.documentElement.clientHeight;
         settings = {
             'enablePreview': ENABLE_PREVIEW.toString(),
+            'previewQuality': PREVIEW_QUALITY.toString(),
             'enableSort': ENABLE_SORT.toString(),
             'pageCount': GETTING_PAGE_COUNT.toString(),
             'favFilter': FAV_FILTER.toString(),
@@ -1182,6 +1190,10 @@ $(document).ready(function (){
         });
         // 按钮的点击事件
         $(li[0]).click(function () { // 是
+            // 不在搜索页的时候跳转到搜索页
+            if (location.href.indexOf('search.php') == -1) {
+                location.href = 'https://www.pixiv.net/search.php?word=miku&pp=guide';
+            }
             guideStep();
         });
         $(li[1]).click(function () { // 是，仅设置
@@ -1197,31 +1209,210 @@ $(document).ready(function (){
             'z-index': 999999, 'background-color': 'rgba(0,0,0,0.8)',
             'left': '0px', 'top': '0px'
         });
+
+        if (location.href.indexOf('pp=guide') != -1) {
+            guideStep();
+        }
     }
     else {
-        settings = eval('[' + settings + ']')[0];
         ENABLE_PREVIEW = settings.enablePreview == 'true' ? true : false;
+        show_origin = settings.previewQuality == '0' ? false : true;
         ENABLE_SORT = settings.enableSort == 'true' ? true : false;
         GETTING_PAGE_COUNT = parseInt(settings.pageCount);
         FAV_FILTER = parseInt(settings.favFilter);
         IS_LINK_BLANK = settings.linkBlank == 'true' ? true : false;
     }
-    // 预览，下载
-    var itv = setInterval(function () {
-        // 作品页使用旧版脚本实现预览
-        if(location.href.indexOf('.php?id=') != -1) {
-            if(ENABLE_PREVIEW) {
-                var oldVersion = 'https://www.ocrosoft.com/PixivPreviewer113.js';
-                var ovScript = document.createElement('script');
-                ovScript.src = oldVersion;
-                document.body.appendChild(ovScript);
+
+    // 设置页面
+    if (location.href.indexOf('bookmark_new_illust') != -1) {
+        CurrentPage = FollowPage;
+    } else if (location.href.indexOf('discovery') != -1) {
+        CurrentPage = DiscoveryPage;
+    } else if (location.href.indexOf('member') != -1) {
+        CurrentPage = MemberPage;
+    } else if (location.href == 'https://www.pixiv.net/') {
+        CurrentPage = HomePage;
+    } else if (location.href.indexOf('ranking') != -1) {
+        CurrentPage = RankingPage;
+    } else if (location.href.indexOf('new_illust.php') != -1) {
+        CurrentPage = NewIllustPage;
+    }
+
+    var itv;
+    // 怎么都得单独处理，好麻烦...
+    // 发现页单独处理
+    if (CurrentPage == DiscoveryPage) {
+        (function discoveryFunc() {
+            if (ENABLE_PREVIEW) {
+                var itv = setInterval(function(){
+                    dataDiv = $(dataDivSelector[CurrentPage]);
+                    imgData = []; // 得自己生成imgData
+                    if(dataDiv.find('figure').length > 0){
+                        clearInterval(itv);
+                        picList = dataDiv.children()[0];
+                        var pics = $($(picList).children()[1]).children();
+                        pics = $($(pics.children()[1]).children()[0]).children();
+                        picDiv = []; picHref = [];
+                        for (var i = 0; i < pics.length; i++) {
+                            if(pics[i].className != pics[0].className){
+                                pics[i].remove();
+                                pics.splice(i--,1);
+                                continue;
+                            }
+                            picDiv.push(pics[i].childNodes[0].childNodes[0]);
+                            $(picDiv[i]).attr('data-index', i);
+                            picHref.push(picDiv[i].childNodes[0]);
+                            $(picHref[i]).attr('data-index', i);
+                            var id = $(picHref[i]).attr('href').split('illust_id')[1].split('=')[1].split('&')[0];
+                            $(picHref[i]).attr('data-id', id);
+                            var divs = $(picHref[i]).find('div');
+                            var spans = $(picHref[i]).find('span');
+                            var illustType = 0, pageCount = 1;
+                            if (divs.length == 2 && spans.length != 0) {
+                                illustType = 1;
+                                pageCount = parseInt(spans[1].innerText);
+                            }
+                            else if (divs.length == 1){
+                                illustType = 0;
+                            }
+                            else {
+                                illustType = 2;
+                            }
+                            imgData.push({'illustType': illustType, 'pageCount': pageCount});
+                        }
+                        pixivPreviewer();
+                    }
+                }, 500);
             }
-            clearInterval(itv);
+        })();
+        return;
+    }
+    // 作品页单独处理
+    else if (CurrentPage == MemberPage || CurrentPage == NewIllustPage) {
+        if (ENABLE_PREVIEW) {
+            itv = setInterval(function(){
+                dataDiv = $('._image-items').parent();
+                imgData = []; // 得自己生成imgData
+                if(dataDiv.find('._layout-thumbnail').length > 0){
+                    clearInterval(itv);
+                    //picList = dataDiv.children()[0];
+                    //picList = dataDiv.find('ul._image-items')[0];
+                    picList = $('._image-items')[0];
+                    var pics = $(picList).children();
+                    picDiv = []; picHref = [];
+                    for (var i = 0; i < pics.length; i++) {
+                        picDiv.push(pics[i]);
+                        $(picDiv[i]).attr('data-index', i);
+                        picHref.push($(pics[i]).find('._work')[0]);
+                        $(picHref[i]).attr('data-index', i);
+                        var id = $(picHref[i]).attr('href').split('illust_id')[1].split('=')[1].split('&')[0];
+                        $(picHref[i]).attr('data-id', id);
+                        var illustType = 0, pageCount = 1;
+                        if ($(picHref[i]).hasClass('ugoku-illust')){
+                            illustType = 2;
+                        }
+                        else if ($(picHref[i]).find('.page-count').length > 0) {
+                            illustType = 1;
+                            pageCount = $(picHref[i]).find('.page-count').find('span')[0].innerText;
+                        }
+                        imgData.push({'illustType': illustType, 'pageCount': pageCount});
+                    }
+                    pixivPreviewer();
+                }
+            }, 500);
         }
+        return;
+    }
+    // 主页单独处理
+    else if (CurrentPage == HomePage) {
+        if (ENABLE_PREVIEW) {
+            itv = setInterval(function(){
+                dataDiv = $('._image-items').parent();
+                imgData = []; // 得自己生成imgData
+                if(dataDiv.find('._layout-thumbnail').length > 0){
+                    clearInterval(itv);
+                    picList = dataDiv.find('._image-items');
+                    var pics = $(picList).children();
+                    picDiv = []; picHref = [];
+                    for (var i = 0; i < pics.length; i++) {
+                        picDiv.push(pics[i]);
+                        $(picDiv[i]).attr('data-index', i);
+                        picHref.push($(pics[i]).find('._work')[0]);
+                        $(picHref[i]).attr('data-index', i);
+                        var id;
+                        // BOOTH最新动态这种没有预览的意义
+                        try {
+                            id = $(picHref[i]).attr('href').split('illust_id')[1].split('=')[1].split('&')[0]
+                        } catch (e) {
+                            picDiv.pop();
+                            picHref.pop();
+                            continue;
+                        }
+                        $(picHref[i]).attr('data-id', id);
+                        var illustType = 0, pageCount = 1;
+                        if ($(picHref[i]).hasClass('ugoku-illust')) {
+                            illustType = 2;
+                        }
+                        else if ($(picHref[i]).find('.page-count').length > 0) {
+                            illustType = 1;
+                            pageCount = $(picHref[i]).find('.page-count').find('span')[0].innerText;
+                        }
+                        imgData.push({'illustType': illustType, 'pageCount': pageCount});
+                    }
+                    pixivPreviewer();
+                }
+            }, 500);
+        }
+        return;
+    }
+    // 排行榜单独处理
+    else if (CurrentPage == RankingPage) {
+        if (ENABLE_PREVIEW) {
+            itv = setInterval(function(){
+                dataDiv = $('.ranking-items-container');
+                imgData = []; // 得自己生成imgData
+                if(dataDiv.find('.ranking-item').length > 0){
+                    clearInterval(itv);
+                    picList = dataDiv.children()[0];
+                    var pics = $(picList).children();
+                    picDiv = []; picHref = [];
+                    for (var i = 0; i < pics.length; i++) {
+                        picDiv.push($(pics[i]).find('.ranking-image-item'));
+                        $(picDiv[i]).attr('data-index', i);
+                        picHref.push($(pics[i]).find('._work')[0]);
+                        $(picHref[i]).attr('data-index', i);
+                        var id = $(picHref[i]).attr('href').split('illust_id')[1].split('=')[1].split('&')[0];
+                        $(picHref[i]).attr('data-id', id);
+                        var illustType = 0, pageCount = 1;
+                        if ($(picHref[i]).hasClass('ugoku-illust')) {
+                            illustType = 2;
+                        }
+                        else if ($(picHref[i]).find('.page-count').length > 0) {
+                            illustType = 1;
+                            pageCount = $(picHref[i]).find('.page-count').find('span')[0].innerText;
+                        }
+                        imgData.push({'illustType': illustType, 'pageCount': pageCount});
+                    }
+                    pixivPreviewer();
+                }
+            }, 500);
+        }
+        return;
+    }
+
+    // 预览，下载
+    itv = setInterval(function () {
         try {
             getImageElements();
+        }
+        catch (e) {
+            console.log(e);
+            return;
+        }
+        try {
             // 排序
             if (picDiv.length > 0) {
+                clearInterval(itv);
                 if (ENABLE_SORT && ENABLE_PREVIEW) {
                     pixiv_sk(pixivPreviewer); // 排序完成后调用预览
                 }
@@ -1231,7 +1422,6 @@ $(document).ready(function (){
                 else if (ENABLE_PREVIEW) {
                     pixivPreviewer();
                 }
-                clearInterval(itv);
             }
         }
         catch (e) {
