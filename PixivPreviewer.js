@@ -1,12 +1,29 @@
 ﻿// ==UserScript==
 // @name         Pixiv Previewer
 // @namespace    https://github.com/Ocrosoft/PixivPreviewer
-// @version      3.00
+// @version      2.08
 // @description  显示大图预览，按热门度排序(pixiv_sk)。Show Preview, Sort by favorite numbers(pixiv_sk).
 // @author       Ocrosoft
-// @match        *://www.pixiv.net*
+// @match        *://www.pixiv.net/search.php*
+// 作品页主页
+// @match        *://www.pixiv.net/member.php?id=*
+// 作品页其他
+// @match        *://www.pixiv.net/member_illust.php?id=*
+// 作品页（动画预览）
+// @match        *://www.pixiv.net/artworks/*
+// @match        *://www.pixiv.net/member_illust.php?mode=*
+// @match        *://www.pixiv.net/ranking.php*
+// @match        *://www.pixiv.net/bookmark_new_illust.php*
+// @match        *://www.pixiv.net/discovery*
+// @match        *://www.pixiv.net/
+// @match        *://www.pixiv.net/en/
+// @match        *://www.pixiv.net/new_illust.php*
+// @match        *://www.pixiv.net/cate_r18.php
+// @match        *://www.pixiv.net/bookmark.php*
+// @match        *://www.pixiv.net/stacc*
 // @grant        none
 // @compatible   Chrome
+// @compatible   FireFox
 // ==/UserScript==
 
 try {
@@ -17,7 +34,7 @@ try {
     document.head.appendChild(script);
 }
 
-// 添加删除收藏需要这个
+// 添加收藏需要这个
 var csrf_token = '';
 
 /**
@@ -46,8 +63,11 @@ var IS_LINK_BLANK = true;
 // 1：English
 var lang = 1;
 // 日志等级（0：无，1：错误，2：警告，3：信息
-var LOG_LEVEL = 4;
+var LOG_LEVEL = 2;
+// 排序时同时请求收藏量的 Request 数量，不要太多
+var XHR_COUNT = 10;
 
+var LogCount = 0;
 var LogLevel = {
     None: 0,
     Error: 1,
@@ -78,6 +98,11 @@ function DoLog(level, msgOrElement) {
             console.log(prefix + msgOrElement, param);
         } else {
             console.log(msgOrElement);
+        }
+
+        if (++LogCount > 512) {
+            console.clear();
+            LogCount = 0;
         }
     }
 }
@@ -436,6 +461,14 @@ var mousePos; // 鼠标位置
 var SORT_END = false; // 是否排序完成
 var show_origin = false; // 默认预览使用原图
 var changedExtension = false; // 是否已经出错修改了后缀，防止 .jpg 和 .png 都出错一直在加载
+var initialUrl = location.href;
+
+// 现在 P站点击一些按钮不会重新加载页面了，脚本也不会重新加载，会导致一些问题。如果检测到 url 变了，就刷新一下
+setInterval(function () {
+    if (location.href != initialUrl) {
+        location.href = location.href;
+    }
+}, 1000);
 // 获取相关的元素
 function getImageElements() {
     if (infoDivSelector[CurrentPage] == '...') {
@@ -1171,7 +1204,6 @@ function pixiv_sk(callback) {
         getWorks(onloadCallback);
     }
 
-    var XHR_COUNT = 5;
     var xhrs = [];
     var currentRequestGroupMinimumIndex = 0;
     function FillXhrsArray() {
@@ -1263,7 +1295,7 @@ function pixiv_sk(callback) {
     }
 
     var GetBookmarkCount = function (index) {
-        if (index >= 25 || index >= works.length) {
+        if (index >= works.length) {
             clearAndUpdateWorks();
             return;
         }
@@ -1273,6 +1305,11 @@ function pixiv_sk(callback) {
         }
 
         for (var i = 0; i < XHR_COUNT; i++) {
+            if (index + i >= works.length) {
+                xhrs[i].complete = true;
+                continue;
+            }
+
             var illustId = works[index + i].illustId;
             var url = 'https://www.pixiv.net/artworks/' + illustId;
             xhrs[i].illustId = illustId;
@@ -1349,6 +1386,7 @@ function pixiv_sk(callback) {
             bookmarkCountDiv.addClass('ppBookmarkCount');
 
             additionTagDiv.empty();
+            bookmarkCountDiv.empty();
             animationTag.remove();
             bookmarkSvg.find('path:first').css('fill', 'rgb(31, 31, 31)');
             bookmarkSvg.find('path:last').css('fill', 'rgb(255, 255, 255)');
@@ -1830,7 +1868,7 @@ window.onload = function () {
 
     // 设置按钮
     AddSettingButton();
-    return;
+
     // 读取设置
     var settings = getSettings();
     if (!settings) {
