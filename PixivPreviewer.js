@@ -709,7 +709,8 @@ function PixivPreview() {
             });
 
             // 右上角张数标记
-            var pageCountDiv = $('<div class="pp-pageCount"><div class="icon"></div><span class="pp-page">0/0</span></div>')
+            var pageCountHTML = '<div class="pp-pageCount" style="display: flex;-webkit-box-align: center;align-items: center;box-sizing: border-box;margin-left: auto;height: 20px;color: rgb(255, 255, 255);font-size: 10px;line-height: 12px;font-weight: bold;flex: 0 0 auto;padding: 4px 6px;background: rgba(0, 0, 0, 0.32);border-radius: 10px;margin-top:5px;margin-right:5px;">\<svg viewBox="0 0 9 10" width="9" height="10" style="stroke: none;line-height: 0;font-size: 0px;fill: currentcolor;"><path d="M8,3 C8.55228475,3 9,3.44771525 9,4 L9,9 C9,9.55228475 8.55228475,10 8,10 L3,10 C2.44771525,10 2,9.55228475 2,9 L6,9 C7.1045695,9 8,8.1045695 8,7 L8,3 Z M1,1 L6,1 C6.55228475,1 7,1.44771525 7,2 L7,7 C7,7.55228475 6.55228475,8 6,8 L1,8 C0.44771525,8 0,7.55228475 0,7 L0,2 C0,1.44771525 0.44771525,1 1,1 Z"></path></svg><span style="margin-left:2px;" class="pp-page">0/0</span></div>';
+            var pageCountDiv = $(pageCountHTML)
                 .css({ 'position': 'absolute', 'top': '0px', 'display': 'none', 'right': '0px', 'display': 'none' });
             previewDiv.append(pageCountDiv);
 
@@ -823,6 +824,7 @@ function PixivPreview() {
         var screenWidth = document.documentElement.clientWidth;
         var screenHeight = document.documentElement.clientHeight;
         var top = document.body.scrollTop + document.documentElement.scrollTop;
+        $('.pp-image').css({ 'width': '', 'height': '' });
         var width = $('.pp-image').get(0).width;
         var height = $('.pp-image').get(0).height;
 
@@ -876,48 +878,13 @@ function PixivPreview() {
         }
 
         if (original.length > 1) {
-            $('.pp-page').text(index + '/' + regular.length);
+            $('.pp-page').text((index + 1) + '/' + regular.length);
             $('.pp-pageCount').show();
         }
         if (isShowOriginal) {
             $('.pp-image').addClass('original');
         }
         PREVIEW_QUALITY = isShowOriginal ? 1 : 0;
-        $('.pp-image').attr('index', index);
-
-        // 绑定点击事件，Ctrl+左键 单击切换原图
-        $('.pp-image').on('click', function (ev) {
-            var _this = $(this);
-            var isOriginal = _this.hasClass('original');
-            var index = _this.attr('index');
-            if (index == null) {
-                index = 0;
-            }
-
-            if (ev.ctrlKey) {
-                // 按住 Ctrl 来回切换原图
-                isOriginal = !isOriginal;
-                ViewImages(regular, index, original, isOriginal);
-            }
-            else if (ev.shiftKey) {
-                // 按住 Shift 点击图片新标签页打开原图
-                window.open(original[index]);
-            } else {
-                if (regular.length == 1) {
-                    return;
-                }
-                // 如果是多图，点击切换下一张
-                if (++index >= regular.length) {
-                    index = 0;
-                }
-                ViewImages(regular, index, original, isOriginal);
-                // 预加载
-                for (var i = index + 1; i < regular.length && i <= index + 3; i++) {
-                    var image = new Image();
-                    image.src = isOriginal ? original[i] : regular[i];;
-                }
-            }
-        });
 
         // 隐藏多图加载中图片
         if (HIDE_LOADING_IN_NEXTPIC) {
@@ -927,30 +894,69 @@ function PixivPreview() {
         // 隐藏页数和原图标签
         $('.pp-origin, .pp-pageCount').hide();
 
-        // 图片预加载完成
-        $('.pp-image').on('load', function () {
-            // 调整图片位置和大小
-            var size = AdjustDivPosition();
+        // 第一次需要绑定事件
+        if ($('.pp-image').attr('index') == null) {
+            // 绑定点击事件，Ctrl+左键 单击切换原图
+            $('.pp-image').on('click', function (ev) {
+                var _this = $(this);
+                var isOriginal = _this.hasClass('original');
+                var index = _this.attr('index');
+                if (index == null) {
+                    index = 0;
+                }
 
-            // 调整下一次 loading 出现的位置
-            $('.pp-loading').css({ 'left': size.width / 2 - 24 + 'px', 'top': size.height / 2 - 24 + 'px' }).css('display', 'none');
-            // 显示图像、页数、原图标签
-            $('.pp-image').css('display', '');
-            if (regular.length > 1) {
-                $('.pp-pageCount').show();
-            }
-            if (isShowOriginal) {
-                $('.pp-original').show();
-            }
+                if (ev.ctrlKey) {
+                    // 按住 Ctrl 来回切换原图
+                    isOriginal = !isOriginal;
+                    ViewImages(regular, index, original, isOriginal);
+                }
+                else if (ev.shiftKey) {
+                    // 按住 Shift 点击图片新标签页打开原图
+                    window.open(original[index]);
+                } else {
+                    if (regular.length == 1) {
+                        return;
+                    }
+                    // 如果是多图，点击切换下一张
+                    if (++index >= regular.length) {
+                        index = 0;
+                    }
+                    ViewImages(regular, index, original, isOriginal);
+                    // 预加载
+                    for (var i = index + 1; i < regular.length && i <= index + 3; i++) {
+                        var image = new Image();
+                        image.src = isOriginal ? original[i] : regular[i];;
+                    }
+                }
+            });
 
-            // 预加载
-            for (var i = index + 1; i < regular.length && i <= index + 3; i++) {
-                var image = new Image();
-                image.src = isOriginal ? original[i] : regular[i];;
-            }
-        }).on('error', function () {
-            DoLog(LogLevel.Error, 'Load image failed!');
-        }).attr('src', isShowOriginal ? original[index] : regular[index]);
+            // 图片预加载完成
+            $('.pp-image').on('load', function () {
+                // 调整图片位置和大小
+                var size = AdjustDivPosition();
+
+                // 调整下一次 loading 出现的位置
+                $('.pp-loading').css({ 'left': size.width / 2 - 24 + 'px', 'top': size.height / 2 - 24 + 'px' }).css('display', 'none');
+                // 显示图像、页数、原图标签
+                $('.pp-image').css('display', '');
+                if (regular.length > 1) {
+                    $('.pp-pageCount').show();
+                }
+                if (isShowOriginal) {
+                    $('.pp-original').show();
+                }
+
+                // 预加载
+                for (var i = index + 1; i < regular.length && i <= index + 3; i++) {
+                    var image = new Image();
+                    image.src = isShowOriginal ? original[i] : regular[i];;
+                }
+            }).on('error', function () {
+                DoLog(LogLevel.Error, 'Load image failed!');
+            });
+        }
+
+        $('.pp-image').attr('src', isShowOriginal ? original[index] : regular[index]).attr('index', index);
     }
 
     // 开启预览
