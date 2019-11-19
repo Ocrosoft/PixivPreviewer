@@ -695,7 +695,7 @@ function PixivPreview() {
             previewDiv.append(loadingImg);
 
             // 要显示的预览图节点
-            var loadImg = $(new Image()).addClass('pp-image').attr('data-index', dataIndex).css({ 'height': '0px', 'width': '0px', 'display': 'none' });
+            var loadImg = $(new Image()).addClass('pp-image').css({ 'height': '0px', 'width': '0px', 'display': 'none' });
             previewDiv.append(loadImg);
 
             // 原图（笑脸）图标
@@ -726,13 +726,11 @@ function PixivPreview() {
                 // 获取图片链接
                 $.ajax(url, {
                     method: 'GET',
-                    success: function (data) {
-                        var json = $(data);
-
+                    success: function (json) {
                         DoLog(LogLevel.Info, 'Got artwork urls:');
                         DoLog(LogLevel.Elements, json);
 
-                        if (json.error) {
+                        if (json.error === true) {
                             DoLog(LogLevel.Error, 'Server responsed an error: ' + json.message);
                             return;
                         }
@@ -791,7 +789,7 @@ function PixivPreview() {
                     isMoveToPreviewElement = true;
                 }
 
-                if (moveToElement.parent() == null) {
+                if (moveToElement.parent().length < 1) {
                     break;
                 }
 
@@ -805,7 +803,8 @@ function PixivPreview() {
 
         // 鼠标移动，调整位置
         $(returnMap.controlElements).mousemove(function (e) {
-            if (e.ctrlKey) {
+            // Ctrl 和 中键 都可以禁止预览图移动，这样就可以单手操作了
+            if (e.ctrlKey || e.buttons & 4) {
                 return;
             }
             var screenWidth = document.documentElement.clientWidth;
@@ -818,16 +817,18 @@ function PixivPreview() {
 
     // 调整预览 Div 的位置
     function AdjustDivPosition() {
+        // 鼠标到预览图的距离
+        var fromMouseToDiv = 30;
+
         var screenWidth = document.documentElement.clientWidth;
         var screenHeight = document.documentElement.clientHeight;
         var top = document.body.scrollTop + document.documentElement.scrollTop;
         var width = $('.pp-image').get(0).width;
         var height = $('.pp-image').get(0).height;
 
-        var isShowOnLeft = g_mousePos.x < screenWidth / 2;
+        var isShowOnLeft = g_mousePos.x > screenWidth / 2;
 
-
-        var newWidth = isShowOnLeft ? g_mousePos.x - 5 : screenWidth - g_mousePos.x - 5;
+        var newWidth = isShowOnLeft ? g_mousePos.x - fromMouseToDiv : screenWidth - g_mousePos.x - fromMouseToDiv;
         var newHeight = height / width * newWidth;
         // 高度不足以完整显示，只能让两侧留空了
         if (newHeight > screenHeight) {
@@ -838,12 +839,12 @@ function PixivPreview() {
         $('.pp-image').css({ 'height': newHeight + 'px', 'width': newWidth + 'px' });
 
         // 图片宽度大于高度很多时，会显示在页面顶部，鼠标碰不到，把它移动到下面
-        if (st + newHeight <= g_mousePos.y) {
+        if (top + newHeight <= g_mousePos.y) {
             top = (g_mousePos.y - newHeight / 2);
         }
         // 调整DIV的位置
-        var left = isShowOnLeft ? g_mousePos.x - newWidth - 5 : g_mousePos.x + 5;
-        $(previewDiv).css({ 'left': left + 'px', 'top': top + 'px', 'width': newWidth, 'height': newHeight });
+        var left = isShowOnLeft ? g_mousePos.x - newWidth - fromMouseToDiv : g_mousePos.x + fromMouseToDiv;
+        $('.pp-main').css({ 'left': left + 'px', 'top': top + 'px', 'width': newWidth, 'height': newHeight });
         // 返回新的宽高
         return {
             width: newWidth,
@@ -935,7 +936,7 @@ function PixivPreview() {
             $('.pp-loading').css({ 'left': size.width / 2 - 24 + 'px', 'top': size.height / 2 - 24 + 'px' }).css('display', 'none');
             // 显示图像、页数、原图标签
             $('.pp-image').css('display', '');
-            if (regular.length > 0) {
+            if (regular.length > 1) {
                 $('.pp-pageCount').show();
             }
             if (isShowOriginal) {
@@ -1795,7 +1796,7 @@ function ShowGuide(step) {
 /**
  * ---------------------------------------- 以下为 主函数 部分 ----------------------------------------
  */
-window.onload = function () {
+var loadInterval = setInterval(function () {
     // 匹配当前页面
     for (var i = 0; i < PageType.PageTypeCount; i++) {
         if (Pages[i].CheckUrl(location.href)) {
@@ -2268,6 +2269,7 @@ window.onload = function () {
         DoLog(LogLevel.Info, 'Process page comlete, sorting and prevewing begin.');
         DoLog(LogLevel.Elements, returnMap);
 
+        clearInterval(loadInterval);
         clearInterval(itv);
 
         try {
@@ -2286,4 +2288,4 @@ window.onload = function () {
             DoLog(LogLevel.Error, 'Unknown error: ' + e);
         }
     }, 500);
-};
+}, 1000);
