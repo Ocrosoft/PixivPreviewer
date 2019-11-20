@@ -1420,7 +1420,7 @@ function PixivSK(callback) {
             var animationTag = imageDiv.find('svg');
 
             var bookmarkCountDiv = additionTagDiv.clone();
-            bookmarkCountDiv.css({ 'top': 'auto', 'bottom': '0px' });
+            bookmarkCountDiv.css({ 'top': 'auto', 'bottom': '0px', 'width': '50%' });
             additionTagDiv.parent().append(bookmarkCountDiv);
 
             // 添加 class，方便后面修改内容
