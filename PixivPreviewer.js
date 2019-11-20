@@ -240,9 +240,11 @@ Pages[PageType.Search] = {
                 }
 
                 // 添加 attr
-                li.attr('illustId', ctlAttrs.illustId);
-                li.attr('illustType', ctlAttrs.illustTye);
-                li.attr('pageCount', ctlAttrs.pageCount);
+                li.attr({
+                    'illustId': ctlAttrs.illustId,
+                    'illustType': ctlAttrs.illustTye,
+                    'pageCount': ctlAttrs.pageCount
+                });
             }
 
             li.addClass('pp-control');
@@ -335,10 +337,79 @@ Pages[PageType.Home] = {
         return false;
     },
     ProcessPageElements: function () {
-        //
+        var returnMap = {
+            loadingComplete: false,
+            controlElements: [],
+        };
+
+        var uls = $('._image-items');
+
+        DoLog(LogLevel.Info, 'This page has ' + uls.length + ' <ul>.');
+        if (uls.length < 1) {
+            DoLog(LogLevel.Warning, 'Less than 1 <ul>, continue waiting.');
+            return returnMap;
+        } else if (uls.length != 4) {
+            DoLog(LogLevel.Warning, 'Normaly, should found 4 <ul>.');
+        }
+
+        uls.each(function (i, e) {
+            var _this = $(e);
+
+            var li = _this.find('.image-item');
+            if (li.length < 1) {
+                DoLog(LogLevel.Warning, 'This <ul> has 0 <li>, will be skipped.');
+                return;
+            }
+
+            li.each(function (j, ee) {
+                var __this = $(ee);
+
+                var ctlAttrs = {
+                    illustId: 0,
+                    illustTye: 0,
+                    pageCount: 1,
+                };
+
+                var illustId = __this.find('a:first').attr('data-gtm-recommend-illust-id') || __this.find('img:first').attr('data-id');
+                if (illustId == null) {
+                    DoLog(LogLevel.Warning, 'Can not found illust id of this image, skip.');
+                    return;
+                } else {
+                    ctlAttrs.illustId = illustId;
+                }
+                var pageCount = __this.find('.page-count');
+                if (pageCount.length > 0) {
+                    pageCount = parseInt(pageCount.find('span').text());
+                }
+                if (__this.find('a:first').hasClass('ugoku-illust')) {
+                    ctlAttrs.illustTye = 2;
+                }
+
+                __this.attr({
+                    'illustId': ctlAttrs.illustId,
+                    'illustType': ctlAttrs.illustTye,
+                    'pageCount': ctlAttrs.pageCount
+                });
+
+                returnMap.controlElements.push(ee);
+            });
+        });
+
+        DoLog(LogLevel.Info, 'Process page elements complete.');
+        DoLog(LogLevel.Elements, returnMap);
+
+        returnMap.loadingComplete = true;
+        this.private.returnMap = returnMap;
+        return returnMap;
+    },
+    GetProcessedPageElements: function() {
+        return this.private.returnMap;
     },
     GetToolBar: function () {
-        //
+        return $('._toolmenu').get(0);
+    },
+    private: {
+        returnMap: null,
     },
 };
 Pages[PageType.Ranking] = {
@@ -493,7 +564,6 @@ var XHR_COUNT = 10;
 /**
  * ---------------------------------------- 以下为 预览功能 部分 ----------------------------------------
  */
-
 var dataDivSelector = [
     '#js-react-search-mid',
     '#js-mount-point-latest-following',
@@ -523,8 +593,6 @@ var dataDiv, infoDiv, picList, picDiv = [], picHref = []; // 相关元素，含�
 var dataStr; // 更新后图片信息使用 json 保存在了 dataDiv 的 data-items 属性中
 var imgData; // 保存解析后的 json
 var SORT_END = false; // 是否排序完成
-var show_origin = false; // 默认预览使用原图
-var changedExtension = false; // 是否已经出错修改了后缀，防止 .jpg 和 .png 都出错一直在加载
 var initialUrl = location.href;
 
 // 获取相关的元素
@@ -820,6 +888,8 @@ function PixivPreview() {
 
             AdjustDivPosition();
         });
+
+        DoLog(LogLevel.Info, 'Preview enable successful!');
     }
 
     // 调整预览 Div 的位置
@@ -832,8 +902,8 @@ function PixivPreview() {
         var left = 0;
         var top = document.body.scrollTop + document.documentElement.scrollTop;
         $('.pp-image').css({ 'width': '', 'height': '' });
-        var width = $('.pp-image').get(0).width;
-        var height = $('.pp-image').get(0).height;
+        var width = $('.pp-image').get(0) == null ? 0 : $('.pp-image').get(0).width;
+        var height = $('.pp-image').get(0) == null ? 0 : $('.pp-image').get(0).height;
 
         var isShowOnLeft = g_mousePos.x > screenWidth / 2;
 
@@ -846,6 +916,7 @@ function PixivPreview() {
                 newHeight = screenHeight;
                 newWidth = newHeight / height * width;
             }
+            newWidth -= 5;
             newHeight -= 5;
             // 设置新的宽高
             $('.pp-image').css({ 'height': newHeight + 'px', 'width': newWidth + 'px' });
@@ -1472,7 +1543,6 @@ function PixivSK(callback) {
  * ---------------------------------------- 以下为 Cookie 部分 ----------------------------------------
  */
 // 设置 Cookie
-// arg: Cookie 名称，Cookie 值
 function SetCookie(name, value) {
     var Days = 30;
     var exp = new Date();
@@ -1480,7 +1550,6 @@ function SetCookie(name, value) {
     document.cookie = name + "=" + escape(value) + ";expires=" + exp.toGMTString();
 }
 // 读取 Cookie
-// arg: Cookie 名称
 function GetCookie(name) {
     var arr, reg = new RegExp("(^| )" + name + "=([^;]*)(;|$)");
     if (arr = document.cookie.match(reg)) {
