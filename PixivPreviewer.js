@@ -758,6 +758,7 @@ function PixivPreview() {
                     'position': 'absolute', 'z-index': '999999', 'left': g_mousePos.x + 'px', 'top': g_mousePos.y + 'px',
                     'border-style': 'solid', 'border-color': '#6495ed', 'border-width': '2px', 'border-radius': '20px',
                     'width': '48px', 'height': '48px',
+                    'background-image': 'url(https://raw.githubusercontent.com/Ocrosoft/PixivPreviewer/master/transparent.png)',
                 });
             // 添加到 body
             $('.pp-main').remove();
