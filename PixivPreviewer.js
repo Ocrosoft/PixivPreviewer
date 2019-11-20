@@ -657,7 +657,7 @@ function PixivPreview() {
         }
 
         // 鼠标进入
-        $(returnMap.controlElements).mouseover(function (e) {
+        $(returnMap.controlElements).mouseenter(function (e) {
             // 按住 Ctrl键 不显示预览图
             if (e.ctrlKey) {
                 return;
@@ -685,22 +685,28 @@ function PixivPreview() {
             g_mousePos = { x: e.pageX, y: e.pageY };
             // 预览 Div
             var previewDiv = $(document.createElement('div')).addClass('pp-main').attr('illustId', illustId)
-                .css({ 'position': 'absolute', 'z-index': '999999', 'left': g_mousePos.x + 'px', 'top': g_mousePos.y + 'px' });
+                .css({
+                    'position': 'absolute', 'z-index': '999999', 'left': g_mousePos.x + 'px', 'top': g_mousePos.y + 'px',
+                    'border-style': 'solid', 'border-color': '#6495ed', 'border-width': '2px', 'border-radius': '20px',
+                    'width': '48px', 'height': '48px',
+                });
             // 添加到 body
             $('.pp-main').remove();
             $('body').append(previewDiv);
 
             // 加载中图片
-            var loadingImg = $(new Image()).addClass('pp-loading').attr('src', g_loadingImage).css('position', 'absolute');
+            var loadingImg = $(new Image()).addClass('pp-loading').attr('src', g_loadingImage).css({
+                'position': 'absolute', 'border-radius': '20px',
+            });
             previewDiv.append(loadingImg);
 
             // 要显示的预览图节点
-            var loadImg = $(new Image()).addClass('pp-image').css({ 'height': '0px', 'width': '0px', 'display': 'none' });
+            var loadImg = $(new Image()).addClass('pp-image').css({ 'height': '0px', 'width': '0px', 'display': 'none', 'border-radius': '20px'});
             previewDiv.append(loadImg);
 
             // 原图（笑脸）图标
             var originIcon = $(new Image()).addClass('pp-original').attr('src', 'https://source.pixiv.net/www/images/pixivcomic-favorite.png')
-                .css({ 'position': 'absolute', 'bottom': '0px', 'right': '0px', 'display': 'none' });
+                .css({ 'position': 'absolute', 'bottom': '5px', 'right': '5px', 'display': 'none' });
             previewDiv.append(originIcon);
 
             // 点击图标新网页打开原图
@@ -776,7 +782,7 @@ function PixivPreview() {
         });
 
         // 鼠标移出图片
-        $(returnMap.controlElements).mouseout(function (e) {
+        $(returnMap.controlElements).mouseleave(function (e) {
             var _this = $(this);
             var illustId = _this.attr('illustId');
             var illustType = _this.attr('illustType');
@@ -823,6 +829,7 @@ function PixivPreview() {
 
         var screenWidth = document.documentElement.clientWidth;
         var screenHeight = document.documentElement.clientHeight;
+        var left = 0;
         var top = document.body.scrollTop + document.documentElement.scrollTop;
         $('.pp-image').css({ 'width': '', 'height': '' });
         var width = $('.pp-image').get(0).width;
@@ -830,23 +837,29 @@ function PixivPreview() {
 
         var isShowOnLeft = g_mousePos.x > screenWidth / 2;
 
-        var newWidth = isShowOnLeft ? g_mousePos.x - fromMouseToDiv : screenWidth - g_mousePos.x - fromMouseToDiv;
-        var newHeight = height / width * newWidth;
-        // 高度不足以完整显示，只能让两侧留空了
-        if (newHeight > screenHeight) {
-            newHeight = screenHeight;
-            newWidth = newHeight / height * width;
+        var newWidth = 48, newHeight = 48;
+        if (width > 0 && height > 0) {
+            newWidth = isShowOnLeft ? g_mousePos.x - fromMouseToDiv : screenWidth - g_mousePos.x - fromMouseToDiv;
+            newHeight = height / width * newWidth;
+            // 高度不足以完整显示，只能让两侧留空了
+            if (newHeight > screenHeight) {
+                newHeight = screenHeight;
+                newWidth = newHeight / height * width;
+            }
+            newHeight -= 5;
+            // 设置新的宽高
+            $('.pp-image').css({ 'height': newHeight + 'px', 'width': newWidth + 'px' });
         }
-        // 设置新的宽高
-        $('.pp-image').css({ 'height': newHeight + 'px', 'width': newWidth + 'px' });
 
         // 图片宽度大于高度很多时，会显示在页面顶部，鼠标碰不到，把它移动到下面
         if (top + newHeight <= g_mousePos.y) {
-            top = (g_mousePos.y - newHeight / 2);
+            top = (g_mousePos.y - newHeight - fromMouseToDiv);
         }
         // 调整DIV的位置
-        var left = isShowOnLeft ? g_mousePos.x - newWidth - fromMouseToDiv : g_mousePos.x + fromMouseToDiv;
+        left = isShowOnLeft ? g_mousePos.x - newWidth - fromMouseToDiv : g_mousePos.x + fromMouseToDiv;
+
         $('.pp-main').css({ 'left': left + 'px', 'top': top + 'px', 'width': newWidth, 'height': newHeight });
+
         // 返回新的宽高
         return {
             width: newWidth,
