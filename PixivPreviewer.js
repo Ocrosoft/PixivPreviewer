@@ -139,7 +139,8 @@ var ControlElementsAttributesSample = {
 Pages[PageType.Search] = {
     PageTypeString: 'SearchPage',
     CheckUrl: function (url) {
-        return /^https?:\/\/www.pixiv.net\/search.php.*/.test(url);
+        return /^https?:\/\/www.pixiv.net\/tags\/.*\/artworks/.test(url);
+        //return /^https?:\/\/www.pixiv.net\/search.php.*/.test(url);
     },
     ProcessPageElements: function () {
         var returnMap = {
@@ -1133,21 +1134,28 @@ function PixivSK(callback) {
     if (currentPage === 0) {
         var url = location.href;
 
-        // key word
-        if (url.indexOf('word=') == -1) {
-            DoLog(LogLevel.Error, 'Can not found search word!');
+        if (url.indexOf('&p=') == -1 && url.indexOf('?p=') == -1) {
+            DoLog(LogLevel.Warning, 'Can not found page in url.');
+            if (url.indexOf('?') == -1) {
+                url += '?p=1';
+                DoLog(LogLevel.Info, 'Add "?p=1": ' + url);
+            } else {
+                url += '&p=1';
+                DoLog(LogLevel.Info, 'Add "&p=1": ' + url);
+            }
+        }
+        var wordMatch = url.match(/\/tags\/([^/]*)\/artworks/);
+        var searchWord = '';
+        if (wordMatch) {
+            DoLog(LogLevel.Info, 'Search key word: ' + searchWord);
+            searchWord = wordMatch[1];
+        } else {
+            DoLog(LogLevel.Error, 'Can not found search key word!');
             return;
         }
-        if (url.indexOf('&p=') == -1) {
-            DoLog(LogLevel.Warning, 'Can not found page in url.');
-            url += '&p=1';
-            DoLog(LogLevel.Info, 'Add "&p=1": ' + url);
-        }
-        var searchWord = url.match(/word=([^&]*)/)[1];
-        DoLog(LogLevel.Info, 'Search key word: ' + searchWord);
 
         // page
-        var page = url.match(/&p=(\d+)/)[1];
+        var page = url.match(/p=(\d*)/)[1];
         currentPage = parseInt(page);
         DoLog(LogLevel.Info, 'Current page: ' + currentPage);
 
@@ -1191,8 +1199,12 @@ function PixivSK(callback) {
             $(pageSelectorDiv).find('a').attr('href', 'javascript:;');
 
             var pageUrl = location.href;
-            if (pageUrl.indexOf('&p=') == -1) {
-                pageUrl += '&p=1';
+            if (pageUrl.indexOf('&p=') == -1 || pageUrl.indexOf('?p=') == -1) {
+                if (pageUrl.indexOf('?') == -1) {
+                    pageUrl += '?p=1';
+                } else {
+                    pageUrl += '&p=1';
+                }
             }
             var prevPageUrl = pageUrl.replace(/p=\d+/, 'p=' + (currentPage - GETTING_PAGE_COUNT > 1 ? currentPage - GETTING_PAGE_COUNT : 1));
             var nextPageUrl = pageUrl.replace(/p=\d+/, 'p=' + (currentPage + GETTING_PAGE_COUNT));
