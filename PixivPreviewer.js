@@ -291,10 +291,95 @@ Pages[PageType.BookMarkNew] = {
         return /^https:\/\/www.pixiv.net\/bookmark_new_illust.php.*/.test(url);
     },
     ProcessPageElements: function () {
-        //
+        var returnMap = {
+            loadingComplete: false,
+            controlElements: [],
+        };
+
+        var containerDiv = $('#js-mount-point-latest-following').children('div:first');
+        if (containerDiv.length > 0) {
+            DoLog(LogLevel.Info, 'Found container div.');
+            DoLog(LogLevel.Elements, containerDiv);
+        } else {
+            DoLog(LogLevel.Error, 'Can not found container div.');
+            return returnMap;
+        }
+
+        containerDiv.children().each(function (i, e) {
+            var _this = $(e);
+
+            var figure = _this.find('figure');
+            if (figure.length === 0) {
+                DoLog(LogLevel.Warning, 'Can not found <fingure>, skip this element.');
+                return;
+            }
+
+            var link = figure.children('div:first').children('a:first');
+            if (link.length === 0) {
+                DoLog(LogLevel.Warning, 'Can not found <a>, skip this element.');
+                return;
+            }
+
+            var ctlAttrs = {
+                illustId: 0,
+                illustTye: 0,
+                pageCount: 1,
+            };
+
+            var href = link.attr('href');
+            if (href == null || href === '') {
+                DoLog(LogLevel.Warning, 'No href found, skip.');
+                return;
+            } else {
+                var matched = href.match(/artworks\/(\d+)/);
+                if (matched) {
+                    ctlAttrs.illustId = matched[1];
+                } else {
+                    DoLog(LogLevel.Warning, 'Can not found illust id, skip.');
+                    return;
+                }
+            }
+
+            if (link.children().length > 1) {
+                if (link.children('div:first').find('span').length > 0) {
+                    var span = link.children('div:first').children('span:first');
+                    if (span.length === 0) {
+                        DoLog(LogLevel.Warning, 'Can not found <span>, skip this element.');
+                        return;
+                    }
+                    ctlAttrs.pageCount = span.text();
+                } else {
+                    ctlAttrs.illustTye = 2;
+                }
+            }
+
+            _this.attr({
+                'illustId': ctlAttrs.illustId,
+                'illustType': ctlAttrs.illustTye,
+                'pageCount': ctlAttrs.pageCount
+            });
+
+            returnMap.controlElements.push(e);
+        });
+
+        DoLog(LogLevel.Info, 'Process page elements complete.');
+        DoLog(LogLevel.Elements, returnMap);
+
+        returnMap.loadingComplete = true;
+        this.private.returnMap = returnMap;
+        return returnMap;
+    },
+    GetProcessedPageElements: function() {
+        if (this.private.returnMap == null) {
+            return this.ProcessPageElements;
+        }
+        return this.private.returnMap;
     },
     GetToolBar: function () {
-        //
+        return $('._toolmenu').get(0);
+    },
+    private: {
+        returnMap: null,
     },
 };
 Pages[PageType.Discovery] = {
@@ -403,7 +488,10 @@ Pages[PageType.Home] = {
         this.private.returnMap = returnMap;
         return returnMap;
     },
-    GetProcessedPageElements: function() {
+    GetProcessedPageElements: function () {
+        if (this.private.returnMap == null) {
+            return this.ProcessPageElements;
+        }
         return this.private.returnMap;
     },
     GetToolBar: function () {
