@@ -71,7 +71,7 @@ var g_getArtworkUrl = '/ajax/illust/#id#/pages';
 // 鼠标位置
 var g_mousePos = { x: 0, y: 0 };
 // 加载中图片
-var g_loadingImage = 'https://raw.githubusercontent.com/shikato/pixiv_sk/master/loading.gif';
+var g_loadingImage = 'https://pp-1252089172.cos.ap-chengdu.myqcloud.com/loading.gif';
 
 // 页面相关的一些预定义，包括处理页面元素等
 var PageType = {
@@ -479,7 +479,6 @@ Pages[PageType.Discovery] = {
         returnMap: null,
     },
 };
-// 页面与 Search 相似
 Pages[PageType.Member] = {
     PageTypeString: 'MemberPage',
     CheckUrl: function (url) {
@@ -748,10 +747,89 @@ Pages[PageType.NewIllust] = {
         return /^https?:\/\/www.pixiv.net\/new_illust.php.*/.test(url);
     },
     ProcessPageElements: function () {
-        //
+        var returnMap = {
+            loadingComplete: false,
+            controlElements: [],
+        };
+
+        var firstDiv = $('#root').children('div:first');
+        if (firstDiv.length === 0) {
+            DoLog(LogLevel.Error, 'Can not found images\' container div!');
+            return returnMap;
+        }
+
+        var ul = firstDiv.children('div:last').find('ul');
+        if (ul.length === 0) {
+            DoLog(LogLevel.Error, 'Can not found <ul>!');
+            return returnMap;
+        }
+
+        ul.find('li').each(function (i, e) {
+            var _this = $(e);
+
+            var link = _this.find('a:first');
+            var href = link.attr('href');
+            if (href == null || href === '') {
+                DoLog(LogLevel.Error, 'Can not found illust id, skip this.');
+                return;
+            }
+
+            var ctlAttrs = {
+                illustId: 0,
+                illustTye: 0,
+                pageCount: 1,
+            };
+
+            var matched = href.match(/artworks\/(\d+)/);
+            if (matched) {
+                ctlAttrs.illustId = matched[1];
+            } else {
+                DoLog(LogLevel.Warning, 'Can not found illust id, skip this.');
+                return;
+            }
+
+            if (link.children().length > 1) {
+                var span = link.find('svg').next();
+                if (span.length > 0) {
+                    ctlAttrs.pageCount = span.text();
+                } else {
+                    ctlAttrs.illustTye = 2;
+                }
+            }
+
+            _this.attr({
+                'illustId': ctlAttrs.illustId,
+                'illustType': ctlAttrs.illustTye,
+                'pageCount': ctlAttrs.pageCount
+            });
+
+            returnMap.controlElements.push(e);
+        });
+
+        returnMap.loadingComplete = true;
+
+        DoLog(LogLevel.Info, 'Process page elements complete.');
+        DoLog(LogLevel.Elements, returnMap);
+
+        this.private.returnMap = returnMap;
+        return returnMap;
+    },
+    GetProcessedPageElements: function () {
+        if (this.private.returnMap == null) {
+            return this.ProcessPageElements;
+        }
+        return this.private.returnMap;
     },
     GetToolBar: function () {
-        //
+        var div = $('#root').children('div');
+        for (var i = div.length - 1; i >= 0; i--) {
+            if ($(div.get(i)).children('ul').length > 0) {
+                return $(div.get(i)).children('ul').get(0);
+            }
+        }
+    },
+    private: {
+        returnMap: null,
     },
 };
 Pages[PageType.R18] = {
@@ -861,7 +939,6 @@ Pages[PageType.Stacc] = {
         //
     },
 };
-// 页面同 Member
 Pages[PageType.MemberIllust] = {
     PageTypeString: 'MemberIllustPage',
     CheckUrl: function (url) {
@@ -874,7 +951,6 @@ Pages[PageType.MemberIllust] = {
         returnMap: null,
     },
 };
-// 页面同 Member
 Pages[PageType.MemberBookMark] = {
     PageTypeString: 'MemberBookMarkPage',
     CheckUrl: function (url) {
@@ -1148,7 +1224,7 @@ function PixivPreview() {
                     'position': 'absolute', 'z-index': '999999', 'left': g_mousePos.x + 'px', 'top': g_mousePos.y + 'px',
                     'border-style': 'solid', 'border-color': '#6495ed', 'border-width': '2px', 'border-radius': '20px',
                     'width': '48px', 'height': '48px',
-                    'background-image': 'url(https://raw.githubusercontent.com/Ocrosoft/PixivPreviewer/master/transparent.png)',
+                    'background-image': 'url(https://pp-1252089172.cos.ap-chengdu.myqcloud.com/transparent.png)',
                 });
             // 添加到 body
             $('.pp-main').remove();
