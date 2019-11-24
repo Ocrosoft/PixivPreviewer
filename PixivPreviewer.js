@@ -669,10 +669,77 @@ Pages[PageType.Ranking] = {
         return /^https?:\/\/www.pixiv.net\/ranking.php.*/.test(url);
     },
     ProcessPageElements: function () {
-        //
+        var returnMap = {
+            loadingComplete: false,
+            controlElements: [],
+        };
+
+        var works = $('._work');
+
+        DoLog(LogLevel.Info, 'Found .work, length: ' + works.length);
+        DoLog(LogLevel.Elements, works);
+
+        works.each(function (i, e) {
+            var _this = $(e);
+
+            var ctlAttrs = {
+                illustId: 0,
+                illustTye: 0,
+                pageCount: 1,
+            };
+
+            var href = _this.attr('href');
+
+            if (href == null || href === '') {
+                DoLog('Can not found illust id, skip this.');
+                return;
+            }
+
+            var matched = href.match(/artworks\/(\d+)/);
+            if (matched) {
+                ctlAttrs.illustId = matched[1];
+            } else {
+                DoLog('Can not found illust id, skip this.');
+                return;
+            }
+
+            if (_this.hasClass('multiple')) {
+                ctlAttrs.pageCount = _this.find('.page-count').find('span').text();
+            }
+
+            if (_this.hasClass('ugoku-illust')) {
+                ctlAttrs.illustTye = 2;
+            }
+
+            // 添加 attr
+            _this.attr({
+                'illustId': ctlAttrs.illustId,
+                'illustType': ctlAttrs.illustTye,
+                'pageCount': ctlAttrs.pageCount
+            });
+
+            returnMap.controlElements.push(e);
+        });
+
+        returnMap.loadingComplete = true;
+
+        DoLog(LogLevel.Info, 'Process page elements complete.');
+        DoLog(LogLevel.Elements, returnMap);
+
+        this.private.returnMap = returnMap;
+        return returnMap;
+    },
+    GetProcessedPageElements: function () {
+        if (this.private.returnMap == null) {
+            return this.ProcessPageElements;
+        }
+        return this.private.returnMap;
     },
     GetToolBar: function () {
-        //
+        return $('._toolmenu').get(0);
+    },
+    private: {
+        returnMap: null,
     },
 };
 Pages[PageType.NewIllust] = {
