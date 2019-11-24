@@ -268,7 +268,7 @@ Pages[PageType.Search] = {
         return this.private.returnMap;
     },
     GetToolBar: function () {
-        return $('#root').children('div:last').prev().find('li').get(0);
+        return $('#root').children('div:last').prev().find('li:first').parent().get(0);
     },
     GetImageListContainer: function () {
         return this.private.imageListConrainer;
@@ -387,23 +387,185 @@ Pages[PageType.Discovery] = {
     CheckUrl: function (url) {
         return /^https?:\/\/www.pixiv.net\/discovery.*/.test(url);
     },
-    ProcessPageElements: function () {
-        //
+    ProcessPageElements: function() {
+        var returnMap = {
+            loadingComplete: false,
+            controlElements: [],
+        };
+
+        var containerDiv = $('.gtm-illust-recommend-zone');
+        if (containerDiv.length > 0) {
+            DoLog(LogLevel.Info, 'Found container div.');
+            DoLog(LogLevel.Elements, containerDiv);
+        } else {
+            DoLog(LogLevel.Error, 'Can not found container div.');
+            return returnMap;
+        }
+
+        containerDiv.children().each(function (i, e) {
+            var _this = $(e);
+
+            var figure = _this.find('figure');
+            if (figure.length === 0) {
+                DoLog(LogLevel.Warning, 'Can not found <fingure>, skip this element.');
+                return;
+            }
+
+            var link = figure.children('div:first').children('a:first');
+            if (link.length === 0) {
+                DoLog(LogLevel.Warning, 'Can not found <a>, skip this element.');
+                return;
+            }
+
+            var ctlAttrs = {
+                illustId: 0,
+                illustTye: 0,
+                pageCount: 1,
+            };
+
+            var href = link.attr('href');
+            if (href == null || href === '') {
+                DoLog(LogLevel.Warning, 'No href found, skip.');
+                return;
+            } else {
+                var matched = href.match(/artworks\/(\d+)/);
+                if (matched) {
+                    ctlAttrs.illustId = matched[1];
+                } else {
+                    DoLog(LogLevel.Warning, 'Can not found illust id, skip.');
+                    return;
+                }
+            }
+
+            if (link.children().length > 1) {
+                if (link.children('div:first').find('span').length > 0) {
+                    var span = link.children('div:first').children('span:first');
+                    if (span.length === 0) {
+                        DoLog(LogLevel.Warning, 'Can not found <span>, skip this element.');
+                        return;
+                    }
+                    ctlAttrs.pageCount = span.text();
+                } else {
+                    ctlAttrs.illustTye = 2;
+                }
+            }
+
+            _this.attr({
+                'illustId': ctlAttrs.illustId,
+                'illustType': ctlAttrs.illustTye,
+                'pageCount': ctlAttrs.pageCount
+            });
+
+            returnMap.controlElements.push(e);
+        });
+
+        DoLog(LogLevel.Info, 'Process page elements complete.');
+        DoLog(LogLevel.Elements, returnMap);
+
+        returnMap.loadingComplete = true;
+        this.private.returnMap = returnMap;
+        return returnMap;
+    },
+    GetProcessedPageElements: function () {
+        if (this.private.returnMap == null) {
+            return this.ProcessPageElements;
+        }
+        return this.private.returnMap;
     },
     GetToolBar: function () {
-        //
+        return $('._toolmenu').get(0);
+    },
+    private: {
+        returnMap: null,
     },
 };
+// 页面与 Search 相似
 Pages[PageType.Member] = {
     PageTypeString: 'MemberPage',
     CheckUrl: function (url) {
         return /^https?:\/\/www.pixiv.net\/member.php\?id=.*/.test(url);
     },
     ProcessPageElements: function () {
-        //
+        var returnMap = {
+            loadingComplete: false,
+            controlElements: [],
+        };
+
+        var sections = $('section');
+        DoLog(LogLevel.Info, 'Page has ' + sections.length + ' <section>.');
+        DoLog(LogLevel.Elements, sections);
+
+        var lis = sections.find('ul').find('li');
+        lis.each(function (i, e) {
+            var li = $(e);
+            var control = li.children('div:first');
+
+            // 只填充必须的几个，其他的目前用不着
+            var ctlAttrs = {
+                illustId: 0,
+                illustTye: 0,
+                pageCount: 1,
+            };
+
+            // 有 figure 的是 lazy load，读取不到数据
+            if (li.find('figure').length === 0) {
+                var img = $(li.find('img').get(0));
+                var imageLink = img.parent().parent();
+                var additionDiv = img.parent().prev();
+                var animationSvg = img.parent().find('svg');
+                var pageCountSpan = additionDiv.find('span');
+
+                var link = imageLink.attr('href');
+                var linkMatched = link.match(/artworks\/(\d+)/);
+                var illustId = '';
+                if (linkMatched) {
+                    ctlAttrs.illustId = linkMatched[1];
+                } else {
+                    DoLog(LogLevel.Error, 'Get illustId failed, skip this list item!');
+                    return;
+                }
+                if (animationSvg.length > 0) {
+                    ctlAttrs.illustType = 2;
+                }
+                if (pageCountSpan.length > 0) {
+                    ctlAttrs.pageCount = parseInt(pageCountSpan.text());
+                }
+
+                // 添加 attr
+                li.attr({
+                    'illustId': ctlAttrs.illustId,
+                    'illustType': ctlAttrs.illustTye,
+                    'pageCount': ctlAttrs.pageCount
+                });
+            }
+
+            li.addClass('pp-control');
+        });
+        returnMap.controlElements = $('.pp-control');
+        returnMap.loadingComplete = true;
+
+        DoLog(LogLevel.Info, 'Process page elements complete.');
+        DoLog(LogLevel.Elements, returnMap);
+
+        this.private.returnMap = returnMap;
+        return returnMap;
+    },
+    GetProcessedPageElements: function () {
+        if (this.private.returnMap == null) {
+            return ProcessPageElements;
+        }
+        return this.private.returnMap;
     },
     GetToolBar: function () {
-        //
+        var div = $('#root').children('div');
+        for (var i = div.length - 1; i >= 0; i--) {
+            if ($(div.get(i)).children('ul').length > 0) {
+                return $(div.get(i)).children('ul').get(0);
+            }
+        }
+    },
+    private: {
+        returnMap: null,
     },
 };
 Pages[PageType.Home] = {
@@ -543,10 +705,81 @@ Pages[PageType.BookMark] = {
         return /^https:\/\/www.pixiv.net\/bookmark.php\/?$/.test(url);
     },
     ProcessPageElements: function () {
-        //
+        var returnMap = {
+            loadingComplete: false,
+            controlElements: [],
+        };
+
+        var images = $('.image-item');
+        DoLog(LogLevel.Info, 'Found images, length: ' + images.length);
+        DoLog(LogLevel.Elements, images);
+
+        images.each(function (i, e) {
+            var _this = $(e);
+
+            var work = _this.find('._work');
+            if (work.length === 0) {
+                DoLog(LogLevel.Warning, 'Can not found ._work, skip this.');
+                return;
+            }
+
+            var ctlAttrs = {
+                illustId: 0,
+                illustTye: 0,
+                pageCount: 1,
+            };
+
+            var href = work.attr('href');
+            if (href == null || href === '') {
+                DoLog(LogLevel.Warning, 'Can not found illust id, skip this.');
+                return;
+            }
+
+            var matched = href.match(/illust_id=(\d+)/);
+            if (matched) {
+                ctlAttrs.illustId = matched[1];
+            } else {
+                DoLog(LogLevel.Warning, 'Can not found illust id, skip this.');
+                return;
+            }
+
+            if (work.hasClass('multiple')) {
+                ctlAttrs.pageCount = _this.find('.page-count').find('span').text();
+            }
+
+            if (work.hasClass('ugoku-illust')) {
+                ctlAttrs.illustTye = 2;
+            }
+
+            // 添加 attr
+            _this.attr({
+                'illustId': ctlAttrs.illustId,
+                'illustType': ctlAttrs.illustTye,
+                'pageCount': ctlAttrs.pageCount
+            });
+
+            returnMap.controlElements.push(e);
+        });
+
+        returnMap.loadingComplete = true;
+
+        DoLog(LogLevel.Info, 'Process page elements complete.');
+        DoLog(LogLevel.Elements, returnMap);
+
+        this.private.returnMap = returnMap;
+        return returnMap;
+    },
+    GetProcessedPageElements: function () {
+        if (this.private.returnMap == null) {
+            return this.ProcessPageElements;
+        }
+        return this.private.returnMap;
     },
     GetToolBar: function () {
-        //
+        return $('._toolmenu').get(0);
+    },
+    private: {
+        returnMap: null,
     },
 };
 Pages[PageType.Stacc] = {
@@ -561,28 +794,30 @@ Pages[PageType.Stacc] = {
         //
     },
 };
+// 页面同 Member
 Pages[PageType.MemberIllust] = {
     PageTypeString: 'MemberIllustPage',
     CheckUrl: function (url) {
         return /^https:\/\/www.pixiv.net\/member_illust.php.*/.test(url);
     },
-    ProcessPageElements: function () {
-        //
-    },
-    GetToolBar: function () {
-        //
+    ProcessPageElements: Pages[PageType.Member].ProcessPageElements,
+    GetProcessedPageElements: Pages[PageType.Member].GetProcessedPageElements,
+    GetToolBar: Pages[PageType.Member].GetToolBar,
+    private: {
+        returnMap: null,
     },
 };
+// 页面同 Member
 Pages[PageType.MemberBookMark] = {
     PageTypeString: 'MemberBookMarkPage',
     CheckUrl: function (url) {
         return /^https:\/\/www.pixiv.net\/bookmark.php\?.*/.test(url);
     },
-    ProcessPageElements: function () {
-        //
-    },
-    GetToolBar: function () {
-        //
+    ProcessPageElements: Pages[PageType.Member].ProcessPageElements,
+    GetProcessedPageElements: Pages[PageType.Member].GetProcessedPageElements,
+    GetToolBar: Pages[PageType.Member].GetToolBar,
+    private: {
+        returnMap: null,
     },
 };
 
@@ -1988,7 +2223,7 @@ var loadInterval = setInterval(function () {
     }
 
     toolBar.appendChild(toolBar.firstChild.cloneNode(true));
-    toolBar.lastChild.outerHTML = '<br/><button style="background-color: rgb(0, 0, 0);margin-top: 5px;opacity: 0.8;cursor: pointer;border: none;padding: 12px;border-radius: 24px;width: 48px;height: 48px;" class="_3cJzhTE"><svg version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" x="0px" y="0px" viewBox="0 0 1000 1000" enable-background="new 0 0 1000 1000" xml:space="preserve" style="fill: white;"><metadata> Svg Vector Icons : http://www.sfont.cn </metadata><g><path d="M377.5,500c0,67.7,54.8,122.5,122.5,122.5S622.5,567.7,622.5,500S567.7,377.5,500,377.5S377.5,432.3,377.5,500z"></path><path d="M990,546v-94.8L856.2,411c-8.9-35.8-23-69.4-41.6-100.2L879,186L812,119L689,185.2c-30.8-18.5-64.4-32.6-100.2-41.5L545.9,10h-94.8L411,143.8c-35.8,8.9-69.5,23-100.2,41.5L186.1,121l-67,66.9L185.2,311c-18.6,30.8-32.6,64.4-41.5,100.3L10,454v94.8L143.8,589c8.9,35.8,23,69.4,41.6,100.2L121,814l67,67l123-66.2c30.8,18.6,64.5,32.6,100.3,41.5L454,990h94.8L589,856.2c35.8-8.9,69.4-23,100.2-41.6L814,879l67-67l-66.2-123.1c18.6-30.7,32.6-64.4,41.5-100.2L990,546z M500,745c-135.3,0-245-109.7-245-245c0-135.3,109.7-245,245-245s245,109.7,245,245C745,635.3,635.3,745,500,745z"></path></g></svg></button>';
+    toolBar.lastChild.outerHTML = '<button style="background-color: rgb(0, 0, 0);margin-top: 5px;opacity: 0.8;cursor: pointer;border: none;padding: 12px;border-radius: 24px;width: 48px;height: 48px;" class="_3cJzhTE"><svg version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" x="0px" y="0px" viewBox="0 0 1000 1000" enable-background="new 0 0 1000 1000" xml:space="preserve" style="fill: white;"><metadata> Svg Vector Icons : http://www.sfont.cn </metadata><g><path d="M377.5,500c0,67.7,54.8,122.5,122.5,122.5S622.5,567.7,622.5,500S567.7,377.5,500,377.5S377.5,432.3,377.5,500z"></path><path d="M990,546v-94.8L856.2,411c-8.9-35.8-23-69.4-41.6-100.2L879,186L812,119L689,185.2c-30.8-18.5-64.4-32.6-100.2-41.5L545.9,10h-94.8L411,143.8c-35.8,8.9-69.5,23-100.2,41.5L186.1,121l-67,66.9L185.2,311c-18.6,30.8-32.6,64.4-41.5,100.3L10,454v94.8L143.8,589c8.9,35.8,23,69.4,41.6,100.2L121,814l67,67l123-66.2c30.8,18.6,64.5,32.6,100.3,41.5L454,990h94.8L589,856.2c35.8-8.9,69.4-23,100.2-41.6L814,879l67-67l-66.2-123.1c18.6-30.7,32.6-64.4,41.5-100.2L990,546z M500,745c-135.3,0-245-109.7-245-245c0-135.3,109.7-245,245-245s245,109.7,245,245C745,635.3,635.3,745,500,745z"></path></g></svg></button>';
     $(toolBar.lastChild).css('margin-top', '10px');
     $(toolBar.lastChild).css('opacity', '0.8');
     $(toolBar.lastChild).click(function () {
