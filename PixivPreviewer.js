@@ -1,7 +1,7 @@
 ﻿// ==UserScript==
 // @name         Pixiv Previewer
 // @namespace    https://github.com/Ocrosoft/PixivPreviewer
-// @version      3.0.0
+// @version      3.0.1
 // @description  显示大图预览，按热门度排序(pixiv_sk)。Show Preview, ands sort by bookmark count.
 // @author       Ocrosoft
 // @match        *://www.pixiv.net/*
@@ -66,7 +66,7 @@ function DoLog(level, msgOrElement) {
 }
 
 // 版本号
-var g_version = '3.0.0';
+var g_version = '3.0';
 // 添加收藏需要这个
 var g_csrfToken = '';
 // 打的日志数量，超过一定数值清空控制台
@@ -128,9 +128,11 @@ var PageType = {
     MemberIllust: 10,
     // 用户-收藏页
     MemberBookMark: 11,
+    // 作品详情页（处理动图预览及下载）
+    Artwork: 12,
 
     // 总数
-    PageTypeCount: 12,
+    PageTypeCount: 13,
 };
 var Pages = {};
 /*
@@ -1064,6 +1066,112 @@ Pages[PageType.MemberBookMark] = {
         returnMap: null,
     },
 };
+Pages[PageType.Artwork] = {
+    PageTypeString: 'ArtworkPage',
+    CheckUrl: function (url) {
+        return /^https:\/\/www.pixiv.net\/artworks\/.*/.test(url);
+    },
+    ProcessPageElements: function () {
+        var returnMap = {
+            loadingComplete: false,
+            controlElements: [],
+        };
+
+        // 是动图
+        var canvas = $('main').find('figure').find('canvas');
+        if ($('main').find('figure').find('canvas').length > 0) {
+            this.private.needProcess = true;
+            canvas.addClass('pp-canvas');
+        }
+
+        returnMap.loadingComplete = true;
+        return returnMap;
+    },
+    GetToolBar: function () {
+        var div = $('#root').children('div');
+        for (var i = div.length - 1; i >= 0; i--) {
+            if ($(div.get(i)).children('ul').length > 0) {
+                return $(div.get(i)).children('ul').get(0);
+            }
+        }
+    },
+    Work: function () {
+        if (this.private.needProcess) {
+            var canvas = $('.pp-canvas');
+
+            if (location.href.indexOf('#preview') != -1) {
+                canvas.click();
+
+                $('#root').remove();
+
+                var callbackInterval = setInterval(function () {
+                    var div = $('div[role="presentation"]');
+                    if (div.length < 1) {
+                        return;
+                    }
+
+                    DoLog(LogLevel.Info, 'found <div>, continue to next step.');
+
+                    clearInterval(callbackInterval);
+
+                    var presentationCanvas = div.find('canvas');
+                    if (presentationCanvas.length < 1) {
+                        DoLog(LogLevel.Error, 'Can not found canvas in the presentation div.');
+                        return;
+                    }
+
+                    var width = 0, height = 0;
+                    var tWidth = presentationCanvas.attr('width');
+                    var tHeight = presentationCanvas.attr('height');
+                    if (tWidth && tHeight) {
+                        width = parseInt(tWidth);
+                        height = parseInt(tHeight);
+                    } else {
+                        tWidth = presentationCanvas.css('width');
+                        tHeight = presentationCanvas.css('height');
+                        width = parseInt(tWidth);
+                        height = parseInt(this);
+                    }
+
+                    var parent = presentationCanvas.parent();
+                    for (var i = 0; i < 3; i++) {
+                        parent.get(0).className = '';
+                        parent = parent.parent();
+                    }
+                    presentationCanvas.css({ 'width': width + 'px', 'height': height + 'px', 'cursor': 'default' }).addClass('pp-presentationCanvas');
+                    var divForStopClick = $('<div class="pp-disableClick"></div>').css({
+                        'width': width + 'px', 'height': height + 'px',
+                        'opacity': 0,
+                        'position': 'absolute', 'top': '0px', 'left': '0px', 'z-index': 99999,
+                    });
+                    div.append(divForStopClick);
+                    div.append(presentationCanvas.next().css('z-index', 99999));
+                    presentationCanvas.next().remove();
+                    // 防止预览图消失
+                    $('html').addClass('pp-main');
+
+                    // 调整 canvas 大小的函数
+                    window.ResizeCanvas = function (newWidth, newHeight) {
+                        DoLog(LogLevel.Info, 'Resize canvas: ' + newWidth + 'x' + newHeight);
+                        $('.pp-disableClick').css({ 'width': newWidth, 'height': newHeight });
+                        $('.pp-presentationCanvas').css({ 'width': newWidth, 'height': newHeight });
+                    };
+                    window.GetCanvasSize = function () {
+                        return {
+                            width: width,
+                            height: height,
+                        };
+                    }
+
+                    window.parent.PreviewCallback(width, height);
+                }, 500);
+            }
+        }
+    },
+    private: {
+        needProcess: false,
+    },
+};
 
 function CheckUrlTest() {
     var urls = [
@@ -1088,6 +1196,8 @@ function CheckUrlTest() {
         'https://www.pixiv.net/bookmark.php',
         'https://www.pixiv.net/bookmark.php?x=1',
         'https://www.pixiv.net/stacc?mode=unify',
+        'https://www.pixiv.net/artworks/77996773',
+        'https://www.pixiv.net/artworks/77996773#preview',
     ];
 
     for (var j = 0; j < urls.length; j++) {
@@ -1176,12 +1286,20 @@ function PixivPreview() {
             previewDiv.append(pageCountDiv);
 
             $('.pp-main').mouseout(function (e) {
+                var target = $(e.relatedTarget);
+
+                if (target.hasClass('pp-iframe')) {
+                    return;
+                }
+
                 $(this).remove();
             });
 
             var url = '';
             if (illustType == 2) {
                 // 动图
+                previewDiv.get(0).innerHTML = '<iframe class="pp-iframe" style="width: 48px; height: 48px; display: none; border-radius: 20px;" src="https://www.pixiv.net/artworks/' + illustId + '#preview" />';
+                previewDiv.append(loadingImg);
             } else {
                 url = g_getArtworkUrl.replace('#id#', illustId);
 
@@ -1218,22 +1336,6 @@ function PixivPreview() {
                     }
                 });
             }
-
-            // 动图，illustType 值为2
-            /*if (imgData[dataIndex].illustType == 2) {
-                $(previewDiv).children().remove();
-                var screenWidth = document.documentElement.clientWidth;
-                var screenHeight = document.documentElement.clientHeight;
-                previewDiv.innerHTML = '<iframe width="600px" height="50%" src="https://www.pixiv.net/artworks/' +
-                    $(picHref[dataIndex]).attr('data-id') + '#animePreview' + g_mousePos.x + ',' + g_mousePos.y + ',' + screenWidth + ',' + screenHeight + '"/>';
-                $(previewDiv).children('iframe').css('display', 'none');
-                $(previewDiv).children('iframe').attr('data-index', dataIndex);
-                loadingImg = new Image();
-                loadingImg.src = 'https://raw.githubusercontent.com/shikato/PixivSK/master/loading.gif';
-                $(loadingImg).css('position', 'absolute');
-                previewDiv.appendChild(loadingImg);
-                return;
-            }*/
         });
 
         // 鼠标移出图片
@@ -1276,7 +1378,22 @@ function PixivPreview() {
             AdjustDivPosition();
         });
 
+        // 插一段回调函数
+        window.PreviewCallback = PreviewCallback;
+        DoLog(LogLevel.Info, 'Callback function was inserted.');
+        DoLog(LogLevel.Elements, window.PreviewCallback);
+
         DoLog(LogLevel.Info, 'Preview enable successful!');
+    }
+
+    // iframe 的回调函数
+    function PreviewCallback(canvasWidth, canvasHeight) {
+        DoLog(LogLevel.Info, 'iframe callback, width: ' + canvasWidth + ', height: ' + canvasHeight);
+
+        var size = AdjustDivPosition();
+
+        $('.pp-loading').hide();
+        $('.pp-iframe').css({ 'width': size.width, 'height': size.height }).show();
     }
 
     // 调整预览 Div 的位置
@@ -1288,9 +1405,18 @@ function PixivPreview() {
         var screenHeight = document.documentElement.clientHeight;
         var left = 0;
         var top = document.body.scrollTop + document.documentElement.scrollTop;
-        $('.pp-image').css({ 'width': '', 'height': '' });
-        var width = $('.pp-image').get(0) == null ? 0 : $('.pp-image').get(0).width;
-        var height = $('.pp-image').get(0) == null ? 0 : $('.pp-image').get(0).height;
+
+        var width = 0, height = 0;
+        if ($('.pp-main').find('iframe').length > 0) {
+            var iframe = $('.pp-main').find('iframe').get(0);
+            var canvasSize = iframe.contentWindow.GetCanvasSize();
+            width = canvasSize.width;
+            height = canvasSize.height;
+        } else {
+            $('.pp-image').css({ 'width': '', 'height': '' });
+            width = $('.pp-image').get(0) == null ? 0 : $('.pp-image').get(0).width;
+            height = $('.pp-image').get(0) == null ? 0 : $('.pp-image').get(0).height;
+        }
 
         var isShowOnLeft = g_mousePos.x > screenWidth / 2;
 
@@ -1305,8 +1431,17 @@ function PixivPreview() {
             }
             newWidth -= 5;
             newHeight -= 5;
+
             // 设置新的宽高
-            $('.pp-image').css({ 'height': newHeight + 'px', 'width': newWidth + 'px' });
+            if ($('.pp-main').find('iframe').length > 0) {
+                var iframe = $('.pp-main').find('iframe');
+                iframe.get(0).contentWindow.ResizeCanvas(newWidth, newHeight);
+                iframe.css({ 'width': newWidth, 'height': newHeight });
+            }
+            else {
+                $('.pp-image').css({ 'height': newHeight + 'px', 'width': newWidth + 'px' });
+            }
+
             // 调整下一次 loading 出现的位置
             $('.pp-loading').css({ 'left': newWidth / 2 - 24 + 'px', 'top': newHeight / 2 - 24 + 'px' });
         }
@@ -1328,7 +1463,6 @@ function PixivPreview() {
     }
 
     // 显示预览图
-    // args: 图片地址数组，下标，原图地址数组，是否显示原图
     function ViewImages(regular, index, original, isShowOriginal) {
         if (!regular || regular.length === 0) {
             DoLog(LogLevel.Error, 'Regular url array is null, can not view images!');
@@ -1931,7 +2065,7 @@ function PixivSK(callback) {
         }
     }
 }
-/* ---------------------------------- Cookie / Setting ---------------------------------- */
+/* ---------------------------------------- 设置 ---------------------------------------- */
 function SetCookie(name, value) {
     var Days = 180;
     var exp = new Date();
@@ -2040,7 +2174,7 @@ function ShowSetting() {
         $('#pp-bg').remove();
     });
 }
-/* ---------------------------------------- Main ---------------------------------------- */
+/* --------------------------------------- 主函数 --------------------------------------- */
 var loadInterval = setInterval(function () {
     // 匹配当前页面
     for (var i = 0; i < PageType.PageTypeCount; i++) {
@@ -2053,6 +2187,7 @@ var loadInterval = setInterval(function () {
         DoLog(LogLevel.Info, 'Current page is ' + Pages[g_pageType].PageTypeString);
     } else {
         DoLog(LogLevel.Info, 'Unsupported page.');
+        clearInterval(loadInterval);
         return;
     }
 
@@ -2110,7 +2245,10 @@ var loadInterval = setInterval(function () {
         clearInterval(itv);
 
         try {
-            if (g_pageType == PageType.Search) {
+            if (g_pageType == PageType.Artwork) {
+                Pages[g_pageType].Work();
+            }
+            else if (g_pageType == PageType.Search) {
                 if (g_settings.enableSort) {
                     PixivSK(g_settings.enablePreview ? PixivPreview : null);
                 } else if (g_settings.enablePreview) {
@@ -2119,7 +2257,6 @@ var loadInterval = setInterval(function () {
             } else if (g_settings.enablePreview) {
                 PixivPreview();
             }
-
         }
         catch (e) {
             DoLog(LogLevel.Error, 'Unknown error: ' + e);
