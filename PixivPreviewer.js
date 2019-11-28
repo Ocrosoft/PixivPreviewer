@@ -1285,19 +1285,15 @@ function PixivPreview() {
                 .css({ 'position': 'absolute', 'top': '0px', 'display': 'none', 'right': '0px', 'display': 'none' });
             previewDiv.append(pageCountDiv);
 
-            $('.pp-main').mouseout(function (e) {
-                var target = $(e.relatedTarget);
-
-                if (target.hasClass('pp-iframe')) {
-                    return;
-                }
-
+            $('.pp-main').mouseleave(function (e) {
                 $(this).remove();
             });
 
             var url = '';
             if (illustType == 2) {
                 // 动图
+                var screenWidth = document.documentElement.clientWidth;
+                var screenHeight = document.documentElement.clientHeight;
                 previewDiv.get(0).innerHTML = '<iframe class="pp-iframe" style="width: 48px; height: 48px; display: none; border-radius: 20px;" src="https://www.pixiv.net/artworks/' + illustId + '#preview" />';
                 previewDiv.append(loadingImg);
             } else {
