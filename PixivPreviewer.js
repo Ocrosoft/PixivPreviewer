@@ -1,7 +1,7 @@
 ﻿// ==UserScript==
 // @name         Pixiv Previewer
 // @namespace    https://github.com/Ocrosoft/PixivPreviewer
-// @version      3.0.2
+// @version      3.0.1
 // @description  显示大图预览，按热门度排序(pixiv_sk)。Show Preview, ands sort by bookmark count.
 // @author       Ocrosoft
 // @match        *://www.pixiv.net/*
@@ -1098,6 +1098,74 @@ Pages[PageType.Artwork] = {
         }
     },
     Work: function () {
+        function AddDownloadButton (div, button, offsetToOffsetTop) {
+            var cloneButton = button.clone().css({'bottom': '50px', 'margin': 0, 'padding': 0, 'width': '48px', 'height': '48px', 'opacity': '0.4', 'cursor': 'pointer'});
+            cloneButton.get(0).innerHTML = '<svg viewBox="0 0 120 120" style="width: 40px; height: 40px; stroke-width: 10; stroke-linecap: round; stroke-linejoin: round; border-radius: 24px; background-color: black; stroke: limegreen; fill: none;" class="_3Fo0Hjg"><polyline points="60,30 60,90"></polyline><polyline points="30,60 60,90 90,60"></polyline></svg></button>';
+
+            function MoveButton() {
+                function getOffset(e){
+                    if (e.offsetParent) {
+                        var offset = getOffset(e.offsetParent);
+                        return {
+                            offsetTop: e.offsetTop + offset.offsetTop,
+                            offsetLeft: e.offsetLeft + offset.offsetLeft,
+                        };
+                    } else {
+                        return {
+                            offsetTop: e.offsetTop,
+                            offsetLeft: e.offsetLeft,
+                        };
+                    }
+                }
+
+                var offset = getOffset(button.get(0));
+                DoLog(LogLevel.Info, 'offset of download button: ' + offset.offsetTop + ', ' + offset.offsetLeft);
+                DoLog(LogLevel.Elements, offset);
+
+                cloneButton.css({'position': 'absolute', 'left': offset.offsetLeft, 'top': offset.offsetTop - 50 - offsetToOffsetTop}).show();
+            }
+
+            MoveButton();
+            $(window).on('resize', MoveButton);
+            div.append(cloneButton);
+
+            cloneButton.mouseover(function() {
+                $(this).css('opacity', '0.2');
+            }).mouseleave(function() {
+                $(this).css('opacity', '0.4');
+            }).click(function() {
+                var illustId = '';
+
+                var matched = location.href.match(/artworks\/(\d+)/);
+                if (matched) {
+                    illustId = matched[1];
+                    DoLog(LogLevel.Info, 'IllustId=' + illustId);
+                } else {
+                    DoLog(LogLevel.Error, 'Can not found illust id!');
+                    return;
+                }
+
+                $.ajax(g_getUgoiraUrl.replace('#id#', illustId), {
+                    method: 'GET',
+                    success: function(json) {
+                        DoLog(LogLevel.Elements, json);
+
+                        if (json.error == true) {
+                            DoLog(LogLevel.Error, 'Server response an error: ' + json.message);
+                            return;
+                        }
+
+                        // 因为浏览器会拦截不同域的 open 操作，绕一下
+                        var newWindow = window.open('_blank');
+                        newWindow.location = json.body.originalSrc;
+                    },
+                    error: function() {
+                        DoLog(LogLevel.Error, 'Request zip file failed!');
+                    }
+                });
+            });
+        }
+
         if (this.private.needProcess) {
             var canvas = $('.pp-canvas');
 
@@ -1166,77 +1234,23 @@ Pages[PageType.Artwork] = {
                         };
                     }
 
+                    // 添加下载按钮
+                    AddDownloadButton(div, divForStopClick.next(), 0);
+
                     window.parent.PreviewCallback(width, height);
                 }, 500);
             }
-                // 普通模式，只需要添加下载按钮到内嵌模式的 div 里
+            // 普通模式，只需要添加下载按钮到内嵌模式的 div 里
             else {
                 var div = $('div[role="presentation"]');
                 var button = div.find('button');
-                var cloneButton = button.clone().css({ 'bottom': '50px', 'margin': 0, 'padding': 0, 'width': '48px', 'height': '48px', 'opacity': '0.4', 'cursor': 'pointer' });
-                cloneButton.get(0).innerHTML = '<svg viewBox="0 0 120 120" style="width: 40px; height: 40px; stroke-width: 10; stroke-linecap: round; stroke-linejoin: round; border-radius: 24px; background-color: black; stroke: limegreen; fill: none;" class="_3Fo0Hjg"><polyline points="60,30 60,90"></polyline><polyline points="30,60 60,90 90,60"></polyline></svg></button>';
-
-                function getOffset(e) {
-                    if (e.offsetParent) {
-                        var offset = getOffset(e.offsetParent);
-                        return {
-                            offsetTop: e.offsetTop + offset.offsetTop,
-                            offsetLeft: e.offsetLeft + offset.offsetLeft,
-                        };
-                    } else {
-                        return {
-                            offsetTop: e.offsetTop,
-                            offsetLeft: e.offsetLeft,
-                        };
-                    }
-                }
-
-                var offset = getOffset(button.get(0));
-                DoLog(LogLevel.Info, 'offset of download button: ' + offset.offsetTop + ', ' + offset.offsetLeft);
-                DoLog(LogLevel.Elements, offset);
 
                 var headerRealHeight = parseInt($('header').css('height')) +
                     parseInt($('header').css('padding-top')) + parseInt($('header').css('padding-bottom')) +
                     parseInt($('header').css('margin-top')) + parseInt($('header').css('margin-bottom')) +
                     parseInt($('header').css('border-bottom-width')) + parseInt($('header').css('border-top-width'));
-                cloneButton.css({ 'position': 'absolute', 'left': offset.offsetLeft, 'top': offset.offsetTop - 50 - headerRealHeight }).show();
-                div.append(cloneButton);
 
-                cloneButton.mouseover(function () {
-                    $(this).css('opacity', '0.2');
-                }).mouseleave(function () {
-                    $(this).css('opacity', '0.4');
-                }).click(function () {
-                    var illustId = '';
-
-                    var matched = location.href.match(/artworks\/(\d+)/);
-                    if (matched) {
-                        illustId = matched[1];
-                        DoLog(LogLevel.Info, 'IllustId=' + illustId);
-                    } else {
-                        DoLog(LogLevel.Error, 'Can not found illust id!');
-                        return;
-                    }
-
-                    $.ajax(g_getUgoiraUrl.replace('#id#', illustId), {
-                        method: 'GET',
-                        success: function (json) {
-                            DoLog(LogLevel.Elements, json);
-
-                            if (json.error == true) {
-                                DoLog(LogLevel.Error, 'Server response an error: ' + json.message);
-                                return;
-                            }
-
-                            // 因为浏览器会拦截不同域的 open 操作，绕一下
-                            var newWindow = window.open('_blank');
-                            newWindow.location = json.body.originalSrc;
-                        },
-                        error: function () {
-                            DoLog(LogLevel.Error, 'Request zip file failed!');
-                        }
-                    });
-                });
+                AddDownloadButton(div, button, headerRealHeight);
             }
         }
     },
@@ -2132,7 +2146,7 @@ function PixivSK(callback) {
             callback();
         }
     }
-}
+    }
 /* ---------------------------------------- 设置 ---------------------------------------- */
 function SetCookie(name, value) {
     var Days = 180;
