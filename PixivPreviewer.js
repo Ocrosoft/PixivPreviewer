@@ -1,7 +1,7 @@
 ﻿// ==UserScript==
 // @name         Pixiv Previewer
 // @namespace    https://github.com/Ocrosoft/PixivPreviewer
-// @version      3.0.1
+// @version      3.0.2
 // @description  显示大图预览，按热门度排序(pixiv_sk)。Show Preview, ands sort by bookmark count.
 // @author       Ocrosoft
 // @match        *://www.pixiv.net/*
@@ -77,6 +77,8 @@ var g_pageType = -1;
 var g_artworkUrl = '/artworks/#id#';
 // 获取图片链接的链接
 var g_getArtworkUrl = '/ajax/illust/#id#/pages';
+// 获取动图下载链接的链接
+var g_getUgoiraUrl = '/ajax/illust/#id#/ugoira_meta';
 // 鼠标位置
 var g_mousePos = { x: 0, y: 0 };
 // 加载中图片
@@ -1099,6 +1101,7 @@ Pages[PageType.Artwork] = {
         if (this.private.needProcess) {
             var canvas = $('.pp-canvas');
 
+            // 预览模式，需要调成全屏，并且添加下载按钮到全屏播放的 div 里
             if (location.href.indexOf('#preview') != -1) {
                 canvas.click();
 
@@ -1165,6 +1168,75 @@ Pages[PageType.Artwork] = {
 
                     window.parent.PreviewCallback(width, height);
                 }, 500);
+            }
+                // 普通模式，只需要添加下载按钮到内嵌模式的 div 里
+            else {
+                var div = $('div[role="presentation"]');
+                var button = div.find('button');
+                var cloneButton = button.clone().css({ 'bottom': '50px', 'margin': 0, 'padding': 0, 'width': '48px', 'height': '48px', 'opacity': '0.4', 'cursor': 'pointer' });
+                cloneButton.get(0).innerHTML = '<svg viewBox="0 0 120 120" style="width: 40px; height: 40px; stroke-width: 10; stroke-linecap: round; stroke-linejoin: round; border-radius: 24px; background-color: black; stroke: limegreen; fill: none;" class="_3Fo0Hjg"><polyline points="60,30 60,90"></polyline><polyline points="30,60 60,90 90,60"></polyline></svg></button>';
+
+                function getOffset(e) {
+                    if (e.offsetParent) {
+                        var offset = getOffset(e.offsetParent);
+                        return {
+                            offsetTop: e.offsetTop + offset.offsetTop,
+                            offsetLeft: e.offsetLeft + offset.offsetLeft,
+                        };
+                    } else {
+                        return {
+                            offsetTop: e.offsetTop,
+                            offsetLeft: e.offsetLeft,
+                        };
+                    }
+                }
+
+                var offset = getOffset(button.get(0));
+                DoLog(LogLevel.Info, 'offset of download button: ' + offset.offsetTop + ', ' + offset.offsetLeft);
+                DoLog(LogLevel.Elements, offset);
+
+                var headerRealHeight = parseInt($('header').css('height')) +
+                    parseInt($('header').css('padding-top')) + parseInt($('header').css('padding-bottom')) +
+                    parseInt($('header').css('margin-top')) + parseInt($('header').css('margin-bottom')) +
+                    parseInt($('header').css('border-bottom-width')) + parseInt($('header').css('border-top-width'));
+                cloneButton.css({ 'position': 'absolute', 'left': offset.offsetLeft, 'top': offset.offsetTop - 50 - headerRealHeight }).show();
+                div.append(cloneButton);
+
+                cloneButton.mouseover(function () {
+                    $(this).css('opacity', '0.2');
+                }).mouseleave(function () {
+                    $(this).css('opacity', '0.4');
+                }).click(function () {
+                    var illustId = '';
+
+                    var matched = location.href.match(/artworks\/(\d+)/);
+                    if (matched) {
+                        illustId = matched[1];
+                        DoLog(LogLevel.Info, 'IllustId=' + illustId);
+                    } else {
+                        DoLog(LogLevel.Error, 'Can not found illust id!');
+                        return;
+                    }
+
+                    $.ajax(g_getUgoiraUrl.replace('#id#', illustId), {
+                        method: 'GET',
+                        success: function (json) {
+                            DoLog(LogLevel.Elements, json);
+
+                            if (json.error == true) {
+                                DoLog(LogLevel.Error, 'Server response an error: ' + json.message);
+                                return;
+                            }
+
+                            // 因为浏览器会拦截不同域的 open 操作，绕一下
+                            var newWindow = window.open('_blank');
+                            newWindow.location = json.body.originalSrc;
+                        },
+                        error: function () {
+                            DoLog(LogLevel.Error, 'Request zip file failed!');
+                        }
+                    });
+                });
             }
         }
     },
@@ -1249,12 +1321,12 @@ function PixivPreview() {
             g_mousePos = { x: e.pageX, y: e.pageY };
             // 预览 Div
             var previewDiv = $(document.createElement('div')).addClass('pp-main').attr('illustId', illustId)
-                .css({
-                    'position': 'absolute', 'z-index': '999999', 'left': g_mousePos.x + 'px', 'top': g_mousePos.y + 'px',
-                    'border-style': 'solid', 'border-color': '#6495ed', 'border-width': '2px', 'border-radius': '20px',
-                    'width': '48px', 'height': '48px',
-                    'background-image': 'url(https://pp-1252089172.cos.ap-chengdu.myqcloud.com/transparent.png)',
-                });
+            .css({
+                'position': 'absolute', 'z-index': '999999', 'left': g_mousePos.x + 'px', 'top': g_mousePos.y + 'px',
+                'border-style': 'solid', 'border-color': '#6495ed', 'border-width': '2px', 'border-radius': '20px',
+                'width': '48px', 'height': '48px',
+                'background-image': 'url(https://pp-1252089172.cos.ap-chengdu.myqcloud.com/transparent.png)',
+            });
             // 添加到 body
             $('.pp-main').remove();
             $('body').append(previewDiv);
@@ -1271,7 +1343,7 @@ function PixivPreview() {
 
             // 原图（笑脸）图标
             var originIcon = $(new Image()).addClass('pp-original').attr('src', 'https://source.pixiv.net/www/images/pixivcomic-favorite.png')
-                .css({ 'position': 'absolute', 'bottom': '5px', 'right': '5px', 'display': 'none' });
+            .css({ 'position': 'absolute', 'bottom': '5px', 'right': '5px', 'display': 'none' });
             previewDiv.append(originIcon);
 
             // 点击图标新网页打开原图
@@ -1282,7 +1354,7 @@ function PixivPreview() {
             // 右上角张数标记
             var pageCountHTML = '<div class="pp-pageCount" style="display: flex;-webkit-box-align: center;align-items: center;box-sizing: border-box;margin-left: auto;height: 20px;color: rgb(255, 255, 255);font-size: 10px;line-height: 12px;font-weight: bold;flex: 0 0 auto;padding: 4px 6px;background: rgba(0, 0, 0, 0.32);border-radius: 10px;margin-top:5px;margin-right:5px;">\<svg viewBox="0 0 9 10" width="9" height="10" style="stroke: none;line-height: 0;font-size: 0px;fill: currentcolor;"><path d="M8,3 C8.55228475,3 9,3.44771525 9,4 L9,9 C9,9.55228475 8.55228475,10 8,10 L3,10 C2.44771525,10 2,9.55228475 2,9 L6,9 C7.1045695,9 8,8.1045695 8,7 L8,3 Z M1,1 L6,1 C6.55228475,1 7,1.44771525 7,2 L7,7 C7,7.55228475 6.55228475,8 6,8 L1,8 C0.44771525,8 0,7.55228475 0,7 L0,2 C0,1.44771525 0.44771525,1 1,1 Z"></path></svg><span style="margin-left:2px;" class="pp-page">0/0</span></div>';
             var pageCountDiv = $(pageCountHTML)
-                .css({ 'position': 'absolute', 'top': '0px', 'display': 'none', 'right': '0px', 'display': 'none' });
+            .css({ 'position': 'absolute', 'top': '0px', 'display': 'none', 'right': '0px', 'display': 'none' });
             previewDiv.append(pageCountDiv);
 
             $('.pp-main').mouseleave(function (e) {
@@ -2067,7 +2139,7 @@ function SetCookie(name, value) {
     var exp = new Date();
     exp.setTime(exp.getTime() + Days * 24 * 60 * 60 * 1000);
     var str = JSON.stringify(value);
-    document.cookie = name + "=" + str + ";expires=" + exp.toGMTString();
+    document.cookie = name + "=" + str + ";expires=" + exp.toGMTString() + ';path=\/';
 }
 function GetCookie(name) {
     var arr, reg = new RegExp("(^| )" + name + "=([^;]*)(;|$)");
