@@ -100,7 +100,7 @@ var g_defaultSettings = {
 // 设置
 var g_settings;
 // 日志等级
-var g_logLevel = LogLevel.Elements;
+var g_logLevel = LogLevel.Warning;
 // 排序时同时请求收藏量的 Request 数量，没必要太多，并不会加快速度
 var g_maxXhr = 10;
 
@@ -2223,7 +2223,7 @@ function ShowInstallMessage() {
     });
     $('body').append(bg);
 
-    bg.get(0).innerHTML = '<img id="pps-close"src="https://pp-1252089172.cos.ap-chengdu.myqcloud.com/Close.png"style="position: absolute; right: 20px; top: 20px; width: 32px; height: 32px; cursor: pointer;"><div style="position: absolute;width: 40%;left: 30%;top: 25%;font-size: 25px; text-align: center; color: white;">欢迎使用PixivPreviewer v' + g_version + '</div><br><div style="position: absolute;width: 40%;left: 30%;top: 30%;font-size: 20px; color: white;"><p style="text-indent: 2em;">当前版本是对v2.08进行了大量改动后的第一个版本，因此可能不稳定，如果发现问题，请到<a href="https://greasyfork.org/zh-CN/scripts/30766-pixiv-previewer/feedback"target="_blank">反馈页面</a>反馈，我会尽快修复，也欢迎提出建议，非常感谢！</p><p style="text-indent: 2em;">排序功能会比之前的版本慢，具体时间视Pixiv的加载速度而定，原因是新的搜索页面不会再显示排序所必须的收藏量。</p><p style="text-indent: 2em;">如果您是第一次使用，可以到<a href="https://greasyfork.org/zh-CN/scripts/30766-pixiv-previewer"target="_blank">详情页</a>查看脚本介绍。</p></div>';
+    bg.get(0).innerHTML = '<img id="pps-close"src="https://pp-1252089172.cos.ap-chengdu.myqcloud.com/Close.png"style="position: absolute; right: 20px; top: 20px; width: 32px; height: 32px; cursor: pointer;"><div style="position: absolute;width: 40%;left: 30%;top: 25%;font-size: 25px; text-align: center; color: white;">欢迎使用PixivPreviewer v' + g_version + '</div><br><div style="position: absolute;width: 40%;left: 30%;top: 30%;font-size: 20px; color: white;"><p style="text-indent: 2em;">当前版本是对v2.08进行了大量改动后的第一个版本，因此可能不稳定，如果发现问题，请到<a style="color: green;" href="https://greasyfork.org/zh-CN/scripts/30766-pixiv-previewer/feedback" target="_blank">反馈页面</a>反馈，我会尽快修复，也欢迎提出建议，非常感谢！</p><p style="text-indent: 2em;">排序功能会比之前的版本慢，具体时间视Pixiv的加载速度而定，原因是新的搜索页面不会再显示排序所必须的收藏量。</p><p style="text-indent: 2em;">如果您是第一次使用，推荐到<a style="color: green;" href="https://greasyfork.org/zh-CN/scripts/30766-pixiv-previewer" target="_blank">详情页</a>查看脚本介绍。</p></div>';
     $('#pps-close').click(function () {
         $('#pp-bg').remove();
     });
