@@ -1084,6 +1084,10 @@ Pages[PageType.Artwork] = {
     HasAutoLoad: false,
     Work: function () {
         function AddDownloadButton(div, button, offsetToOffsetTop) {
+            if (!g_settings.enableAnimeDownload) {
+                return;
+            }
+
             var cloneButton = button.clone().css({ 'bottom': '50px', 'margin': 0, 'padding': 0, 'width': '48px', 'height': '48px', 'opacity': '0.4', 'cursor': 'pointer' });
             cloneButton.get(0).innerHTML = '<svg viewBox="0 0 120 120" style="width: 40px; height: 40px; stroke-width: 10; stroke-linecap: round; stroke-linejoin: round; border-radius: 24px; background-color: black; stroke: limegreen; fill: none;" class="_3Fo0Hjg"><polyline points="60,30 60,90"></polyline><polyline points="30,60 60,90 90,60"></polyline></svg></button>';
 
@@ -2219,7 +2223,7 @@ function ShowInstallMessage() {
     });
     $('body').append(bg);
 
-    bg.get(0).innerHTML = '<img id="pps-close" src="https://pp-1252089172.cos.ap-chengdu.myqcloud.com/Close.png" style="position: absolute; right: 20px; top: 20px; width: 32px; height: 32px; cursor: pointer;"><div style="position: absolute;width: 40%;left: 30%;top: 25%;font-size: 25px; text-align: center; color: white;">欢迎使用 PixivPreviewer v' + g_version + '</div><br><div style="position: absolute;width: 40%;left: 30%;top: 30%;font-size: 20px; color: white;"><p style="text-indent: 2em;">当前版本是对 v2.08 进行了大量改动后的第一个版本，因此可能不稳定，如果发现问题，请到<a href="https://greasyfork.org/zh-CN/scripts/30766-pixiv-previewer/feedback" target="_blank">反馈页面</a>反馈，我会尽快修复，也欢迎提出建议，非常感谢！</p><p style="text-indent: 2em;">如果您是第一次使用，可以到<a href="https://greasyfork.org/zh-CN/scripts/30766-pixiv-previewer" target="_blank">详情页</a>查看脚本介绍。</p></div>';
+    bg.get(0).innerHTML = '<img id="pps-close"src="https://pp-1252089172.cos.ap-chengdu.myqcloud.com/Close.png"style="position: absolute; right: 20px; top: 20px; width: 32px; height: 32px; cursor: pointer;"><div style="position: absolute;width: 40%;left: 30%;top: 25%;font-size: 25px; text-align: center; color: white;">欢迎使用PixivPreviewer v' + g_version + '</div><br><div style="position: absolute;width: 40%;left: 30%;top: 30%;font-size: 20px; color: white;"><p style="text-indent: 2em;">当前版本是对v2.08进行了大量改动后的第一个版本，因此可能不稳定，如果发现问题，请到<a href="https://greasyfork.org/zh-CN/scripts/30766-pixiv-previewer/feedback"target="_blank">反馈页面</a>反馈，我会尽快修复，也欢迎提出建议，非常感谢！</p><p style="text-indent: 2em;">排序功能会比之前的版本慢，具体时间视Pixiv的加载速度而定，原因是新的搜索页面不会再显示排序所必须的收藏量。</p><p style="text-indent: 2em;">如果您是第一次使用，可以到<a href="https://greasyfork.org/zh-CN/scripts/30766-pixiv-previewer"target="_blank">详情页</a>查看脚本介绍。</p></div>';
     $('#pps-close').click(function () {
         $('#pp-bg').remove();
     });
