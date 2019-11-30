@@ -1,7 +1,7 @@
 ﻿// ==UserScript==
 // @name         Pixiv Previewer
 // @namespace    https://github.com/Ocrosoft/PixivPreviewer
-// @version      3.0.1
+// @version      3.0.2
 // @description  显示大图预览，按热门度排序(pixiv_sk)。Show Preview, ands sort by bookmark count.
 // @author       Ocrosoft
 // @match        *://www.pixiv.net/*
@@ -126,24 +126,20 @@ var PageType = {
     BookMark: 8,
     // 动态
     Stacc: 9,
-    // 用户-插画页
-    MemberIllust: 10,
-    // 用户-收藏页
-    MemberBookMark: 11,
     // 作品详情页（处理动图预览及下载）
-    Artwork: 12,
+    Artwork: 10,
 
     // 总数
-    PageTypeCount: 13,
+    PageTypeCount: 11,
 };
 var Pages = {};
-/*
- * Pages 元素规则，仅包含必须有的内容，可以添加其他内容
+/* Pages 必须实现的函数
  * PageTypeString: string，字符串形式的 PageType
  * bool CheckUrl: function(string url)，用于检查一个 url 是否是当前页面的目标 url
  * ReturnMap ProcessPageElements: function()，处理页面（寻找图片元素、添加属性等），返回 ReturnMap
+ * ReturnMap GetProcessedPageElements: function(), 返回上一次 ProcessPageElements 的返回值（如果没有上次调用则调用一次）
  * Object GetToolBar: function(), 返回工具栏元素（右下角那个，用来放设置按钮）
- * GetProcessedPageElements: function(), 返回上一次 ProcessPageElements 的返回值（如果没有上次调用则调用一次）
+ * HasAutoLoad: bool，表示这个页面是否有自动加载功能
  */
 var ReturnMapSample = {
     // 页面是否加载完成，false 意味着后面的成员无效
@@ -303,6 +299,7 @@ Pages[PageType.Search] = {
     GetToolBar: function () {
         return $('#root').children('div:last').prev().find('li:first').parent().get(0);
     },
+	HasAutoLoad: false,
     GetImageListContainer: function () {
         return this.private.imageListConrainer;
     },
@@ -411,6 +408,7 @@ Pages[PageType.BookMarkNew] = {
     GetToolBar: function () {
         return $('._toolmenu').get(0);
     },
+    HasAutoLoad: false,
     private: {
         returnMap: null,
     },
@@ -508,14 +506,17 @@ Pages[PageType.Discovery] = {
     GetToolBar: function () {
         return $('._toolmenu').get(0);
     },
+    HasAutoLoad: true,
     private: {
         returnMap: null,
     },
 };
 Pages[PageType.Member] = {
-    PageTypeString: 'MemberPage',
+    PageTypeString: 'MemberPage/MemberIllustPage/MemberBookMark',
     CheckUrl: function (url) {
-        return /^https?:\/\/www.pixiv.net\/member.php\?id=.*/.test(url);
+        return /^https?:\/\/www.pixiv.net\/member.php\?id=.*/.test(url) ||
+               /^https:\/\/www.pixiv.net\/member_illust.php.*/.test(url) ||
+               /^https:\/\/www.pixiv.net\/bookmark.php\?.*/.test(url);
     },
     ProcessPageElements: function () {
         var returnMap = {
@@ -601,6 +602,7 @@ Pages[PageType.Member] = {
             }
         }
     },
+    HasAutoLoad: false,
     private: {
         returnMap: null,
     },
@@ -696,6 +698,7 @@ Pages[PageType.Home] = {
     GetToolBar: function () {
         return $('._toolmenu').get(0);
     },
+    HasAutoLoad: false,
     private: {
         returnMap: null,
     },
@@ -775,6 +778,7 @@ Pages[PageType.Ranking] = {
     GetToolBar: function () {
         return $('._toolmenu').get(0);
     },
+    HasAutoLoad: false,
     private: {
         returnMap: null,
     },
@@ -866,6 +870,7 @@ Pages[PageType.NewIllust] = {
             }
         }
     },
+    HasAutoLoad: true,
     private: {
         returnMap: null,
     },
@@ -881,6 +886,7 @@ Pages[PageType.R18] = {
     GetToolBar: function () {
         //
     },
+    HasAutoLoad: false,
 };
 Pages[PageType.BookMark] = {
     PageTypeString: 'BookMarkPage',
@@ -961,6 +967,7 @@ Pages[PageType.BookMark] = {
     GetToolBar: function () {
         return $('._toolmenu').get(0);
     },
+    HasAutoLoad: false,
     private: {
         returnMap: null,
     },
@@ -1040,30 +1047,7 @@ Pages[PageType.Stacc] = {
     GetToolBar: function () {
         return $('._toolmenu').get(0);
     },
-    private: {
-        returnMap: null,
-    },
-};
-Pages[PageType.MemberIllust] = {
-    PageTypeString: 'MemberIllustPage',
-    CheckUrl: function (url) {
-        return /^https:\/\/www.pixiv.net\/member_illust.php.*/.test(url);
-    },
-    ProcessPageElements: Pages[PageType.Member].ProcessPageElements,
-    GetProcessedPageElements: Pages[PageType.Member].GetProcessedPageElements,
-    GetToolBar: Pages[PageType.Member].GetToolBar,
-    private: {
-        returnMap: null,
-    },
-};
-Pages[PageType.MemberBookMark] = {
-    PageTypeString: 'MemberBookMarkPage',
-    CheckUrl: function (url) {
-        return /^https:\/\/www.pixiv.net\/bookmark.php\?.*/.test(url);
-    },
-    ProcessPageElements: Pages[PageType.Member].ProcessPageElements,
-    GetProcessedPageElements: Pages[PageType.Member].GetProcessedPageElements,
-    GetToolBar: Pages[PageType.Member].GetToolBar,
+    HasAutoLoad: true,
     private: {
         returnMap: null,
     },
@@ -1097,13 +1081,14 @@ Pages[PageType.Artwork] = {
             }
         }
     },
+    HasAutoLoad: false,
     Work: function () {
-        function AddDownloadButton (div, button, offsetToOffsetTop) {
-            var cloneButton = button.clone().css({'bottom': '50px', 'margin': 0, 'padding': 0, 'width': '48px', 'height': '48px', 'opacity': '0.4', 'cursor': 'pointer'});
+        function AddDownloadButton(div, button, offsetToOffsetTop) {
+            var cloneButton = button.clone().css({ 'bottom': '50px', 'margin': 0, 'padding': 0, 'width': '48px', 'height': '48px', 'opacity': '0.4', 'cursor': 'pointer' });
             cloneButton.get(0).innerHTML = '<svg viewBox="0 0 120 120" style="width: 40px; height: 40px; stroke-width: 10; stroke-linecap: round; stroke-linejoin: round; border-radius: 24px; background-color: black; stroke: limegreen; fill: none;" class="_3Fo0Hjg"><polyline points="60,30 60,90"></polyline><polyline points="30,60 60,90 90,60"></polyline></svg></button>';
 
             function MoveButton() {
-                function getOffset(e){
+                function getOffset(e) {
                     if (e.offsetParent) {
                         var offset = getOffset(e.offsetParent);
                         return {
@@ -1122,18 +1107,18 @@ Pages[PageType.Artwork] = {
                 DoLog(LogLevel.Info, 'offset of download button: ' + offset.offsetTop + ', ' + offset.offsetLeft);
                 DoLog(LogLevel.Elements, offset);
 
-                cloneButton.css({'position': 'absolute', 'left': offset.offsetLeft, 'top': offset.offsetTop - 50 - offsetToOffsetTop}).show();
+                cloneButton.css({ 'position': 'absolute', 'left': offset.offsetLeft, 'top': offset.offsetTop - 50 - offsetToOffsetTop }).show();
             }
 
             MoveButton();
             $(window).on('resize', MoveButton);
             div.append(cloneButton);
 
-            cloneButton.mouseover(function() {
+            cloneButton.mouseover(function () {
                 $(this).css('opacity', '0.2');
-            }).mouseleave(function() {
+            }).mouseleave(function () {
                 $(this).css('opacity', '0.4');
-            }).click(function() {
+            }).click(function () {
                 var illustId = '';
 
                 var matched = location.href.match(/artworks\/(\d+)/);
@@ -1147,7 +1132,7 @@ Pages[PageType.Artwork] = {
 
                 $.ajax(g_getUgoiraUrl.replace('#id#', illustId), {
                     method: 'GET',
-                    success: function(json) {
+                    success: function (json) {
                         DoLog(LogLevel.Elements, json);
 
                         if (json.error == true) {
@@ -1159,7 +1144,7 @@ Pages[PageType.Artwork] = {
                         var newWindow = window.open('_blank');
                         newWindow.location = json.body.originalSrc;
                     },
-                    error: function() {
+                    error: function () {
                         DoLog(LogLevel.Error, 'Request zip file failed!');
                     }
                 });
@@ -1298,6 +1283,8 @@ function CheckUrlTest() {
 
 /* ---------------------------------------- 预览 ---------------------------------------- */
 function PixivPreview() {
+    var autoLoadInterval = null;
+
     // 开启预览功能
     function ActivePreview() {
         var returnMap = Pages[g_pageType].GetProcessedPageElements();
@@ -1460,12 +1447,37 @@ function PixivPreview() {
             AdjustDivPosition();
         });
 
+        // 这个页面有自动加载
+        if (Pages[g_pageType].HasAutoLoad && autoLoadInterval == null) {
+            autoLoadInterval = setInterval(ProcessAutoLoad, 1000);
+            DoLog(LogLevel.Info, 'Auto load interval set.');
+        }
+
         // 插一段回调函数
         window.PreviewCallback = PreviewCallback;
         DoLog(LogLevel.Info, 'Callback function was inserted.');
         DoLog(LogLevel.Elements, window.PreviewCallback);
 
-        DoLog(LogLevel.Info, 'Preview enable successful!');
+        DoLog(LogLevel.Info, 'Preview enable succeed!');
+    }
+
+    // 关闭预览功能，不是给外部用的
+    function DeactivePreview() {
+        var returnMap = Pages[g_pageType].GetProcessedPageElements();
+        if (!returnMap.loadingComplete) {
+            DoLog(LogLevel.Error, 'Page not load, should not call Preview!');
+            return;
+        }
+
+        // 只需要取消绑定事件， attrs 以及回调都不需要删除
+        $(returnMap.controlElements).unbind('mouseenter').unbind('mouseleave').unbind('mousemove');
+
+        if (autoLoadInterval) {
+            clearInterval(autoLoadInterval);
+            autoLoadInterval = null;
+        }
+
+        DoLog(LogLevel.Info, 'Preview disable succeed!');
     }
 
     // iframe 的回调函数
@@ -1646,6 +1658,36 @@ function PixivPreview() {
         }
 
         $('.pp-image').attr('src', isShowOriginal ? original[index] : regular[index]).attr('index', index);
+    }
+
+    // 处理自动加载
+    function ProcessAutoLoad() {
+        if (Pages[g_pageType].private.returnMap == null) {
+            DoLog(LogLevel.Error, 'Call ProcessPageElements first!');
+            return;
+        }
+
+        var oldReturnMap = Pages[g_pageType].private.returnMap;
+        var newReturnMap = Pages[g_pageType].ProcessPageElements();
+
+        if (newReturnMap.loadingComplete) {
+            if (oldReturnMap.controlElements.length < newReturnMap.controlElements.length) {
+                DoLog(LogLevel.Info, 'Page loaded ' + (newReturnMap.controlElements.length - oldReturnMap.controlElements.length) + ' new work(s).');
+
+                DeactivePreview();
+                PixivPreview();
+
+                return;
+            } else if (oldReturnMap.length > newReturnMap.length) {
+                DoLog(LogLevel.Warning, 'works become less?');
+
+                Pages[g_pageType].private.returnMap = oldReturnMap;
+
+                return;
+            }
+        }
+
+        DoLog(LogLevel.Info, 'Page not change.');
     }
 
     // 开启预览
@@ -2146,7 +2188,7 @@ function PixivSK(callback) {
             callback();
         }
     }
-    }
+}
 /* ---------------------------------------- 设置 ---------------------------------------- */
 function SetCookie(name, value) {
     var Days = 180;
