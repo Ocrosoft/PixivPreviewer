@@ -1,7 +1,7 @@
 ﻿// ==UserScript==
 // @name         Pixiv Previewer
 // @namespace    https://github.com/Ocrosoft/PixivPreviewer
-// @version      3.0.2
+// @version      3.0.3
 // @description  显示大图预览，按热门度排序(pixiv_sk)。Show Preview, ands sort by bookmark count.
 // @author       Ocrosoft
 // @match        *://www.pixiv.net/*
@@ -1848,7 +1848,7 @@ function PixivSK(callback) {
             $(pageSelectorDiv).find('a').attr('href', 'javascript:;');
 
             var pageUrl = location.href;
-            if (pageUrl.indexOf('&p=') == -1 || pageUrl.indexOf('?p=') == -1) {
+            if (pageUrl.indexOf('&p=') == -1 && pageUrl.indexOf('?p=') == -1) {
                 if (pageUrl.indexOf('?') == -1) {
                     pageUrl += '?p=1';
                 } else {
