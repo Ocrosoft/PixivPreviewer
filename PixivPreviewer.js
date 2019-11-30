@@ -1,7 +1,7 @@
 ﻿// ==UserScript==
 // @name         Pixiv Previewer
 // @namespace    https://github.com/Ocrosoft/PixivPreviewer
-// @version      3.0.3
+// @version      3.0.5
 // @description  显示大图预览，按热门度排序(pixiv_sk)。Show Preview, ands sort by bookmark count.
 // @author       Ocrosoft
 // @match        *://www.pixiv.net/*
@@ -378,7 +378,7 @@ Pages[PageType.BookMarkNew] = {
                         return;
                     }
                     ctlAttrs.pageCount = span.text();
-                } else if (link.children('div:last').find('svg').length > 0) {
+                } else {
                     ctlAttrs.illustType = 2;
                 }
             }
@@ -1671,12 +1671,12 @@ function PixivPreview() {
 
     // 处理自动加载
     function ProcessAutoLoad() {
-        if (Pages[g_pageType].private.returnMap == null) {
+        if (Pages[g_pageType].GetProcessedPageElements() == null) {
             DoLog(LogLevel.Error, 'Call ProcessPageElements first!');
             return;
         }
 
-        var oldReturnMap = Pages[g_pageType].private.returnMap;
+        var oldReturnMap = Pages[g_pageType].GetProcessedPageElements();
         var newReturnMap = Pages[g_pageType].ProcessPageElements();
 
         if (newReturnMap.loadingComplete) {
@@ -1684,14 +1684,14 @@ function PixivPreview() {
                 DoLog(LogLevel.Info, 'Page loaded ' + (newReturnMap.controlElements.length - oldReturnMap.controlElements.length) + ' new work(s).');
 
                 if (g_settings.linkBlank) {
-                    $(returnMap.controlElements).find('a').attr('target', '_blank');
+                    $(newReturnMap.controlElements).find('a').attr('target', '_blank');
                 }
 
                 DeactivePreview();
-                PixivPreview();
+                ActivePreview();
 
                 return;
-            } else if (oldReturnMap.length > newReturnMap.length) {
+            } else if (oldReturnMap.controlElements.length > newReturnMap.controlElements.length) {
                 DoLog(LogLevel.Warning, 'works become less?');
 
                 Pages[g_pageType].private.returnMap = oldReturnMap;
