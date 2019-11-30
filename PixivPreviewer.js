@@ -1507,9 +1507,14 @@ function PixivPreview() {
         var width = 0, height = 0;
         if ($('.pp-main').find('iframe').length > 0) {
             var iframe = $('.pp-main').find('iframe').get(0);
-            var canvasSize = iframe.contentWindow.GetCanvasSize();
-            width = canvasSize.width;
-            height = canvasSize.height;
+            if (iframe.contentWindow.GetCanvasSize) {
+                var canvasSize = iframe.contentWindow.GetCanvasSize();
+                width = canvasSize.width;
+                height = canvasSize.height;
+            } else {
+                width = 0;
+                height = 0;
+            }
         } else {
             $('.pp-image').css({ 'width': '', 'height': '' });
             width = $('.pp-image').get(0) == null ? 0 : $('.pp-image').get(0).width;
