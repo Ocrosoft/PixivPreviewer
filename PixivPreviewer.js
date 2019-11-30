@@ -299,7 +299,7 @@ Pages[PageType.Search] = {
     GetToolBar: function () {
         return $('#root').children('div:last').prev().find('li:first').parent().get(0);
     },
-	HasAutoLoad: false,
+    HasAutoLoad: false,
     GetImageListContainer: function () {
         return this.private.imageListConrainer;
     },
@@ -1225,7 +1225,7 @@ Pages[PageType.Artwork] = {
                     window.parent.PreviewCallback(width, height);
                 }, 500);
             }
-            // 普通模式，只需要添加下载按钮到内嵌模式的 div 里
+                // 普通模式，只需要添加下载按钮到内嵌模式的 div 里
             else {
                 var div = $('div[role="presentation"]');
                 var button = div.find('button');
@@ -1673,6 +1673,10 @@ function PixivPreview() {
         if (newReturnMap.loadingComplete) {
             if (oldReturnMap.controlElements.length < newReturnMap.controlElements.length) {
                 DoLog(LogLevel.Info, 'Page loaded ' + (newReturnMap.controlElements.length - oldReturnMap.controlElements.length) + ' new work(s).');
+
+                if (g_settings.linkBlank) {
+                    $(returnMap.controlElements).find('a').attr('target', '_blank');
+                }
 
                 DeactivePreview();
                 PixivPreview();
@@ -2206,18 +2210,42 @@ function GetCookie(name) {
         return null;
     }
 }
+function ShowInstallMessage() {
+    $('#pp-bg').remove();
+    var bg = $('<div id="pp-bg"></div>').css({
+        'width': document.documentElement.clientWidth + 'px', 'height': document.documentElement.clientHeight + 'px', 'position': 'fixed',
+        'z-index': 999999, 'background-color': 'rgba(0,0,0,0.8)',
+        'left': '0px', 'top': '0px'
+    });
+    $('body').append(bg);
+
+    bg.get(0).innerHTML = '<img id="pps-close" src="https://pp-1252089172.cos.ap-chengdu.myqcloud.com/Close.png" style="position: absolute; right: 20px; top: 20px; width: 32px; height: 32px; cursor: pointer;"><div style="position: absolute;width: 40%;left: 30%;top: 25%;font-size: 25px; text-align: center; color: white;">欢迎使用 PixivPreviewer v' + g_version + '</div><br><div style="position: absolute;width: 40%;left: 30%;top: 30%;font-size: 20px; color: white;"><p style="text-indent: 2em;">当前版本是对 v2.08 进行了大量改动后的第一个版本，因此可能不稳定，如果发现问题，请到<a href="https://greasyfork.org/zh-CN/scripts/30766-pixiv-previewer/feedback" target="_blank">反馈页面</a>反馈，我会尽快修复，也欢迎提出建议，非常感谢！</p><p style="text-indent: 2em;">如果您是第一次使用，可以到<a href="https://greasyfork.org/zh-CN/scripts/30766-pixiv-previewer" target="_blank">详情页</a>查看脚本介绍。</p></div>';
+    $('#pps-close').click(function () {
+        $('#pp-bg').remove();
+    });
+}
 function GetSettings() {
     var settings;
 
     var cookie = GetCookie('PixivPreview');
+    // 新安装
     if (cookie == null || cookie == 'null') {
         settings = g_defaultSettings;
+        SetCookie('PixivPreview', settings);
+
+        ShowInstallMessage();
     } else {
         settings = JSON.parse(cookie);
     }
 
-    if (settings.version == null) {
+    // 升级
+    if (settings.version != g_version) {
+        ShowInstallMessage();
+    }
+
+    if (settings.version == null || settings.version != g_version) {
         settings.version = g_version;
+        SetCookie('PixivPreview', settings);
     }
 
     return settings;
@@ -2236,7 +2264,7 @@ function ShowSetting() {
 
     var settings = GetSettings();
 
-    var settingHTML = '<div style="color: white; font-size: 1em;"><img id="pps-close" src="https://pp-1252089172.cos.ap-chengdu.myqcloud.com/Close.png" style="position: absolute; right: 20px; top: 20px; width: 32px; height: 32px; cursor: pointer;"><div style="position: absolute; width: 30%; left: 30%; top: 25%;"><ul style="list-style: none; padding: 0; margin: 0;"><li style="height: 32px; font-size: 25px;">预览</li><li style="height: 32px; font-size: 25px;">排序（仅搜索页生效）</li><li style="height: 32px; font-size: 25px;">动图下载（预览动图时生效）</li><li style="height: 32px; font-size: 25px;">预览时优先显示原图（慢）</li><li style="height: 32px; font-size: 25px;"></li><li style="height: 32px; font-size: 25px;">每次排序时统计的最大页数</li><li style="height: 32px; font-size: 25px;">隐藏收藏数少于该值的作品</li><li style="height: 32px; font-size: 25px;">搜索时隐藏已收藏的作品</li><li style="height: 32px; font-size: 25px;">使用新标签页打开作品详情页</li></ul></div><div id="pps-right" style="position: absolute; width: 10%; right: 30%; text-align: right; top: 25%;"><ul style="list-style: none; padding: 0; margin: 0;"><li style="height: 32px;"><img id="pps-preview" src="https://pp-1252089172.cos.ap-chengdu.myqcloud.com/On.png" style="height: 32px; cursor: pointer;"></li><li style="height: 32px;"><img id="pps-sort" src="https://pp-1252089172.cos.ap-chengdu.myqcloud.com/On.png" style="height: 32px; cursor: pointer;"></li><li style="height: 32px;"><img id="pps-anime" src="https://pp-1252089172.cos.ap-chengdu.myqcloud.com/On.png" style="height: 32px; cursor: pointer;"></li><li style="height: 32px;"><img id="pps-original" src="https://pp-1252089172.cos.ap-chengdu.myqcloud.com/On.png" style="height: 32px; cursor: pointer;"></li><li style="height: 32px;"></li><li style="height: 32px;"><input id="pps-maxPage" style="height: 28px; font-size: 24px; padding: 0px; margin: 0px; border-width: 0px; width: 64px; text-align: center;"></li><li style="height: 32px;"><input id="pps-hideLess" style="height: 28px; font-size: 24px; padding: 0px; margin: 0px; border-width: 0px; width: 64px; text-align: center;"></li><li style="height: 32px;"><img id="pps-hideBookmarked" src="https://pp-1252089172.cos.ap-chengdu.myqcloud.com/On.png" style="height: 32px; cursor: pointer;"></li><li style="height: 32px;"><img id="pps-newTab" src="https://pp-1252089172.cos.ap-chengdu.myqcloud.com/On.png" style="height: 32px; cursor: pointer;"></li></ul></div><div style="margin-top: 10px;position: absolute;bottom: 30%;width: 100%;text-align: center;"><button id="pps-save" style="font-size: 25px;border-radius: 15px;height: 48px;width: 128px;background-color: green;color: white;margin: 0 32px 0 32px;cursor: pointer;border: none;">保存设置</button><button id="pps-reset" style="font-size: 25px;border-radius: 15px;height: 48px;width: 128px;background-color: darkred;color: white;margin: 0 32px 0 32px;cursor: pointer;border: none;">重置脚本</button></div></div>';
+    var settingHTML = '<div style="color: white; font-size: 1em;"><img id="pps-close" src="https://pp-1252089172.cos.ap-chengdu.myqcloud.com/Close.png" style="position: absolute; right: 20px; top: 20px; width: 32px; height: 32px; cursor: pointer;"><div style="position: absolute; width: 30%; left: 30%; top: 25%;"><ul style="list-style: none; padding: 0; margin: 0;"><li style="height: 32px; font-size: 25px;">预览</li><li style="height: 32px; font-size: 25px;">排序（仅搜索页生效）</li><li style="height: 32px; font-size: 25px;">动图下载（动图预览及详情页生效）</li><li style="height: 32px; font-size: 25px;">预览时优先显示原图（慢）</li><li style="height: 32px; font-size: 25px;"></li><li style="height: 32px; font-size: 25px;">每次排序时统计的最大页数</li><li style="height: 32px; font-size: 25px;">隐藏收藏数少于设定值的作品</li><li style="height: 32px; font-size: 25px;">排序时隐藏已收藏的作品</li><li style="height: 32px; font-size: 25px;">使用新标签页打开作品详情页</li></ul></div><div id="pps-right" style="position: absolute; width: 10%; right: 30%; text-align: right; top: 25%;"><ul style="list-style: none; padding: 0; margin: 0;"><li style="height: 32px;"><img id="pps-preview" src="https://pp-1252089172.cos.ap-chengdu.myqcloud.com/On.png" style="height: 32px; cursor: pointer;"></li><li style="height: 32px;"><img id="pps-sort" src="https://pp-1252089172.cos.ap-chengdu.myqcloud.com/On.png" style="height: 32px; cursor: pointer;"></li><li style="height: 32px;"><img id="pps-anime" src="https://pp-1252089172.cos.ap-chengdu.myqcloud.com/On.png" style="height: 32px; cursor: pointer;"></li><li style="height: 32px;"><img id="pps-original" src="https://pp-1252089172.cos.ap-chengdu.myqcloud.com/On.png" style="height: 32px; cursor: pointer;"></li><li style="height: 32px;"></li><li style="height: 32px;"><input id="pps-maxPage" style="height: 28px; font-size: 24px; padding: 0px; margin: 0px; border-width: 0px; width: 64px; text-align: center;"></li><li style="height: 32px;"><input id="pps-hideLess" style="height: 28px; font-size: 24px; padding: 0px; margin: 0px; border-width: 0px; width: 64px; text-align: center;"></li><li style="height: 32px;"><img id="pps-hideBookmarked" src="https://pp-1252089172.cos.ap-chengdu.myqcloud.com/On.png" style="height: 32px; cursor: pointer;"></li><li style="height: 32px;"><img id="pps-newTab" src="https://pp-1252089172.cos.ap-chengdu.myqcloud.com/On.png" style="height: 32px; cursor: pointer;"></li></ul></div><div style="margin-top: 10px;position: absolute;bottom: 30%;width: 100%;text-align: center;"><button id="pps-save" style="font-size: 25px;border-radius: 15px;height: 48px;width: 128px;background-color: green;color: white;margin: 0 32px 0 32px;cursor: pointer;border: none;">保存设置</button><button id="pps-reset" style="font-size: 25px;border-radius: 15px;height: 48px;width: 128px;background-color: darkred;color: white;margin: 0 32px 0 32px;cursor: pointer;border: none;">重置脚本</button></div></div>';
 
     bg.get(0).innerHTML = settingHTML;
 
@@ -2367,6 +2395,10 @@ var loadInterval = setInterval(function () {
         DoLog(LogLevel.Elements, returnMap);
 
         clearInterval(itv);
+
+        if (g_settings.linkBlank) {
+            $(returnMap.controlElements).find('a').attr('target', '_blank');
+        }
 
         try {
             if (g_pageType == PageType.Artwork) {
