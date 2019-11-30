@@ -1,7 +1,7 @@
 ﻿// ==UserScript==
 // @name         Pixiv Previewer
 // @namespace    https://github.com/Ocrosoft/PixivPreviewer
-// @version      3.0.6
+// @version      3.0.7
 // @description  显示大图预览，按热门度排序(pixiv_sk)。Show Preview, ands sort by bookmark count.
 // @author       Ocrosoft
 // @match        *://www.pixiv.net/*
@@ -213,6 +213,12 @@ Pages[PageType.Search] = {
                 var lis = ul.find('li');
                 if (lis.length === 0) {
                     DoLog(LogLevel.Info, 'This <ul> has 0 children, will be skipped.');
+                    return false;
+                }
+                if ($(lis.get(0)).find('figure').length > 0) {
+                    DoLog(LogLevel.Warning, '<figure> was found in the first <li>, continue waiting.');
+                    sectionIndex = -1;
+                    bestScore = 999;
                     return false;
                 }
                 if (lis.length > 4) {
