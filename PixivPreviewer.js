@@ -241,7 +241,7 @@ Pages[PageType.Search] = {
             // 只填充必须的几个，其他的目前用不着
             var ctlAttrs = {
                 illustId: 0,
-                illustTye: 0,
+                illustType: 0,
                 pageCount: 1,
             };
 
@@ -272,7 +272,7 @@ Pages[PageType.Search] = {
                 // 添加 attr
                 li.attr({
                     'illustId': ctlAttrs.illustId,
-                    'illustType': ctlAttrs.illustTye,
+                    'illustType': ctlAttrs.illustType,
                     'pageCount': ctlAttrs.pageCount
                 });
             }
@@ -352,7 +352,7 @@ Pages[PageType.BookMarkNew] = {
 
             var ctlAttrs = {
                 illustId: 0,
-                illustTye: 0,
+                illustType: 0,
                 pageCount: 1,
             };
 
@@ -379,13 +379,13 @@ Pages[PageType.BookMarkNew] = {
                     }
                     ctlAttrs.pageCount = span.text();
                 } else if (link.children('div:last').find('svg').length > 0) {
-                    ctlAttrs.illustTye = 2;
+                    ctlAttrs.illustType = 2;
                 }
             }
 
             _this.attr({
                 'illustId': ctlAttrs.illustId,
-                'illustType': ctlAttrs.illustTye,
+                'illustType': ctlAttrs.illustType,
                 'pageCount': ctlAttrs.pageCount
             });
 
@@ -450,7 +450,7 @@ Pages[PageType.Discovery] = {
 
             var ctlAttrs = {
                 illustId: 0,
-                illustTye: 0,
+                illustType: 0,
                 pageCount: 1,
             };
 
@@ -477,13 +477,13 @@ Pages[PageType.Discovery] = {
                     }
                     ctlAttrs.pageCount = span.text();
                 } else if (link.children('div:last').find('svg').length > 0) {
-                    ctlAttrs.illustTye = 2;
+                    ctlAttrs.illustType = 2;
                 }
             }
 
             _this.attr({
                 'illustId': ctlAttrs.illustId,
-                'illustType': ctlAttrs.illustTye,
+                'illustType': ctlAttrs.illustType,
                 'pageCount': ctlAttrs.pageCount
             });
 
@@ -536,7 +536,7 @@ Pages[PageType.Member] = {
             // 只填充必须的几个，其他的目前用不着
             var ctlAttrs = {
                 illustId: 0,
-                illustTye: 0,
+                illustType: 0,
                 pageCount: 1,
             };
 
@@ -572,7 +572,7 @@ Pages[PageType.Member] = {
                 // 添加 attr
                 li.attr({
                     'illustId': ctlAttrs.illustId,
-                    'illustType': ctlAttrs.illustTye,
+                    'illustType': ctlAttrs.illustType,
                     'pageCount': ctlAttrs.pageCount
                 });
             }
@@ -653,7 +653,7 @@ Pages[PageType.Home] = {
 
                 var ctlAttrs = {
                     illustId: 0,
-                    illustTye: 0,
+                    illustType: 0,
                     pageCount: 1,
                 };
 
@@ -669,12 +669,12 @@ Pages[PageType.Home] = {
                     pageCount = parseInt(pageCount.find('span').text());
                 }
                 if (__this.find('a:first').hasClass('ugoku-illust')) {
-                    ctlAttrs.illustTye = 2;
+                    ctlAttrs.illustType = 2;
                 }
 
                 __this.attr({
                     'illustId': ctlAttrs.illustId,
-                    'illustType': ctlAttrs.illustTye,
+                    'illustType': ctlAttrs.illustType,
                     'pageCount': ctlAttrs.pageCount
                 });
 
@@ -724,7 +724,7 @@ Pages[PageType.Ranking] = {
 
             var ctlAttrs = {
                 illustId: 0,
-                illustTye: 0,
+                illustType: 0,
                 pageCount: 1,
             };
 
@@ -748,13 +748,13 @@ Pages[PageType.Ranking] = {
             }
 
             if (_this.hasClass('ugoku-illust')) {
-                ctlAttrs.illustTye = 2;
+                ctlAttrs.illustType = 2;
             }
 
             // 添加 attr
             _this.attr({
                 'illustId': ctlAttrs.illustId,
-                'illustType': ctlAttrs.illustTye,
+                'illustType': ctlAttrs.illustType,
                 'pageCount': ctlAttrs.pageCount
             });
 
@@ -818,7 +818,7 @@ Pages[PageType.NewIllust] = {
 
             var ctlAttrs = {
                 illustId: 0,
-                illustTye: 0,
+                illustType: 0,
                 pageCount: 1,
             };
 
@@ -835,13 +835,13 @@ Pages[PageType.NewIllust] = {
                 if (span.length > 0) {
                     ctlAttrs.pageCount = span.text();
                 } else if (link.find('svg').length > 0) {
-                    ctlAttrs.illustTye = 2;
+                    ctlAttrs.illustType = 2;
                 }
             }
 
             _this.attr({
                 'illustId': ctlAttrs.illustId,
-                'illustType': ctlAttrs.illustTye,
+                'illustType': ctlAttrs.illustType,
                 'pageCount': ctlAttrs.pageCount
             });
 
@@ -914,7 +914,7 @@ Pages[PageType.BookMark] = {
 
             var ctlAttrs = {
                 illustId: 0,
-                illustTye: 0,
+                illustType: 0,
                 pageCount: 1,
             };
 
@@ -937,13 +937,13 @@ Pages[PageType.BookMark] = {
             }
 
             if (work.hasClass('ugoku-illust')) {
-                ctlAttrs.illustTye = 2;
+                ctlAttrs.illustType = 2;
             }
 
             // 添加 attr
             _this.attr({
                 'illustId': ctlAttrs.illustId,
-                'illustType': ctlAttrs.illustTye,
+                'illustType': ctlAttrs.illustType,
                 'pageCount': ctlAttrs.pageCount
             });
 
@@ -993,7 +993,7 @@ Pages[PageType.Stacc] = {
 
             var ctlAttrs = {
                 illustId: 0,
-                illustTye: 0,
+                illustType: 0,
                 pageCount: 1,
             };
 
@@ -1017,13 +1017,13 @@ Pages[PageType.Stacc] = {
             }
 
             if (_this.hasClass('ugoku-illust')) {
-                ctlAttrs.illustTye = 2;
+                ctlAttrs.illustType = 2;
             }
 
             // 添加 attr
             _this.attr({
                 'illustId': ctlAttrs.illustId,
-                'illustType': ctlAttrs.illustTye,
+                'illustType': ctlAttrs.illustType,
                 'pageCount': ctlAttrs.pageCount
             });
 
