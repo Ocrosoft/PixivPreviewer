@@ -96,12 +96,13 @@ var g_defaultSettings = {
     'hideFavorite': 0,
     'linkBlank': 1,
     'pageByKey': 0,
+    'logLevel': 1,
     'version': g_version,
 };
 // 设置
 var g_settings;
 // 日志等级
-var g_logLevel = LogLevel.Elements;
+var g_logLevel = LogLevel.Warning;
 // 排序时同时请求收藏量的 Request 数量，没必要太多，并不会加快速度
 var g_maxXhr = 10;
 
