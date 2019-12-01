@@ -1,7 +1,7 @@
 ﻿// ==UserScript==
 // @name         Pixiv Previewer
 // @namespace    https://github.com/Ocrosoft/PixivPreviewer
-// @version      3.0.7
+// @version      3.0.8
 // @description  显示大图预览，按热门度排序(pixiv_sk)。Show Preview, ands sort by bookmark count.
 // @author       Ocrosoft
 // @match        *://www.pixiv.net/*
@@ -101,7 +101,7 @@ var g_defaultSettings = {
 // 设置
 var g_settings;
 // 日志等级
-var g_logLevel = LogLevel.Warning;
+var g_logLevel = LogLevel.Elements;
 // 排序时同时请求收藏量的 Request 数量，没必要太多，并不会加快速度
 var g_maxXhr = 10;
 
@@ -252,37 +252,44 @@ Pages[PageType.Search] = {
                 pageCount: 1,
             };
 
-            // 有 figure 的是 lazy load，读取不到数据
-            if (li.find('figure').length === 0) {
-                var img = $(li.find('img').get(0));
-                var imageLink = img.parent().parent();
-                var additionDiv = img.parent().prev();
-                var animationSvg = img.parent().find('svg');
-                var pageCountSpan = additionDiv.find('span');
+			// 有没有 <fingure> 不影响排序功能，前面已经保证了第一个元素肯定是加载完成的，排序只需要克隆第一个元素
+            var img = $(li.find('img').get(0));
+            var imageLink = img.parent().parent();
+            var additionDiv = img.parent().prev();
+            var animationSvg = img.parent().find('svg');
+            var pageCountSpan = additionDiv.find('span');
 
-                var link = imageLink.attr('href');
-                var linkMatched = link.match(/artworks\/(\d+)/);
-                var illustId = '';
-                if (linkMatched) {
-                    ctlAttrs.illustId = linkMatched[1];
-                } else {
-                    DoLog(LogLevel.Error, 'Get illustId failed, skip this list item!');
-                    return;
-                }
-                if (animationSvg.length > 0) {
-                    ctlAttrs.illustType = 2;
-                }
-                if (pageCountSpan.length > 0) {
-                    ctlAttrs.pageCount = parseInt(pageCountSpan.text());
-                }
-
-                // 添加 attr
-                li.attr({
-                    'illustId': ctlAttrs.illustId,
-                    'illustType': ctlAttrs.illustType,
-                    'pageCount': ctlAttrs.pageCount
-                });
+            if (img == null || imageLink == null) {
+                DoLog(LogLevel.Warning, 'Can not found img or imageLink, skip this.');
+                return;
             }
+
+            var link = imageLink.attr('href');
+            if (link == null) {
+                DoLog(LogLevel.Warning, 'Invalid href, skip this.');
+                return;
+            }
+            var linkMatched = link.match(/artworks\/(\d+)/);
+            var illustId = '';
+            if (linkMatched) {
+                ctlAttrs.illustId = linkMatched[1];
+            } else {
+                DoLog(LogLevel.Error, 'Get illustId failed, skip this list item!');
+                return;
+            }
+            if (animationSvg.length > 0) {
+                ctlAttrs.illustType = 2;
+            }
+            if (pageCountSpan.length > 0) {
+                ctlAttrs.pageCount = parseInt(pageCountSpan.text());
+            }
+
+            // 添加 attr
+            li.attr({
+                'illustId': ctlAttrs.illustId,
+                'illustType': ctlAttrs.illustType,
+                'pageCount': ctlAttrs.pageCount
+            });
 
             li.addClass('pp-control');
         });
@@ -522,8 +529,8 @@ Pages[PageType.Member] = {
     PageTypeString: 'MemberPage/MemberIllustPage/MemberBookMark',
     CheckUrl: function (url) {
         return /^https?:\/\/www.pixiv.net\/member.php\?id=.*/.test(url) ||
-               /^https:\/\/www.pixiv.net\/member_illust.php.*/.test(url) ||
-               /^https:\/\/www.pixiv.net\/bookmark.php\?.*/.test(url);
+            /^https:\/\/www.pixiv.net\/member_illust.php.*/.test(url) ||
+            /^https:\/\/www.pixiv.net\/bookmark.php\?.*/.test(url);
     },
     ProcessPageElements: function () {
         var returnMap = {
@@ -1236,7 +1243,7 @@ Pages[PageType.Artwork] = {
                     window.parent.PreviewCallback(width, height);
                 }, 500);
             }
-                // 普通模式，只需要添加下载按钮到内嵌模式的 div 里
+            // 普通模式，只需要添加下载按钮到内嵌模式的 div 里
             else {
                 var div = $('div[role="presentation"]');
                 var button = div.find('button');
@@ -1901,6 +1908,20 @@ function PixivSK(callback) {
             currentGettingPageCount++;
             // 设定数量的页面加载完成
             if (currentGettingPageCount == g_settings.pageCount) {
+                DoLog(LogLevel.Info, 'Load complete, start to load bookmark count.');
+                DoLog(LogLevel.Elements, works);
+
+                // 获取到的作品里面可能有广告，先删掉，否则后面一些处理需要做判断
+                var tempWorks = [];
+                for (var i = 0; i < works.length; i++) {
+                    if (works[i].illustId) {
+                        tempWorks.push(works[i]);
+                    }
+                }
+                works = tempWorks;
+                DoLog(LogLevel.Info, 'Clear ad container complete.');
+                DoLog(LogLevel.Elements, works);
+
                 GetBookmarkCount(0);
             } else {
                 getWorks(onloadCallback);
@@ -2226,7 +2247,7 @@ function PixivSK(callback) {
             callback();
         }
     }
-}
+    }
 /* ---------------------------------------- 设置 ---------------------------------------- */
 function SetCookie(name, value) {
     var Days = 180;
