@@ -2,7 +2,7 @@
 // @name         Pixiv Previewer
 // @namespace    https://github.com/Ocrosoft/PixivPreviewer
 // @version      3.0.9
-// @description  显示大图预览，按热门度排序(pixiv_sk)。Show Preview, ands sort by bookmark count.
+// @description  显示预览图（支持单图，多图，动图）；动图压缩包下载；搜索页按热门度（收藏数）排序并显示收藏数，适配11月更新
 // @author       Ocrosoft
 // @match        *://www.pixiv.net/*
 // @grant        none
