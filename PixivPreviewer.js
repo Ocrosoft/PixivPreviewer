@@ -1,7 +1,7 @@
 ﻿// ==UserScript==
 // @name         Pixiv Previewer
 // @namespace    https://github.com/Ocrosoft/PixivPreviewer
-// @version      3.0.11
+// @version      3.0.12
 // @description  显示预览图（支持单图，多图，动图）；动图压缩包下载；搜索页按热门度（收藏数）排序并显示收藏数，适配11月更新
 // @author       Ocrosoft
 // @match        *://www.pixiv.net/*
@@ -1237,7 +1237,7 @@ Pages[PageType.Artwork] = {
                     window.parent.PreviewCallback(width, height);
                 }, 500);
             }
-                // 普通模式，只需要添加下载按钮到内嵌模式的 div 里
+            // 普通模式，只需要添加下载按钮到内嵌模式的 div 里
             else {
                 var div = $('div[role="presentation"]');
                 var button = div.find('button');
@@ -2244,7 +2244,7 @@ function PixivSK(callback) {
             callback();
         }
     }
-}
+    }
 /* ---------------------------------------- 设置 ---------------------------------------- */
 function SetCookie(name, value) {
     var Days = 180;
@@ -2363,7 +2363,7 @@ function ShowSetting() {
             'favFilter': parseInt($('#pps-hideLess').val()),
             'hideFavorite': $('#pps-hideBookmarked').hasClass('on') ? 1 : 0,
             'linkBlank': $('#pps-newTab').hasClass('on') ? 1 : 0,
-            'pageBytKey': $('#pps-pageKey').hasClass('on') ? 1 : 0,
+            'pageByKey': $('#pps-pageKey').hasClass('on') ? 1 : 0,
             'version': g_version,
         }
 
@@ -2472,7 +2472,7 @@ var loadInterval = setInterval(function () {
                 PixivPreview();
             }
 
-            window.onresize = function () {
+            window.onresize = function() {
                 if ($('#pps-save').length > 0) {
                     ShowSetting();
                 }
