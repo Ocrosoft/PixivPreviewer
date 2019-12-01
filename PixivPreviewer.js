@@ -1,7 +1,7 @@
 ﻿// ==UserScript==
 // @name         Pixiv Previewer
 // @namespace    https://github.com/Ocrosoft/PixivPreviewer
-// @version      3.0.8
+// @version      3.0.9
 // @description  显示大图预览，按热门度排序(pixiv_sk)。Show Preview, ands sort by bookmark count.
 // @author       Ocrosoft
 // @match        *://www.pixiv.net/*
@@ -252,7 +252,6 @@ Pages[PageType.Search] = {
                 pageCount: 1,
             };
 
-			// 有没有 <fingure> 不影响排序功能，前面已经保证了第一个元素肯定是加载完成的，排序只需要克隆第一个元素
             var img = $(li.find('img').get(0));
             var imageLink = img.parent().parent();
             var additionDiv = img.parent().prev();
@@ -313,7 +312,8 @@ Pages[PageType.Search] = {
     GetToolBar: function () {
         return $('#root').children('div:last').prev().find('li:first').parent().get(0);
     },
-    HasAutoLoad: false,
+    // 搜索页有 lazyload，不开排序的情况下，最后几张图片可能会无法预览。这里把它当做自动加载处理
+    HasAutoLoad: true,
     GetImageListContainer: function () {
         return this.private.imageListConrainer;
     },
@@ -554,42 +554,44 @@ Pages[PageType.Member] = {
                 pageCount: 1,
             };
 
-            // 有 figure 的是 lazy load，读取不到数据
-            if (li.find('figure').length === 0) {
-                var img = $(li.find('img').get(0));
-                var imageLink = img.parent().parent();
-                var additionDiv = img.parent().prev();
-                var animationSvg = img.parent().find('svg');
-                var pageCountSpan = additionDiv.find('span');
+            var img = $(li.find('img').get(0));
+            var imageLink = img.parent().parent();
+            var additionDiv = img.parent().prev();
+            var animationSvg = img.parent().find('svg');
+            var pageCountSpan = additionDiv.find('span');
 
-                var link = imageLink.attr('href');
-                if (link == null || link === '') {
-                    DoLog(LogLevel.Warning, 'Can not found illust id, skip this.');
-                    return;
-                }
-
-                var linkMatched = link.match(/artworks\/(\d+)/);
-                var illustId = '';
-                if (linkMatched) {
-                    ctlAttrs.illustId = linkMatched[1];
-                } else {
-                    DoLog(LogLevel.Error, 'Get illustId failed, skip this list item!');
-                    return;
-                }
-                if (animationSvg.length > 0) {
-                    ctlAttrs.illustType = 2;
-                }
-                if (pageCountSpan.length > 0) {
-                    ctlAttrs.pageCount = parseInt(pageCountSpan.text());
-                }
-
-                // 添加 attr
-                li.attr({
-                    'illustId': ctlAttrs.illustId,
-                    'illustType': ctlAttrs.illustType,
-                    'pageCount': ctlAttrs.pageCount
-                });
+            if (!img || !imageLink) {
+                DoLog(LogLevel.Warning, 'Can not found img or imageLink, skip this.');
+                return;
             }
+
+            var link = imageLink.attr('href');
+            if (link == null) {
+                DoLog(LogLevel.Warning, 'Can not found illust id, skip this.');
+                return;
+            }
+
+            var linkMatched = link.match(/artworks\/(\d+)/);
+            var illustId = '';
+            if (linkMatched) {
+                ctlAttrs.illustId = linkMatched[1];
+            } else {
+                DoLog(LogLevel.Error, 'Get illustId failed, skip this list item!');
+                return;
+            }
+            if (animationSvg.length > 0) {
+                ctlAttrs.illustType = 2;
+            }
+            if (pageCountSpan.length > 0) {
+                ctlAttrs.pageCount = parseInt(pageCountSpan.text());
+            }
+
+            // 添加 attr
+            li.attr({
+                'illustId': ctlAttrs.illustId,
+                'illustType': ctlAttrs.illustType,
+                'pageCount': ctlAttrs.pageCount
+            });
 
             li.addClass('pp-control');
         });
@@ -616,7 +618,8 @@ Pages[PageType.Member] = {
             }
         }
     },
-    HasAutoLoad: false,
+    // 跟搜索页一样的情况
+    HasAutoLoad: true,
     private: {
         returnMap: null,
     },
@@ -1243,7 +1246,7 @@ Pages[PageType.Artwork] = {
                     window.parent.PreviewCallback(width, height);
                 }, 500);
             }
-            // 普通模式，只需要添加下载按钮到内嵌模式的 div 里
+                // 普通模式，只需要添加下载按钮到内嵌模式的 div 里
             else {
                 var div = $('div[role="presentation"]');
                 var button = div.find('button');
@@ -2226,7 +2229,7 @@ function PixivSK(callback) {
         Pages[PageType.Search].ProcessPageElements();
 
         // 监听键盘的左右键，用来翻页
-        $(document).keydown(function(e) {
+        $(document).keydown(function (e) {
             if (e.keyCode == 39) {
                 var btn = $('.pp-nextPage');
                 if (btn.length < 1 || btn.attr('hidden') == 'hidden') {
@@ -2247,7 +2250,7 @@ function PixivSK(callback) {
             callback();
         }
     }
-    }
+}
 /* ---------------------------------------- 设置 ---------------------------------------- */
 function SetCookie(name, value) {
     var Days = 180;
