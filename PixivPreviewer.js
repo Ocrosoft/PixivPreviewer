@@ -7,7 +7,6 @@
 // @match        *://www.pixiv.net/*
 // @grant        none
 // @compatible   Chrome
-// require       https://unpkg.com/jelly-switch@0.2.3/lib/index.min.js
 // ==/UserScript==
 
 // 测试 JQuery，如果不支持就插入
