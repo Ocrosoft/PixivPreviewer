@@ -1,7 +1,7 @@
 ﻿// ==UserScript==
 // @name         Pixiv Previewer
 // @namespace    https://github.com/Ocrosoft/PixivPreviewer
-// @version      3.0.9
+// @version      3.0.10
 // @description  显示预览图（支持单图，多图，动图）；动图压缩包下载；搜索页按热门度（收藏数）排序并显示收藏数，适配11月更新
 // @author       Ocrosoft
 // @match        *://www.pixiv.net/*
@@ -169,8 +169,8 @@ var ControlElementsAttributesSample = {
 Pages[PageType.Search] = {
     PageTypeString: 'SearchPage',
     CheckUrl: function (url) {
-        return /^https?:\/\/www.pixiv.net\/tags\/.*\/artworks/.test(url);
-        //return /^https?:\/\/www.pixiv.net\/search.php.*/.test(url);
+        return /^https?:\/\/www.pixiv.net\/tags\/.*\/artworks/.test(url) ||
+            /^https?:\/\/www.pixiv.net\/en\/tags\/.*\/artworks/.test(url);
     },
     ProcessPageElements: function () {
         var returnMap = {
@@ -627,18 +627,8 @@ Pages[PageType.Member] = {
 Pages[PageType.Home] = {
     PageTypeString: 'HomePage',
     CheckUrl: function (url) {
-        var patterns = [
-            /https?:\/\/www.pixiv.net\/$/,
-            /https?:\/\/www.pixiv.net$/,
-            /https?:\/\/www.pixiv.net\?.*/,
-            /https?:\/\/www.pixiv.net\/\?.*/,
-        ];
-        for (var i = 0; i < patterns.length; i++) {
-            if (patterns[i].test(url)) {
-                return true;
-            }
-        }
-        return false;
+        return /https?:\/\/www.pixiv.net\/?$/.test(url) ||
+            /https?:\/\/www.pixiv.net\/en\/?$/.test(url);
     },
     ProcessPageElements: function () {
         var returnMap = {
@@ -1072,7 +1062,8 @@ Pages[PageType.Stacc] = {
 Pages[PageType.Artwork] = {
     PageTypeString: 'ArtworkPage',
     CheckUrl: function (url) {
-        return /^https:\/\/www.pixiv.net\/artworks\/.*/.test(url);
+        return /^https:\/\/www.pixiv.net\/artworks\/.*/.test(url) ||
+            /^https:\/\/www.pixiv.net\/en\/artworks\/.*/.test(url);
     },
     ProcessPageElements: function () {
         var returnMap = {
