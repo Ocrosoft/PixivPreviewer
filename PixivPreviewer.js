@@ -2221,6 +2221,9 @@ function PixivSK(callback) {
 
         // 监听键盘的左右键，用来翻页
         $(document).keydown(function (e) {
+            if (g_settings.pageByKey != 1) {
+                return;
+            }
             if (e.keyCode == 39) {
                 var btn = $('.pp-nextPage');
                 if (btn.length < 1 || btn.attr('hidden') == 'hidden') {
