@@ -1,7 +1,7 @@
 ﻿// ==UserScript==
 // @name         Pixiv Previewer
 // @namespace    https://github.com/Ocrosoft/PixivPreviewer
-// @version      3.0.12
+// @version      3.0.13
 // @description  显示预览图（支持单图，多图，动图）；动图压缩包下载；搜索页按热门度（收藏数）排序并显示收藏数，适配11月更新
 // @author       Ocrosoft
 // @match        *://www.pixiv.net/*
@@ -104,6 +104,8 @@ var g_settings;
 var g_logLevel = LogLevel.Warning;
 // 排序时同时请求收藏量的 Request 数量，没必要太多，并不会加快速度
 var g_maxXhr = 10;
+// 排序是否隐藏已关注画师的作品
+var g_enableFilterByUser = false;
 
 // 页面相关的一些预定义，包括处理页面元素等
 var PageType = {
@@ -1752,6 +1754,67 @@ function PixivSK(callback) {
         req.send(null);
     };
 
+    // 筛选已关注画师作品
+    var filterByUser = function() {
+        if (!g_enableFilterByUser) {
+            return;
+        } else {
+            DoLog(LogLevel.Warning, 'All works by your favorite users will be hide!');
+        }
+
+        var members = [];
+
+        // 只获取公开关注的用户，私有的就算了
+        $.ajax('https://www.pixiv.net/bookmark.php?type=user&rest=show', {
+            async: false,
+            success: function(data) {
+                var searchResult = $(data).find('#search-result');
+                if (searchResult.length === 0) {
+                    DoLog(LogLevel.Error, 'Can not found users.');
+                    return;
+                }
+
+                var lis = searchResult.find('li');
+                DoLog(LogLevel.Elements, lis);
+                lis.each(function(i, e) {
+                    var input = $(this).children('input');
+                    if (input) {
+                        members.push(input.attr('value'));
+                    } else {
+                        DoLot(LogLevel.Error, 'No <input> found.');
+                    }
+                });
+            },
+            error: function() {
+                DoLog(LogLevel.Error, 'Request bookmarked user failed.');
+            },
+        });
+
+        DoLog(LogLevel.Info, 'Get users success.');
+        DoLog(LogLevel.Elements, members);
+
+        var tempWorks = [];
+        var hideWorkCount = 0;
+        $(works).each(function (i, work) {
+            var found = false;
+            for (var i = 0; i < members.length; i++) {
+                if (members[i] == work.userId) {
+                    found = true;
+                    break;
+                }
+            }
+            if (!found) {
+                tempWorks.push(work);
+            } else {
+                hideWorkCount++;
+            }
+        });
+        works = tempWorks;
+
+        DoLog(LogLevel.Info, hideWorkCount + ' works were hide.');
+        DoLog(LogLevel.Elements, works);
+    };
+
     // 排序和筛选
     var filterAndSort = function () {
         DoLog(LogLevel.Info, 'Start sort.');
@@ -1765,6 +1828,8 @@ function PixivSK(callback) {
             }
         });
         works = tmp;
+
+        filterByUser();
 
         // 排序
         works.sort(function (a, b) {
@@ -2306,7 +2371,7 @@ function ShowSetting() {
     var screenWidth = document.documentElement.clientWidth;
     var screenHeight = document.documentElement.clientHeight;
 
-    if (screenWidth < 1280 || screenHeight > 1280) {
+    if (screenWidth < 1280 || screenHeight < 720) {
         DoLog(LogLeve.Warning, 'Window too small to display all setting contents.');
     }
 
