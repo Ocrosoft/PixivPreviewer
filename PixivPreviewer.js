@@ -2189,8 +2189,9 @@ function PixivSK(callback) {
 
             // author
             var authorDiv = titleLink.next();
-            var authorLinks = authorDiv.find('a'); // 点击头像和昵称都可以
-            var authorName = $(authorLinks.children('div'));
+            var authorLinkProfileImage = authorDiv.find('a:first');
+            var authorLink = authorDiv.find('a:last');
+            var authorName = $(authorLink.children('div'));
             authorName.each(function (i, e) {
                 if ($(e).children().length === 0) {
                     authorName = $(e);
@@ -2213,7 +2214,8 @@ function PixivSK(callback) {
             img.addClass('ppImg');
             imageLink.addClass('ppImageLink');
             titleLink.addClass('ppTitleLink');
-            authorLinks.addClass('ppAuthorLink');
+            authorLinkProfileImage.addClass('ppAuthorLinkProfileImage');
+            authorLink.addClass('ppAuthorLink');
             authorName.addClass('ppAuthorName');
             authorImage.addClass('ppAuthorImage');
             bookmarkSvg.addClass('ppBookmarkSvg');
@@ -2230,7 +2232,8 @@ function PixivSK(callback) {
             if (g_settings.linkBlank) {
                 imageLink.attr('target', '_blank');
                 titleLink.attr('target', '_blank');
-                authorLinks.attr('target', '_blank');
+                authorLinkProfileImage.attr('target', '_blank');
+                authorLink.attr('target', '_blank');
             }
         }
 
@@ -2241,7 +2244,7 @@ function PixivSK(callback) {
             li.find('.ppImg').attr('src', works[i].url);
             li.find('.ppImageLink').attr('href', '/artworks/' + works[i].illustId);
             li.find('.ppTitleLink').attr('href', '/artworks/' + works[i].illustId).text(works[i].title);
-            li.find('.ppAuthorLink').attr('href', '/member.php?id=' + works[i].userId);
+            li.find('.ppAuthorLink, .ppAuthorLinkProfileImage').attr('href', '/member.php?id=' + works[i].userId).attr({'userId': works[i].userId, 'profileImageUrl': works[i].profileImageUrl, 'userName': works[i].userName});
             li.find('.ppAuthorName').text(works[i].userName);
             li.find('.ppAuthorImage').attr('src', works[i].profileImageUrl);
             li.find('.ppBookmarkSvg').attr('illustId', works[i].illustId);
@@ -2320,6 +2323,100 @@ function PixivSK(callback) {
             }
 
             _this.parent().focus();
+        });
+
+        $('.ppAuthorLink').on('mouseenter', function(e){
+            var _this = $(this);
+
+            function getOffset(e) {
+                if (e.offsetParent) {
+                    var offset = getOffset(e.offsetParent);
+                    return {
+                        offsetTop: e.offsetTop + offset.offsetTop,
+                        offsetLeft: e.offsetLeft + offset.offsetLeft,
+                    };
+                } else {
+                    return {
+                        offsetTop: e.offsetTop,
+                        offsetLeft: e.offsetLeft,
+                    };
+                }
+            }
+
+            var isFollowed = false;
+            $.ajax('https://www.pixiv.net/ajax/user/' + _this.attr('userId') + '?full=1', {
+                method: 'GET',
+                async: false,
+                success: function(data) {
+                    if (data.error == false && data.body.isFollowed) {
+                        isFollowed = true;
+                    }
+                },
+            });
+
+            $('.pp-authorDiv').remove();
+            var pres = $('<div class="pp-authorDiv"><div class="ppa-main" style="position: absolute; top: 0px; left: 0px; border-width: 1px; border-style: solid; z-index: 1; border-color: rgba(0, 0, 0, 0.08); border-radius: 8px;"><div class=""style="    width: 336px;    background-color: rgb(255, 255, 255);    padding-top: 24px;    flex-flow: column;"><div class=""style=" display: flex; align-items: center; flex-flow: column;"><a class="ppa-authorLink"><div role="img"size="64"class=""style=" display: inline-block; width: 64px; height: 64px; border-radius: 50%; overflow: hidden;"><img class="ppa-authorImage" width="64"height="64"style="object-fit: cover; object-position: center top;"></div></a><a class="ppa-authorLink"><div class="ppa-authorName" style=" line-height: 24px; font-size: 16px; font-weight: bold; margin: 4px 0px 0px;"></div></a><div class=""style=" margin: 12px 0px 24px;"><button type="button"class="ppa-follow"style=" padding: 9px 25px; line-height: 1; border: none; border-radius: 16px; font-weight: 700; background-color: #0096fa; color: #fff; cursor: pointer;"><span style="margin-right: 4px;"><svg viewBox="0 0 8 8"width="10"height="10"class=""style=" stroke: rgb(255, 255, 255); stroke-linecap: round; stroke-width: 2;"><line x1="1"y1="4"x2="7"y2="4"></line><line x1="4"y1="1"x2="4"y2="7"></line></svg></span>关注</button></div></div></div></div></div>');
+            $('body').append(pres);
+            var offset = getOffset(this);
+            pres.find('.ppa-main').css({'top': offset.offsetTop - 196 + 'px', 'left': offset.offsetLeft - 113 + 'px'});
+            pres.find('.ppa-authorLink').attr('href', '/member.php?id=' + _this.attr('userId'));
+            pres.find('.ppa-authorImage').attr('src', _this.attr('profileImageUrl'));
+            pres.find('.ppa-authorName').text(_this.attr('userName'));
+            if (isFollowed) {
+                pres.find('.ppa-follow').get(0).outerHTML = '<button type="button" class="ppa-follow followed" data-click-action="click" data-click-label="follow" style="padding: 9px 25px;line-height: 1;border: none;border-radius: 16px;font-size: 14px;font-weight: 700;cursor: pointer;">关注中</button>';
+            }
+            pres.find('.ppa-follow').attr('userId', _this.attr('userId'));
+            pres.on('mouseleave', function(e) {
+                $(this).remove();
+            }).on('mouseenter', function() {
+                $(this).addClass('mouseenter');
+            });
+
+            pres.find('.ppa-follow').on('click', function() {
+                var userId = $(this).attr('userId');
+                if ($(this).hasClass('followed')) {
+                    // 取关
+                    $.ajax('https://www.pixiv.net/rpc_group_setting.php', {
+                        method: 'POST',
+                        headers: { 'x-csrf-token': g_csrfToken },
+                        data: 'mode=del&type=bookuser&id=' + userId,
+                        success: function(data) {
+                            DoLog(LogLevel.Info, 'delete bookmark result: ');
+                            DoLog(LogLevel.Elements, data);
+
+                            if (data.type == 'bookuser') {
+                                $('.ppa-follow').get(0).outerHTML = '<button type="button"class="ppa-follow"style=" padding: 9px 25px; line-height: 1; border: none; border-radius: 16px; font-weight: 700; background-color: #0096fa; color: #fff; cursor: pointer;"><span style="margin-right: 4px;"><svg viewBox="0 0 8 8"width="10"height="10"class=""style=" stroke: rgb(255, 255, 255); stroke-linecap: round; stroke-width: 2;"><line x1="1"y1="4"x2="7"y2="4"></line><line x1="4"y1="1"x2="4"y2="7"></line></svg></span>关注</button>';
+                            }
+                            else {
+                                DoLog(LogLevel.Error, 'Delete follow failed!');
+                            }
+                        }
+                    });
+                } else {
+                    // 关注
+                    $.ajax('https://www.pixiv.net/bookmark_add.php', {
+                        method: 'POST',
+                        headers: {'x-csrf-token': g_csrfToken},
+                        data: 'mode=add&type=user&user_id=' + userId + '&tag=&restrict=0&format=json',
+                        success: function (data) {
+                            DoLog(LogLevel.Info, 'addBookmark result: ');
+                            DoLog(LogLevel.Elements, data);
+                            // success
+                            if (data.length === 0) {
+                                $('.ppa-follow').get(0).outerHTML = '<button type="button" class="ppa-follow followed" data-click-action="click" data-click-label="follow" style="padding: 9px 25px;line-height: 1;border: none;border-radius: 16px;font-size: 14px;font-weight: 700;cursor: pointer;">关注中</button>';
+                            } else {
+                                DoLog(LogLevel.Error, 'Follow failed!');
+                            }
+                        }
+                    });
+                }
+            });
+        }).on('mouseleave', function(e) {
+            setTimeout(function() {
+                if (!$('.pp-authorDiv').hasClass('mouseenter')) {
+                    $('.pp-authorDiv').remove();
+                }
+            }, 200);
         });
 
         if (works.length === 0) {
