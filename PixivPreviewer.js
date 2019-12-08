@@ -1,13 +1,15 @@
 ﻿// ==UserScript==
-// @name            Pixiv Previewer
-// @namespace       https://github.com/Ocrosoft/PixivPreviewer
-// @version         3.0.16
-// @description     Display preview images (support single image, multiple images, moving images); Download compressed image packages; Sorting the search page by favorite count(and display it). Updated for the latest search page.
-// @description:zh  显示预览图（支持单图，多图，动图）；动图压缩包下载；搜索页按热门度（收藏数）排序并显示收藏数，适配11月更新
-// @author          Ocrosoft
-// @match           *://www.pixiv.net/*
-// @grant           none
-// @compatible      Chrome
+// @name                Pixiv Previewer
+// @namespace           https://github.com/Ocrosoft/PixivPreviewer
+// @version             3.0.17
+// @description         Display preview images (support single image, multiple images, moving images); Download animation(.zip); Sorting the search page by favorite count(and display it). Updated for the latest search page.
+// @description:zh-CN   显示预览图（支持单图，多图，动图）；动图压缩包下载；搜索页按热门度（收藏数）排序并显示收藏数，适配11月更新。
+// @description:ja      プレビュー画像の表示（単一画像、複数画像、動画のサポート）; アニメーションのダウンロード（.zip）; お気に入りの数で検索ページをソートします（そして表示します）。 最新の検索ページ用に更新されました。
+// @description:zh_TW   顯示預覽圖像（支持單幅圖像，多幅圖像，運動圖像）； 下載動畫（.zip）; 按收藏夾數對搜索頁進行排序（並顯示）。 已為最新的搜索頁面適配。
+// @author              Ocrosoft
+// @match               *://www.pixiv.net/*
+// @grant               none
+// @compatible          Chrome
 // ==/UserScript==
 
 // 测试 JQuery，如果不支持就插入
@@ -114,7 +116,7 @@ var g_language = Lang.zh_CN;
 // 自动检测语言，开启后 g_language 的默认值将无效
 var g_autoDetectLanguage = true;
 // 版本号，第三位不需要跟脚本的版本号对上，第三位更新只有需要弹更新提示的时候才需要更新这里
-var g_version = '3.0.6';
+var g_version = '3.0.16';
 // 添加收藏需要这个
 var g_csrfToken = '';
 // 打的日志数量，超过一定数值清空控制台
