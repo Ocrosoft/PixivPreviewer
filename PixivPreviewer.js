@@ -1,7 +1,7 @@
 ﻿// ==UserScript==
 // @name         Pixiv Previewer
 // @namespace    https://github.com/Ocrosoft/PixivPreviewer
-// @version      3.0.13
+// @version      3.0.15
 // @description  显示预览图（支持单图，多图，动图）；动图压缩包下载；搜索页按热门度（收藏数）排序并显示收藏数，适配11月更新
 // @author       Ocrosoft
 // @match        *://www.pixiv.net/*
@@ -19,12 +19,50 @@ try {
     document.head.appendChild(script);
 }
 
-var Languages = {
+// If you want to help improve the translate, please
+var Lang = {
     // 中文-中国大陆
     zh_CN: 0,
     // 英语-美国
     en_US: 1,
 };
+var Texts = {};
+Texts[Lang.zh_CN] = {
+    // 安装或更新后弹出的提示
+    install_title: '欢迎使用 PixivPreviewer v',
+    install_body: '<div style="position: absolute;width: 40%;left: 30%;top: 30%;font-size: 20px; color: white;"><p style="text-indent: 2em;">语言更新（v3.0.15）: 这个版本更新了英语翻译，对使用简体/繁体中文版本 Pixiv 的用户没有任何影响。</p><br><p style="text-indent: 2em;"> v3.0.x 是对 v2.08 进行了大量改动后的版本，因此可能不稳定，如果发现问题，请到<a style="color: green;" href="https://greasyfork.org/zh-CN/scripts/30766-pixiv-previewer/feedback" target="_blank"> 反馈页面 </a>反馈，我会尽快修复，也欢迎提出建议，非常感谢！</p><p style="text-indent: 2em;">排序功能会比之前的版本慢，具体时间视Pixiv的加载速度而定，原因是新的搜索页面不会再显示排序所必须的收藏量。</p><br><p style="text-indent: 2em;">如果您是第一次使用，推荐到<a style="color: green;" href="https://greasyfork.org/zh-CN/scripts/30766-pixiv-previewer" target="_blank"> 详情页 </a>查看脚本介绍。</p></div>',
+    // 设置项
+    setting_preview: '预览',
+    setting_sort: '排序（仅搜索页生效）',
+    setting_anime: '动图下载（动图预览及详情页生效）',
+    setting_origin: '预览时优先显示原图（慢）',
+    setting_maxPage: '每次排序时统计的最大页数',
+    setting_hideWork: '隐藏收藏数少于设定值的作品',
+    setting_hideFav: '排序时隐藏已收藏的作品',
+    setting_blank: '使用新标签页打开作品详情页',
+    setting_turnPage: '使用键盘←→进行翻页（排序后的搜索页）',
+    setting_save: '保存设置',
+    setting_reset: '重置脚本',
+    setting_resetHint: '这会删除所有设置，相当于重新安装脚本，确定要重置吗？',
+};
+// translate by google
+Texts[Lang.en_US] = {
+    install_title: 'Welcome to PixivPreviewer v',
+    install_body: '<div style="position: absolute;width: 40%;left: 30%;top: 30%;font-size: 20px; color: white;"><p style="text-indent: 2em;">Language update(v3.0.15): If your Pixiv\'s language is not Simplified Chinese or Traditional Chinese, script will display in English now.</p><br><p style="text-indent: 2em;"> v3.0.x is a version with a lot of changes to v2.08, so it may be unstable. If you find a problem, please go to<a style="color: green;" href="https://greasyfork.org/zh-CN/scripts/30766-pixiv-previewer/feedback" target="_blank"> Feedback Page </a>to feedback, I will fix it as soon as possible, and suggestions are welcome, thank you very much!</p><p style="text-indent: 2em;">The sorting function will be slower than the previous version. The specific time depends on the loading speed of Pixiv, because the new search page will no longer display the amount of favorites necessary for sorting.</p><br><p style="text-indent: 2em;">If you are using it for the first time, it is recommended to go to the<a style="color: green;" href="https://greasyfork.org/zh-CN/scripts/30766-pixiv-previewer" target="_blank"> Details Page </a>to see the script introduction.</p></div>',
+    setting_preview: 'Preview',
+    setting_sort: 'Sorting (only search pages take effect)',
+    setting_anime: 'Animation download (the animation preview and details page take effect)',
+    setting_origin: 'Priority display of original image during preview (slow)',
+    setting_maxPage: 'Maximum number of pages counted per sort',
+    setting_hideWork: 'Hide works with less than set value',
+    setting_hideFav: 'Hide favorites when sorting',
+    setting_blank: 'Open works\' details page in new tab',
+    setting_turnPage: 'Use the keyboard ← → to turn pages (sorted search page)',
+    setting_save: 'Save',
+    setting_reset: 'Reset',
+    setting_resetHint: 'This will delete all settings and set it to default. Are you sure?',
+};
+
 var LogLevel = {
     None: 0,
     Error: 1,
@@ -64,6 +102,16 @@ function DoLog(level, msgOrElement) {
     }
 }
 
+// 语言，如果 g_autoDetectLanguage 的值为 true，则默认值无效；如果希望使用某种语言，请这样操作：
+// 1.修改 g_language 的值，中文（Lang.zh_CN）、英文（Lang.en_US）
+// 2.将 g_autoDetectLanguage 的值从 true 修改为 false
+// =====
+// If you want to set language instead auto detect it, follow this:
+// 1.Change g_language's value, Chinese(Lang.zh_CN), English(Lang.en_US).
+// 2.Change g_autoDetectLanguage's value from true to false.
+var g_language = Lang.zh_CN;
+// 自动检测语言，开启后 g_language 的默认值将无效
+var g_autoDetectLanguage = true;
 // 版本号，第三位不需要跟脚本的版本号对上，第三位更新只有需要弹更新提示的时候才需要更新这里
 var g_version = '3.0.6';
 // 添加收藏需要这个
@@ -104,7 +152,7 @@ var g_settings;
 var g_logLevel = LogLevel.Warning;
 // 排序时同时请求收藏量的 Request 数量，没必要太多，并不会加快速度
 var g_maxXhr = 10;
-// 排序是否隐藏已关注画师的作品
+// 排序是否隐藏已关注画师的作品，如果希望隐藏，将 "false" 修改为 "true" 即可
 var g_enableFilterByUser = false;
 
 // 页面相关的一些预定义，包括处理页面元素等
@@ -1336,12 +1384,12 @@ function PixivPreview() {
             g_mousePos = { x: e.pageX, y: e.pageY };
             // 预览 Div
             var previewDiv = $(document.createElement('div')).addClass('pp-main').attr('illustId', illustId)
-            .css({
-                'position': 'absolute', 'z-index': '999999', 'left': g_mousePos.x + 'px', 'top': g_mousePos.y + 'px',
-                'border-style': 'solid', 'border-color': '#6495ed', 'border-width': '2px', 'border-radius': '20px',
-                'width': '48px', 'height': '48px',
-                'background-image': 'url(https://pp-1252089172.cos.ap-chengdu.myqcloud.com/transparent.png)',
-            });
+                .css({
+                    'position': 'absolute', 'z-index': '999999', 'left': g_mousePos.x + 'px', 'top': g_mousePos.y + 'px',
+                    'border-style': 'solid', 'border-color': '#6495ed', 'border-width': '2px', 'border-radius': '20px',
+                    'width': '48px', 'height': '48px',
+                    'background-image': 'url(https://pp-1252089172.cos.ap-chengdu.myqcloud.com/transparent.png)',
+                });
             // 添加到 body
             $('.pp-main').remove();
             $('body').append(previewDiv);
@@ -1358,7 +1406,7 @@ function PixivPreview() {
 
             // 原图（笑脸）图标
             var originIcon = $(new Image()).addClass('pp-original').attr('src', 'https://source.pixiv.net/www/images/pixivcomic-favorite.png')
-            .css({ 'position': 'absolute', 'bottom': '5px', 'right': '5px', 'display': 'none' });
+                .css({ 'position': 'absolute', 'bottom': '5px', 'right': '5px', 'display': 'none' });
             previewDiv.append(originIcon);
 
             // 点击图标新网页打开原图
@@ -1369,7 +1417,7 @@ function PixivPreview() {
             // 右上角张数标记
             var pageCountHTML = '<div class="pp-pageCount" style="display: flex;-webkit-box-align: center;align-items: center;box-sizing: border-box;margin-left: auto;height: 20px;color: rgb(255, 255, 255);font-size: 10px;line-height: 12px;font-weight: bold;flex: 0 0 auto;padding: 4px 6px;background: rgba(0, 0, 0, 0.32);border-radius: 10px;margin-top:5px;margin-right:5px;">\<svg viewBox="0 0 9 10" width="9" height="10" style="stroke: none;line-height: 0;font-size: 0px;fill: currentcolor;"><path d="M8,3 C8.55228475,3 9,3.44771525 9,4 L9,9 C9,9.55228475 8.55228475,10 8,10 L3,10 C2.44771525,10 2,9.55228475 2,9 L6,9 C7.1045695,9 8,8.1045695 8,7 L8,3 Z M1,1 L6,1 C6.55228475,1 7,1.44771525 7,2 L7,7 C7,7.55228475 6.55228475,8 6,8 L1,8 C0.44771525,8 0,7.55228475 0,7 L0,2 C0,1.44771525 0.44771525,1 1,1 Z"></path></svg><span style="margin-left:2px;" class="pp-page">0/0</span></div>';
             var pageCountDiv = $(pageCountHTML)
-            .css({ 'position': 'absolute', 'top': '0px', 'display': 'none', 'right': '0px', 'display': 'none' });
+                .css({ 'position': 'absolute', 'top': '0px', 'display': 'none', 'right': '0px', 'display': 'none' });
             previewDiv.append(pageCountDiv);
 
             $('.pp-main').mouseleave(function (e) {
@@ -2309,7 +2357,7 @@ function PixivSK(callback) {
             callback();
         }
     }
-    }
+}
 /* ---------------------------------------- 设置 ---------------------------------------- */
 function SetCookie(name, value) {
     var Days = 180;
@@ -2336,7 +2384,7 @@ function ShowInstallMessage() {
     });
     $('body').append(bg);
 
-    bg.get(0).innerHTML = '<img id="pps-close"src="https://pp-1252089172.cos.ap-chengdu.myqcloud.com/Close.png"style="position: absolute; right: 35px; top: 20px; width: 32px; height: 32px; cursor: pointer;"><div style="position: absolute;width: 40%;left: 30%;top: 25%;font-size: 25px; text-align: center; color: white;">欢迎使用 PixivPreviewer v' + g_version + '</div><br><div style="position: absolute;width: 40%;left: 30%;top: 30%;font-size: 20px; color: white;"><p style="text-indent: 2em;">小版本更新（v3.0.6)，排序后的页面现在可以使用键盘的←→键进行翻页，默认关闭，需要在设置中开启。</p><p style="text-indent: 2em;"> v3.0.x 是对 v2.08 进行了大量改动后的版本，因此可能不稳定，如果发现问题，请到<a style="color: green;" href="https://greasyfork.org/zh-CN/scripts/30766-pixiv-previewer/feedback" target="_blank"> 反馈页面 </a>反馈，我会尽快修复，也欢迎提出建议，非常感谢！</p><p style="text-indent: 2em;">排序功能会比之前的版本慢，具体时间视Pixiv的加载速度而定，原因是新的搜索页面不会再显示排序所必须的收藏量。</p><p style="text-indent: 2em;">如果您是第一次使用，推荐到<a style="color: green;" href="https://greasyfork.org/zh-CN/scripts/30766-pixiv-previewer" target="_blank"> 详情页 </a>查看脚本介绍。</p></div>';
+    bg.get(0).innerHTML = '<img id="pps-close"src="https://pp-1252089172.cos.ap-chengdu.myqcloud.com/Close.png"style="position: absolute; right: 35px; top: 20px; width: 32px; height: 32px; cursor: pointer;"><div style="position: absolute;width: 40%;left: 30%;top: 25%;font-size: 25px; text-align: center; color: white;">' + Texts[g_language].install_title + g_version + '</div><br>' + Texts[g_language].install_body;
     $('#pps-close').click(function () {
         $('#pp-bg').remove();
     });
@@ -2385,7 +2433,7 @@ function ShowSetting() {
 
     var settings = GetSettings();
 
-    var settingHTML = '<div style="color: white; font-size: 1em;"><img id="pps-close" src="https://pp-1252089172.cos.ap-chengdu.myqcloud.com/Close.png" style="position: absolute; right: 35px; top: 20px; width: 32px; height: 32px; cursor: pointer;"><div style="position: absolute; width: 40%; left: 25%; top: 25%; overflow: hidden;"><ul style="list-style: none; padding: 0; margin: 0;"><li style="height: 32px; font-size: 25px;">预览</li><li style="height: 32px; font-size: 25px;">排序（仅搜索页生效）</li><li style="height: 32px; font-size: 25px;">动图下载（动图预览及详情页生效）</li><li style="height: 32px; font-size: 25px;">预览时优先显示原图（慢）</li><li style="height: 32px; font-size: 25px;"></li><li style="height: 32px; font-size: 25px;">每次排序时统计的最大页数</li><li style="height: 32px; font-size: 25px;">隐藏收藏数少于设定值的作品</li><li style="height: 32px; font-size: 25px;">排序时隐藏已收藏的作品</li><li style="height: 32px; font-size: 25px;">使用新标签页打开作品详情页</li><li style="height: 32px; font-size: 25px;">使用键盘←→进行翻页（排序后的搜索页）</li></ul></div><div id="pps-right" style="position: absolute; width: 10%; right: 25%; text-align: right; top: 25%;"><ul style="list-style: none; padding: 0; margin: 0;"><li style="height: 32px;"><img id="pps-preview" src="https://pp-1252089172.cos.ap-chengdu.myqcloud.com/On.png" style="height: 32px; cursor: pointer;"></li><li style="height: 32px;"><img id="pps-sort" src="https://pp-1252089172.cos.ap-chengdu.myqcloud.com/On.png" style="height: 32px; cursor: pointer;"></li><li style="height: 32px;"><img id="pps-anime" src="https://pp-1252089172.cos.ap-chengdu.myqcloud.com/On.png" style="height: 32px; cursor: pointer;"></li><li style="height: 32px;"><img id="pps-original" src="https://pp-1252089172.cos.ap-chengdu.myqcloud.com/On.png" style="height: 32px; cursor: pointer;"></li><li style="height: 32px;"></li><li style="height: 32px;"><input id="pps-maxPage" style="height: 28px; font-size: 24px; padding: 0px; margin: 0px; border-width: 0px; width: 64px; text-align: center;"></li><li style="height: 32px;"><input id="pps-hideLess" style="height: 28px; font-size: 24px; padding: 0px; margin: 0px; border-width: 0px; width: 64px; text-align: center;"></li><li style="height: 32px;"><img id="pps-hideBookmarked" src="https://pp-1252089172.cos.ap-chengdu.myqcloud.com/On.png" style="height: 32px; cursor: pointer;"></li><li style="height: 32px;"><img id="pps-newTab" src="https://pp-1252089172.cos.ap-chengdu.myqcloud.com/On.png" style="height: 32px; cursor: pointer;"></li><li style="height: 32px;"><img id="pps-pageKey" src="https://pp-1252089172.cos.ap-chengdu.myqcloud.com/On.png" style="height: 32px; cursor: pointer;"></li></ul></div><div style="margin-top: 10px;position: absolute;bottom: 20%;width: 100%;text-align: center;"><button id="pps-save" style="font-size: 25px;border-radius: 15px;height: 48px;width: 128px;background-color: green;color: white;margin: 0 32px 0 32px;cursor: pointer;border: none;">保存设置</button><button id="pps-reset" style="font-size: 25px;border-radius: 15px;height: 48px;width: 128px;background-color: darkred;color: white;margin: 0 32px 0 32px;cursor: pointer;border: none;">重置脚本</button></div></div>';
+    var settingHTML = '<div style="color: white; font-size: 1em;"><img id="pps-close" src="https://pp-1252089172.cos.ap-chengdu.myqcloud.com/Close.png" style="position: absolute; right: 35px; top: 20px; width: 32px; height: 32px; cursor: pointer;"><div style="position: absolute; width: 40%; left: 25%; top: 25%; overflow: hidden;"><ul style="list-style: none; padding: 0; margin: 0;"><li style="height: 32px; font-size: 25px;">' + Texts[g_language].setting_preview + '</li><li style="height: 32px; font-size: 25px;">'+Texts[g_language].setting_sort +'</li><li style="height: 32px; font-size: 25px;">'+Texts[g_language].setting_anime+'</li><li style="height: 32px; font-size: 25px;">'+Texts[g_language].setting_origin+'</li><li style="height: 32px; font-size: 25px;"></li><li style="height: 32px; font-size: 25px;">'+Texts[g_language].setting_maxPage+'</li><li style="height: 32px; font-size: 25px;">'+Texts[g_language].setting_hideWork+'</li><li style="height: 32px; font-size: 25px;">'+Texts[g_language].setting_hideFav+'</li><li style="height: 32px; font-size: 25px;">'+Texts[g_language].setting_blank+'</li><li style="height: 32px; font-size: 25px;">'+Texts[g_language].setting_turnPage+'</li></ul></div><div id="pps-right" style="position: absolute; width: 10%; right: 25%; text-align: right; top: 25%;"><ul style="list-style: none; padding: 0; margin: 0;"><li style="height: 32px;"><img id="pps-preview" src="https://pp-1252089172.cos.ap-chengdu.myqcloud.com/On.png" style="height: 32px; cursor: pointer;"></li><li style="height: 32px;"><img id="pps-sort" src="https://pp-1252089172.cos.ap-chengdu.myqcloud.com/On.png" style="height: 32px; cursor: pointer;"></li><li style="height: 32px;"><img id="pps-anime" src="https://pp-1252089172.cos.ap-chengdu.myqcloud.com/On.png" style="height: 32px; cursor: pointer;"></li><li style="height: 32px;"><img id="pps-original" src="https://pp-1252089172.cos.ap-chengdu.myqcloud.com/On.png" style="height: 32px; cursor: pointer;"></li><li style="height: 32px;"></li><li style="height: 32px;"><input id="pps-maxPage" style="height: 28px; font-size: 24px; padding: 0px; margin: 0px; border-width: 0px; width: 64px; text-align: center;"></li><li style="height: 32px;"><input id="pps-hideLess" style="height: 28px; font-size: 24px; padding: 0px; margin: 0px; border-width: 0px; width: 64px; text-align: center;"></li><li style="height: 32px;"><img id="pps-hideBookmarked" src="https://pp-1252089172.cos.ap-chengdu.myqcloud.com/On.png" style="height: 32px; cursor: pointer;"></li><li style="height: 32px;"><img id="pps-newTab" src="https://pp-1252089172.cos.ap-chengdu.myqcloud.com/On.png" style="height: 32px; cursor: pointer;"></li><li style="height: 32px;"><img id="pps-pageKey" src="https://pp-1252089172.cos.ap-chengdu.myqcloud.com/On.png" style="height: 32px; cursor: pointer;"></li></ul></div><div style="margin-top: 10px;position: absolute;bottom: 20%;width: 100%;text-align: center;"><button id="pps-save" style="font-size: 25px;border-radius: 15px;height: 48px;width: 128px;background-color: green;color: white;margin: 0 32px 0 32px;cursor: pointer;border: none;">'+Texts[g_language].setting_save+'</button><button id="pps-reset" style="font-size: 25px;border-radius: 15px;height: 48px;width: 128px;background-color: darkred;color: white;margin: 0 32px 0 32px;cursor: pointer;border: none;">'+Texts[g_language].setting_reset+'</button></div></div>';
 
     bg.get(0).innerHTML = settingHTML;
 
@@ -2438,7 +2486,7 @@ function ShowSetting() {
     });
 
     $('#pps-reset').click(function () {
-        var comfirmText = "这会删除所有设置，相当于重新安装脚本，确定要重置吗？";
+        var comfirmText = Texts[g_language].setting_resetHint;
         if (confirm(comfirmText)) {
             SetCookie('PixivPreview', null);
             location.href = location.href;
@@ -2464,6 +2512,18 @@ var loadInterval = setInterval(function () {
         DoLog(LogLevel.Info, 'Unsupported page.');
         clearInterval(loadInterval);
         return;
+    }
+
+    // 自动检测语言
+    if (g_autoDetectLanguage) {
+        var lang = $('html').attr('lang');
+        if (lang.indexOf('zh') != -1) {
+            // 简体中文和繁体中文都用简体中文
+            g_language = Lang.zh_CN;
+        } else {
+            // 其他的统一用英语，其他语言也不知道谷歌翻译得对不对
+            g_language = Lang.en_US;
+        }
     }
 
     // 设置按钮
