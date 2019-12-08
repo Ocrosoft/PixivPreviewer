@@ -1,12 +1,13 @@
 ﻿// ==UserScript==
-// @name         Pixiv Previewer
-// @namespace    https://github.com/Ocrosoft/PixivPreviewer
-// @version      3.0.15
-// @description  显示预览图（支持单图，多图，动图）；动图压缩包下载；搜索页按热门度（收藏数）排序并显示收藏数，适配11月更新
-// @author       Ocrosoft
-// @match        *://www.pixiv.net/*
-// @grant        none
-// @compatible   Chrome
+// @name            Pixiv Previewer
+// @namespace       https://github.com/Ocrosoft/PixivPreviewer
+// @version         3.0.16
+// @description     Display preview images (support single image, multiple images, moving images); Download compressed image packages; Sorting the search page by favorite count(and display it). Updated for the latest search page.
+// @description:zh  显示预览图（支持单图，多图，动图）；动图压缩包下载；搜索页按热门度（收藏数）排序并显示收藏数，适配11月更新
+// @author          Ocrosoft
+// @match           *://www.pixiv.net/*
+// @grant           none
+// @compatible      Chrome
 // ==/UserScript==
 
 // 测试 JQuery，如果不支持就插入
