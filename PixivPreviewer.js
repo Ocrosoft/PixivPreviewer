@@ -296,7 +296,6 @@ Pages[PageType.Search] = {
         var lis = $(sections[sectionIndex]).find('ul').find('li');
         lis.each(function (i, e) {
             var li = $(e);
-            var control = li.children('div:first');
 
             // 只填充必须的几个，其他的目前用不着
             var ctlAttrs = {
@@ -337,13 +336,14 @@ Pages[PageType.Search] = {
             }
 
             // 添加 attr
-            li.attr({
+            var control = li.children('div:first').children('div:first');
+            control.attr({
                 'illustId': ctlAttrs.illustId,
                 'illustType': ctlAttrs.illustType,
                 'pageCount': ctlAttrs.pageCount
             });
 
-            li.addClass('pp-control');
+            control.addClass('pp-control');
         });
         returnMap.controlElements = $('.pp-control');
         this.private.pageSelector = $($(sections[sectionIndex]).find('ul').get(0)).next().get(0);
