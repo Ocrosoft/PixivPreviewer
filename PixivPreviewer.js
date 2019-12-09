@@ -1,7 +1,7 @@
 ﻿// ==UserScript==
 // @name                Pixiv Previewer
 // @namespace           https://github.com/Ocrosoft/PixivPreviewer
-// @version             3.0.17
+// @version             3.0.18
 // @description         Display preview images (support single image, multiple images, moving images); Download animation(.zip); Sorting the search page by favorite count(and display it). Updated for the latest search page.
 // @description:zh-CN   显示预览图（支持单图，多图，动图）；动图压缩包下载；搜索页按热门度（收藏数）排序并显示收藏数，适配11月更新。
 // @description:ja      プレビュー画像の表示（単一画像、複数画像、動画のサポート）; アニメーションのダウンロード（.zip）; お気に入りの数で検索ページをソートします（そして表示します）。 最新の検索ページ用に更新されました。
@@ -99,7 +99,7 @@ function DoLog(level, msgOrElement) {
         }
 
         if (++g_logCount > 512) {
-            console.clear();
+            //console.clear();
             g_logCount = 0;
         }
     }
@@ -450,13 +450,14 @@ Pages[PageType.BookMarkNew] = {
                 }
             }
 
-            _this.attr({
+            var control = figure.children('div:first');
+            control.attr({
                 'illustId': ctlAttrs.illustId,
                 'illustType': ctlAttrs.illustType,
                 'pageCount': ctlAttrs.pageCount
             });
 
-            returnMap.controlElements.push(e);
+            returnMap.controlElements.push(control.get(0));
         });
 
         DoLog(LogLevel.Info, 'Process page elements complete.');
@@ -548,13 +549,14 @@ Pages[PageType.Discovery] = {
                 }
             }
 
-            _this.attr({
+            var control = figure.children('div:first');
+            control.attr({
                 'illustId': ctlAttrs.illustId,
                 'illustType': ctlAttrs.illustType,
                 'pageCount': ctlAttrs.pageCount
             });
 
-            returnMap.controlElements.push(e);
+            returnMap.controlElements.push(control.get(0));
         });
 
         DoLog(LogLevel.Info, 'Process page elements complete.');
@@ -598,7 +600,6 @@ Pages[PageType.Member] = {
         var lis = sections.find('ul').find('li');
         lis.each(function (i, e) {
             var li = $(e);
-            var control = li.children('div:first');
 
             // 只填充必须的几个，其他的目前用不着
             var ctlAttrs = {
@@ -640,13 +641,17 @@ Pages[PageType.Member] = {
             }
 
             // 添加 attr
-            li.attr({
+            var control = li.children('div:first').children('div:first');
+            if (control.length === 0) {
+                control = li.children('div:last').children('div:first');
+            }
+            control.attr({
                 'illustId': ctlAttrs.illustId,
                 'illustType': ctlAttrs.illustType,
                 'pageCount': ctlAttrs.pageCount
             });
 
-            li.addClass('pp-control');
+            control.addClass('pp-control');
         });
         returnMap.controlElements = $('.pp-control');
         returnMap.loadingComplete = true;
@@ -732,13 +737,14 @@ Pages[PageType.Home] = {
                     ctlAttrs.illustType = 2;
                 }
 
-                __this.attr({
+                var control = __this.children('a:first');
+                control.attr({
                     'illustId': ctlAttrs.illustId,
                     'illustType': ctlAttrs.illustType,
                     'pageCount': ctlAttrs.pageCount
                 });
 
-                returnMap.controlElements.push(ee);
+                returnMap.controlElements.push(control.get(0));
             });
         });
 
@@ -899,13 +905,14 @@ Pages[PageType.NewIllust] = {
                 }
             }
 
-            _this.attr({
+            var control = _this.children('div:first').children('div:first');
+            control.attr({
                 'illustId': ctlAttrs.illustId,
                 'illustType': ctlAttrs.illustType,
                 'pageCount': ctlAttrs.pageCount
             });
 
-            returnMap.controlElements.push(e);
+            returnMap.controlElements.push(control.get(0));
         });
 
         returnMap.loadingComplete = true;
@@ -1001,13 +1008,14 @@ Pages[PageType.BookMark] = {
             }
 
             // 添加 attr
-            _this.attr({
+            var control = _this.children('a:first');
+            control.attr({
                 'illustId': ctlAttrs.illustId,
                 'illustType': ctlAttrs.illustType,
                 'pageCount': ctlAttrs.pageCount
             });
 
-            returnMap.controlElements.push(e);
+            returnMap.controlElements.push(control.get(0));
         });
 
         returnMap.loadingComplete = true;
@@ -1663,7 +1671,9 @@ function PixivPreview() {
         $('.pp-original, .pp-pageCount').hide();
 
         // 第一次需要绑定事件
-        if ($('.pp-image').attr('index') == null) {
+        if ($('.pp-image').attr('index') == null || $('.pp-image').attr('pageCount') != regular.length) {
+            $('.pp-image').attr('pageCount', regular.length);
+
             // 绑定点击事件，Ctrl+左键 单击切换原图
             $('.pp-image').on('click', function (ev) {
                 var _this = $(this);
