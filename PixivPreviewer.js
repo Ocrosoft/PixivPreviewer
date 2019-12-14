@@ -1,7 +1,7 @@
 ﻿// ==UserScript==
 // @name                Pixiv Previewer
 // @namespace           https://github.com/Ocrosoft/PixivPreviewer
-// @version             3.0.20
+// @version             3.0.22
 // @description         Display preview images (support single image, multiple images, moving images); Download animation(.zip); Sorting the search page by favorite count(and display it). Updated for the latest search page.
 // @description:zh-CN   显示预览图（支持单图，多图，动图）；动图压缩包下载；搜索页按热门度（收藏数）排序并显示收藏数，适配11月更新。
 // @description:ja      プレビュー画像の表示（単一画像、複数画像、動画のサポート）; アニメーションのダウンロード（.zip）; お気に入りの数で検索ページをソートします（そして表示します）。 最新の検索ページ用に更新されました。
@@ -55,12 +55,12 @@ Texts[Lang.en_US] = {
     setting_preview: 'Preview',
     setting_sort: 'Sorting (Search page)',
     setting_anime: 'Animation download (Preview and Artwork page)',
-    setting_origin: 'Priority display of original image during preview (slow)',
+    setting_origin: 'Display original image when preview (slow)',
     setting_maxPage: 'Maximum number of pages counted per sort',
     setting_hideWork: 'Hide works with less than set value',
     setting_hideFav: 'Hide favorites when sorting',
     setting_blank: 'Open works\' details page in new tab',
-    setting_turnPage: 'Use the keyboard ← → to turn pages (sorted search page)',
+    setting_turnPage: 'Use ← → to turn pages (Search page)',
     setting_save: 'Save',
     setting_reset: 'Reset',
     setting_resetHint: 'This will delete all settings and set it to default. Are you sure?',
@@ -2530,10 +2530,6 @@ function ShowSetting() {
     var screenWidth = document.documentElement.clientWidth;
     var screenHeight = document.documentElement.clientHeight;
 
-    if (screenWidth < 1280 || screenHeight < 720) {
-        DoLog(LogLevel.Warning, 'Window too small to display all setting contents.');
-    }
-
     $('#pp-bg').remove();
     var bg = $('<div id="pp-bg"></div>').css({
         'width': screenWidth + 'px', 'height': screenHeight + 'px', 'position': 'fixed',
@@ -2607,6 +2603,14 @@ function ShowSetting() {
     $('#pps-close').click(function () {
         $('#pp-bg').remove();
     });
+
+    // 不换行
+    $('#pp-bg').find('li').css('overflow', 'hidden');
+
+    if (screenWidth < 1400) {
+        var fontSize = parseInt(25 - (1400 - screenWidth) / 40);
+        $('#pp-bg').find('li').css('font-size', fontSize + 'px');
+    }
 }
 /* --------------------------------------- 主函数 --------------------------------------- */
 var loadInterval = setInterval(function () {
