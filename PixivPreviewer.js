@@ -1,7 +1,7 @@
 ﻿// ==UserScript==
 // @name                Pixiv Previewer
 // @namespace           https://github.com/Ocrosoft/PixivPreviewer
-// @version             3.0.18
+// @version             3.0.20
 // @description         Display preview images (support single image, multiple images, moving images); Download animation(.zip); Sorting the search page by favorite count(and display it). Updated for the latest search page.
 // @description:zh-CN   显示预览图（支持单图，多图，动图）；动图压缩包下载；搜索页按热门度（收藏数）排序并显示收藏数，适配11月更新。
 // @description:ja      プレビュー画像の表示（単一画像、複数画像、動画のサポート）; アニメーションのダウンロード（.zip）; お気に入りの数で検索ページをソートします（そして表示します）。 最新の検索ページ用に更新されました。
@@ -222,8 +222,8 @@ var ControlElementsAttributesSample = {
 Pages[PageType.Search] = {
     PageTypeString: 'SearchPage',
     CheckUrl: function (url) {
-        return /^https?:\/\/www.pixiv.net\/tags\/.*\/artworks/.test(url) ||
-            /^https?:\/\/www.pixiv.net\/en\/tags\/.*\/artworks/.test(url);
+        return /^https?:\/\/www.pixiv.net\/tags\/.*/.test(url) ||
+            /^https?:\/\/www.pixiv.net\/en\/tags\/.*/.test(url);
     },
     ProcessPageElements: function () {
         var returnMap = {
@@ -2530,7 +2530,7 @@ function ShowSetting() {
     var screenHeight = document.documentElement.clientHeight;
 
     if (screenWidth < 1280 || screenHeight < 720) {
-        DoLog(LogLeve.Warning, 'Window too small to display all setting contents.');
+        DoLog(LogLevel.Warning, 'Window too small to display all setting contents.');
     }
 
     $('#pp-bg').remove();
@@ -2646,6 +2646,12 @@ var loadInterval = setInterval(function () {
         return;
     }
 
+    window.onresize = function() {
+        if ($('#pps-save').length > 0) {
+            ShowSetting();
+        }
+    };
+
     toolBar.appendChild(toolBar.firstChild.cloneNode(true));
     toolBar.lastChild.outerHTML = '<button style="background-color: rgb(0, 0, 0);margin-top: 5px;opacity: 0.8;cursor: pointer;border: none;padding: 12px;border-radius: 24px;width: 48px;height: 48px;"><svg version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" x="0px" y="0px" viewBox="0 0 1000 1000" enable-background="new 0 0 1000 1000" xml:space="preserve" style="fill: white;"><metadata> Svg Vector Icons : http://www.sfont.cn </metadata><g><path d="M377.5,500c0,67.7,54.8,122.5,122.5,122.5S622.5,567.7,622.5,500S567.7,377.5,500,377.5S377.5,432.3,377.5,500z"></path><path d="M990,546v-94.8L856.2,411c-8.9-35.8-23-69.4-41.6-100.2L879,186L812,119L689,185.2c-30.8-18.5-64.4-32.6-100.2-41.5L545.9,10h-94.8L411,143.8c-35.8,8.9-69.5,23-100.2,41.5L186.1,121l-67,66.9L185.2,311c-18.6,30.8-32.6,64.4-41.5,100.3L10,454v94.8L143.8,589c8.9,35.8,23,69.4,41.6,100.2L121,814l67,67l123-66.2c30.8,18.6,64.5,32.6,100.3,41.5L454,990h94.8L589,856.2c35.8-8.9,69.4-23,100.2-41.6L814,879l67-67l-66.2-123.1c18.6-30.7,32.6-64.4,41.5-100.2L990,546z M500,745c-135.3,0-245-109.7-245-245c0-135.3,109.7-245,245-245s245,109.7,245,245C745,635.3,635.3,745,500,745z"></path></g></svg></button>';
     $(toolBar.lastChild).css('margin-top', '10px');
@@ -2706,12 +2712,6 @@ var loadInterval = setInterval(function () {
             } else if (g_settings.enablePreview) {
                 PixivPreview();
             }
-
-            window.onresize = function() {
-                if ($('#pps-save').length > 0) {
-                    ShowSetting();
-                }
-            };
         }
         catch (e) {
             DoLog(LogLevel.Error, 'Unknown error: ' + e);
