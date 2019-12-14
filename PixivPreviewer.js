@@ -222,8 +222,9 @@ var ControlElementsAttributesSample = {
 Pages[PageType.Search] = {
     PageTypeString: 'SearchPage',
     CheckUrl: function (url) {
-        return /^https?:\/\/www.pixiv.net\/tags\/.*/.test(url) ||
-            /^https?:\/\/www.pixiv.net\/en\/tags\/.*/.test(url);
+        // 没有 /artworks 的页面不支持
+        return /^https?:\/\/www.pixiv.net\/tags\/.*\/artworks/.test(url) ||
+            /^https?:\/\/www.pixiv.net\/en\/tags\/.*\/artworks/.test(url);
     },
     ProcessPageElements: function () {
         var returnMap = {
