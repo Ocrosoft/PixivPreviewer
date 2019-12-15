@@ -1,7 +1,7 @@
 ﻿// ==UserScript==
 // @name                Pixiv Previewer
 // @namespace           https://github.com/Ocrosoft/PixivPreviewer
-// @version             3.0.22
+// @version             3.0.24
 // @description         Display preview images (support single image, multiple images, moving images); Download animation(.zip); Sorting the search page by favorite count(and display it). Updated for the latest search page.
 // @description:zh-CN   显示预览图（支持单图，多图，动图）；动图压缩包下载；搜索页按热门度（收藏数）排序并显示收藏数，适配11月更新。
 // @description:ja      プレビュー画像の表示（単一画像、複数画像、動画のサポート）; アニメーションのダウンロード（.zip）; お気に入りの数で検索ページをソートします（そして表示します）。 最新の検索ページ用に更新されました。
@@ -1396,12 +1396,12 @@ function PixivPreview() {
             g_mousePos = { x: e.pageX, y: e.pageY };
             // 预览 Div
             var previewDiv = $(document.createElement('div')).addClass('pp-main').attr('illustId', illustId)
-                .css({
-                    'position': 'absolute', 'z-index': '999999', 'left': g_mousePos.x + 'px', 'top': g_mousePos.y + 'px',
-                    'border-style': 'solid', 'border-color': '#6495ed', 'border-width': '2px', 'border-radius': '20px',
-                    'width': '48px', 'height': '48px',
-                    'background-image': 'url(https://pp-1252089172.cos.ap-chengdu.myqcloud.com/transparent.png)',
-                });
+            .css({
+                'position': 'absolute', 'z-index': '999999', 'left': g_mousePos.x + 'px', 'top': g_mousePos.y + 'px',
+                'border-style': 'solid', 'border-color': '#6495ed', 'border-width': '2px', 'border-radius': '20px',
+                'width': '48px', 'height': '48px',
+                'background-image': 'url(https://pp-1252089172.cos.ap-chengdu.myqcloud.com/transparent.png)',
+            });
             // 添加到 body
             $('.pp-main').remove();
             $('body').append(previewDiv);
@@ -1418,7 +1418,7 @@ function PixivPreview() {
 
             // 原图（笑脸）图标
             var originIcon = $(new Image()).addClass('pp-original').attr('src', 'https://source.pixiv.net/www/images/pixivcomic-favorite.png')
-                .css({ 'position': 'absolute', 'bottom': '5px', 'right': '5px', 'display': 'none' });
+            .css({ 'position': 'absolute', 'bottom': '5px', 'right': '5px', 'display': 'none' });
             previewDiv.append(originIcon);
 
             // 点击图标新网页打开原图
@@ -1429,7 +1429,7 @@ function PixivPreview() {
             // 右上角张数标记
             var pageCountHTML = '<div class="pp-pageCount" style="display: flex;-webkit-box-align: center;align-items: center;box-sizing: border-box;margin-left: auto;height: 20px;color: rgb(255, 255, 255);font-size: 10px;line-height: 12px;font-weight: bold;flex: 0 0 auto;padding: 4px 6px;background: rgba(0, 0, 0, 0.32);border-radius: 10px;margin-top:5px;margin-right:5px;">\<svg viewBox="0 0 9 10" width="9" height="10" style="stroke: none;line-height: 0;font-size: 0px;fill: currentcolor;"><path d="M8,3 C8.55228475,3 9,3.44771525 9,4 L9,9 C9,9.55228475 8.55228475,10 8,10 L3,10 C2.44771525,10 2,9.55228475 2,9 L6,9 C7.1045695,9 8,8.1045695 8,7 L8,3 Z M1,1 L6,1 C6.55228475,1 7,1.44771525 7,2 L7,7 C7,7.55228475 6.55228475,8 6,8 L1,8 C0.44771525,8 0,7.55228475 0,7 L0,2 C0,1.44771525 0.44771525,1 1,1 Z"></path></svg><span style="margin-left:2px;" class="pp-page">0/0</span></div>';
             var pageCountDiv = $(pageCountHTML)
-                .css({ 'position': 'absolute', 'top': '0px', 'display': 'none', 'right': '0px', 'display': 'none' });
+            .css({ 'position': 'absolute', 'top': '0px', 'display': 'none', 'right': '0px', 'display': 'none' });
             previewDiv.append(pageCountDiv);
 
             $('.pp-main').mouseleave(function (e) {
@@ -2468,7 +2468,7 @@ function PixivSK(callback) {
             callback();
         }
     }
-}
+    }
 /* ---------------------------------------- 设置 ---------------------------------------- */
 function SetCookie(name, value) {
     var Days = 180;
@@ -2653,7 +2653,14 @@ var loadInterval = setInterval(function () {
 
     window.onresize = function() {
         if ($('#pps-save').length > 0) {
-            ShowSetting();
+            var screenWidth = document.documentElement.clientWidth;
+            var screenHeight = document.documentElement.clientHeight;
+            $('#pp-bg').css({'width': screenWidth + 'px', 'height': screenHeight + 'px'});
+
+            if (screenWidth < 1400) {
+                var fontSize = parseInt(25 - (1400 - screenWidth) / 40);
+                $('#pp-bg').find('li').css('font-size', fontSize + 'px');
+            }
         }
     };
 
