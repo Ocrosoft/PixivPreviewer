@@ -1,7 +1,7 @@
 ﻿// ==UserScript==
 // @name                Pixiv Previewer
 // @namespace           https://github.com/Ocrosoft/PixivPreviewer
-// @version             3.0.24
+// @version             3.0.25
 // @description         Display preview images (support single image, multiple images, moving images); Download animation(.zip); Sorting the search page by favorite count(and display it). Updated for the latest search page.
 // @description:zh-CN   显示预览图（支持单图，多图，动图）；动图压缩包下载；搜索页按热门度（收藏数）排序并显示收藏数，适配11月更新。
 // @description:ja      プレビュー画像の表示（単一画像、複数画像、動画のサポート）; アニメーションのダウンロード（.zip）; お気に入りの数で検索ページをソートします（そして表示します）。 最新の検索ページ用に更新されました。
@@ -47,6 +47,8 @@ Texts[Lang.zh_CN] = {
     setting_save: '保存设置',
     setting_reset: '重置脚本',
     setting_resetHint: '这会删除所有设置，相当于重新安装脚本，确定要重置吗？',
+    // 搜索时过滤值太高
+    sort_noWork: '没有可以显示的作品',
 };
 // translate by google
 Texts[Lang.en_US] = {
@@ -64,6 +66,7 @@ Texts[Lang.en_US] = {
     setting_save: 'Save',
     setting_reset: 'Reset',
     setting_resetHint: 'This will delete all settings and set it to default. Are you sure?',
+    sort_noWork: 'No works to display',
 };
 
 var LogLevel = {
@@ -2434,7 +2437,7 @@ function PixivSK(callback) {
         });
 
         if (works.length === 0) {
-            $('.column-search-result')[0].innerHTML = '<div class="_no-item">未找到任何相关结果</div>';
+            $(container).show().get(0).outerHTML = '<div class=""style="display: flex;align-items: center;justify-content: center; height: 408px;flex-flow: column;"><div class=""style="margin-bottom: 12px;color: rgba(0, 0, 0, 0.16);"><svg viewBox="0 0 16 16"size="72"style="fill: currentcolor;height: 72px;vertical-align: middle;"><path d="M8.25739 9.1716C7.46696 9.69512 6.51908 10 5.5 10C2.73858 10 0.5 7.76142 0.5 5C0.5			2.23858 2.73858 0 5.5 0C8.26142 0 10.5 2.23858 10.5 5C10.5 6.01908 10.1951 6.96696 9.67161			7.75739L11.7071 9.79288C12.0976 10.1834 12.0976 10.8166 11.7071 11.2071C11.3166 11.5976 10.6834			11.5976 10.2929 11.2071L8.25739 9.1716ZM8.5 5C8.5 6.65685 7.15685 8 5.5 8C3.84315 8 2.5 6.65685			2.5 5C2.5 3.34315 3.84315 2 5.5 2C7.15685 2 8.5 3.34315 8.5 5Z"transform="translate(2.25 2.25)"fill-rule="evenodd"clip-rule="evenodd"></path></svg></div><span class="sc-LzMCO fLDUzU">' + Texts[g_language].sort_noWork + '</span></div>';
         }
 
         // 恢复显示
