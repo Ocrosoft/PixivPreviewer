@@ -1,7 +1,7 @@
 ﻿// ==UserScript==
 // @name                Pixiv Previewer
 // @namespace           https://github.com/Ocrosoft/PixivPreviewer
-// @version             3.0.26
+// @version             3.1.0
 // @description         Display preview images (support single image, multiple images, moving images); Download animation(.zip); Sorting the search page by favorite count(and display it). Updated for the latest search page.
 // @description:zh-CN   显示预览图（支持单图，多图，动图）；动图压缩包下载；搜索页按热门度（收藏数）排序并显示收藏数，适配11月更新。
 // @description:ja      プレビュー画像の表示（単一画像、複数画像、動画のサポート）; アニメーションのダウンロード（.zip）; お気に入りの数で検索ページをソートします（そして表示します）。 最新の検索ページ用に更新されました。
@@ -1804,18 +1804,18 @@ function PixivSK(callback) {
 
     // 获取第 currentPage 页的作品
     var getWorks = function (onloadCallback) {
-        currentUrl = currentUrl.replace(/p=\d+/, 'p=' + currentPage);
+        var url = currentUrl.replace(/p=\d+/, 'p=' + currentPage);
 
-        if (location.href.indexOf('mode=r18') != -1) {
-            currentUrl += '&mode=r18';
-        } else if (location.href.indexOf('mode=safe') != -1) {
-            currentUrl += '&mode=safe';
+        if (location.href.indexOf('?') != -1) {
+            var param = location.href.split('?')[1];
+            param = param.replace(/[?&]{1}p=\d+/, '');
+            url += '&' + param;
         }
 
-        DoLog(LogLevel.Info, 'Current url: ' + currentUrl);
+        DoLog(LogLevel.Info, 'getWorks url: ' + url);
 
         var req = new XMLHttpRequest();
-        req.open('GET', currentUrl, true);
+        req.open('GET', url, true);
         req.onload = function (event) {
             onloadCallback(req);
         };
@@ -2281,7 +2281,7 @@ function PixivSK(callback) {
                 li.find('.ppAdditionTag').append(R18HTML);
             }
             if (works[i].pageCount > 1) {
-                var pageCountHTML = '<div style="display: flex;-webkit-box-align: center;align-items: center;box-sizing: border-box;margin-left: auto;height: 20px;color: rgb(255, 255, 255);font-size: 10px;line-height: 12px;font-weight: bold;flex: 0 0 auto;padding: 4px 6px;background: rgba(0, 0, 0, 0.32);border-radius: 10px;">\<svg viewBox="0 0 9 10" width="9" height="10" style="stroke: none;line-height: 0;font-size: 0px;fill: currentcolor;"><path d="M8,3 C8.55228475,3 9,3.44771525 9,4 L9,9 C9,9.55228475 8.55228475,10 8,10 L3,10 C2.44771525,10 2,9.55228475 2,9 L6,9 C7.1045695,9 8,8.1045695 8,7 L8,3 Z M1,1 L6,1 C6.55228475,1 7,1.44771525 7,2 L7,7 C7,7.55228475 6.55228475,8 6,8 L1,8 C0.44771525,8 0,7.55228475 0,7 L0,2 C0,1.44771525 0.44771525,1 1,1 Z"></path></svg><span class="sc-fzXfOw bAzGJW">' + works[i].pageCount + '</span></div>';
+                var pageCountHTML = '<div style="display: flex;-webkit-box-align: center;align-items: center;box-sizing: border-box;margin-left: auto;height: 20px;color: rgb(255, 255, 255);font-size: 10px;line-height: 12px;font-weight: bold;flex: 0 0 auto;padding: 4px 6px;background: rgba(0, 0, 0, 0.32);border-radius: 10px;">\<svg viewBox="0 0 9 10" width="9" height="10" style="stroke: none;line-height: 0;font-size: 0px;fill: currentcolor;"><path d="M8,3 C8.55228475,3 9,3.44771525 9,4 L9,9 C9,9.55228475 8.55228475,10 8,10 L3,10 C2.44771525,10 2,9.55228475 2,9 L6,9 C7.1045695,9 8,8.1045695 8,7 L8,3 Z M1,1 L6,1 C6.55228475,1 7,1.44771525 7,2 L7,7 C7,7.55228475 6.55228475,8 6,8 L1,8 C0.44771525,8 0,7.55228475 0,7 L0,2 C0,1.44771525 0.44771525,1 1,1 Z"></path></svg><span style="margin-left: 2px;">' + works[i].pageCount + '</span></div>';
                 li.find('.ppAdditionTag').append(pageCountHTML);
             }
             var bookmarkCountHTML = '<div style="margin-bottom: 6px; margin-left: 2px;"><div style="color: rgb(7, 95, 166);font-weight: bold;font-size: 13px;line-height: 1;padding: 3px 6px;border-radius: 3px;background: rgb(204, 236, 255);">' + works[i].bookmarkCount + ' likes</div></div>';
