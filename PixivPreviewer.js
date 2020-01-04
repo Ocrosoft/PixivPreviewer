@@ -1,7 +1,7 @@
 ﻿// ==UserScript==
 // @name                Pixiv Previewer
 // @namespace           https://github.com/Ocrosoft/PixivPreviewer
-// @version             3.1.0
+// @version             3.1.2
 // @description         Display preview images (support single image, multiple images, moving images); Download animation(.zip); Sorting the search page by favorite count(and display it). Updated for the latest search page.
 // @description:zh-CN   显示预览图（支持单图，多图，动图）；动图压缩包下载；搜索页按热门度（收藏数）排序并显示收藏数，适配11月更新。
 // @description:ja      プレビュー画像の表示（単一画像、複数画像、動画のサポート）; アニメーションのダウンロード（.zip）; お気に入りの数で検索ページをソートします（そして表示します）。 最新の検索ページ用に更新されました。
@@ -226,8 +226,8 @@ Pages[PageType.Search] = {
     PageTypeString: 'SearchPage',
     CheckUrl: function (url) {
         // 没有 /artworks 的页面不支持
-        return /^https?:\/\/www.pixiv.net\/tags\/.*\/artworks/.test(url) ||
-            /^https?:\/\/www.pixiv.net\/en\/tags\/.*\/artworks/.test(url);
+        return /^https?:\/\/www.pixiv.net\/tags\/.*\//.test(url) ||
+            /^https?:\/\/www.pixiv.net\/en\/tags\/.*\//.test(url);
     },
     ProcessPageElements: function () {
         var returnMap = {
@@ -281,7 +281,8 @@ Pages[PageType.Search] = {
                 if (lis.length > 4) {
                     score += 5;
                 }
-                if (score > bestScore) {
+                // 正确的会在后面
+                if (score >= bestScore) {
                     bestScore = score;
                     sectionIndex = i;
                 }
@@ -1791,7 +1792,7 @@ function PixivSK(callback) {
     // 当前已经取得的页面数量
     var currentGettingPageCount = 0;
     // 当前加载的页面 URL
-    var currentUrl = 'https://www.pixiv.net/ajax/search/artworks/';
+    var currentUrl = 'https://www.pixiv.net/ajax/search/';
     // 当前加载的是第几张页面
     var currentPage = 0;
     // 获取到的作品
@@ -1808,8 +1809,18 @@ function PixivSK(callback) {
 
         if (location.href.indexOf('?') != -1) {
             var param = location.href.split('?')[1];
-            param = param.replace(/[?&]{1}p=\d+/, '');
+            param = param.replace(/[?&]p=\d+/, '');
             url += '&' + param;
+        }
+
+        if (url.indexOf('order=') == -1) {
+            url += '&order=date_d';
+        }
+        if (url.indexOf('mode=') == -1) {
+            url += '&mode=all';
+        }
+        if (url.indexOf('s_mode=') == -1) {
+            url += '&s_mode=s_tag_full';
         }
 
         DoLog(LogLevel.Info, 'getWorks url: ' + url);
@@ -1938,7 +1949,7 @@ function PixivSK(callback) {
                 DoLog(LogLevel.Info, 'Add "&p=1": ' + url);
             }
         }
-        var wordMatch = url.match(/\/tags\/([^/]*)\/artworks/);
+        var wordMatch = url.match(/\/tags\/([^/]*)\//);
         var searchWord = '';
         if (wordMatch) {
             DoLog(LogLevel.Info, 'Search key word: ' + searchWord);
@@ -1952,6 +1963,9 @@ function PixivSK(callback) {
         var page = url.match(/p=(\d*)/)[1];
         currentPage = parseInt(page);
         DoLog(LogLevel.Info, 'Current page: ' + currentPage);
+
+        var type = url.match(/tags\/.*\/(.*)[?$]/)[1];
+        currentUrl += type + '/';
 
         currentUrl += searchWord + '?word=' + searchWord + '&p=' + currentPage;
         DoLog(LogLevel.Info, 'Current url: ' + currentUrl);
@@ -2020,7 +2034,13 @@ function PixivSK(callback) {
                 var json = JSON.parse(req.responseText);
                 if (json.hasOwnProperty('error')) {
                     if (json.error === false) {
-                        var data = json.body.illustManga.data;
+                        var data;
+                        if (json.body.illustManga)
+                            data = json.body.illustManga.data;
+                        else if (json.body.manga)
+                            data = json.body.manga.data;
+                        else if (json.body.illust)
+                            data = json.body.illust.data;
                         works = works.concat(data);
                     } else {
                         DoLog(LogLevel.Error, 'ajax error!');
