@@ -1,7 +1,7 @@
 ﻿// ==UserScript==
 // @name                       Pixiv Previewer
 // @namespace              https://github.com/Ocrosoft/PixivPreviewer
-// @version                    3.1.6
+// @version                    3.1.8
 // @description              Display preview images (support single image, multiple images, moving images); Download animation(.zip); Sorting the search page by favorite count(and display it). Updated for the latest search page.
 // @description:zh-CN   显示预览图（支持单图，多图，动图）；动图压缩包下载；搜索页按热门度（收藏数）排序并显示收藏数，适配11月更新。
 // @description:ja           プレビュー画像の表示（単一画像、複数画像、動画のサポート）; アニメーションのダウンロード（.zip）; お気に入りの数で検索ページをソートします（そして表示します）。 最新の検索ページ用に更新されました。
@@ -157,7 +157,7 @@ var g_settings;
 // 日志等级
 var g_logLevel = LogLevel.Info;
 // 排序时同时请求收藏量的 Request 数量，没必要太多，并不会加快速度
-var g_maxXhr = 10;
+var g_maxXhr = 64;
 // 排序是否隐藏已关注画师的作品，如果希望隐藏，将 "false" 修改为 "true" 即可
 var g_enableFilterByUser = false;
 
@@ -2029,6 +2029,8 @@ function PixivSK(callback) {
         }
 
         var onloadCallback = function (req) {
+            let no_artworks_found = false;
+
             try {
                 var json = JSON.parse(req.responseText);
                 if (json.hasOwnProperty('error')) {
@@ -2040,7 +2042,11 @@ function PixivSK(callback) {
                             data = json.body.manga.data;
                         else if (json.body.illust)
                             data = json.body.illust.data;
-                        works = works.concat(data);
+                        if (data.length > 0) {
+                            works = works.concat(data);
+                        } else {
+                            no_artworks_found = true;
+                        }
                     } else {
                         DoLog(LogLevel.Error, 'ajax error!');
                         return;
@@ -2056,6 +2062,13 @@ function PixivSK(callback) {
 
             currentPage++;
             currentGettingPageCount++;
+
+            // 后面已经没有作品了
+            if (no_artworks_found) {
+                DoLog(LogLevel.Warning, 'No artworks found, ignore ' + (g_settings.pageCount - currentGettingPageCount) + ' pages.');
+                currentPage += g_settings.pageCount - currentGettingPageCount;
+                currentGettingPageCount = g_settings.pageCount;
+            }
             // 设定数量的页面加载完成
             if (currentGettingPageCount == g_settings.pageCount) {
                 DoLog(LogLevel.Info, 'Load complete, start to load bookmark count.');
