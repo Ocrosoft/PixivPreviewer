@@ -155,7 +155,7 @@ var g_defaultSettings = {
 // 设置
 var g_settings;
 // 日志等级
-var g_logLevel = LogLevel.Info;
+var g_logLevel = LogLevel.Warning;
 // 排序时同时请求收藏量的 Request 数量，没必要太多，并不会加快速度
 var g_maxXhr = 64;
 // 排序是否隐藏已关注画师的作品，如果希望隐藏，将 "false" 修改为 "true" 即可
@@ -2255,13 +2255,7 @@ function PixivSK(callback) {
             var authorDiv = titleLink.next();
             var authorLinkProfileImage = authorDiv.find('a:first');
             var authorLink = authorDiv.find('a:last');
-            var authorName = $(authorLink.children('div'));
-            authorName.each(function (i, e) {
-                if ($(e).children().length === 0) {
-                    authorName = $(e);
-                    return false;
-                }
-            });
+            var authorName = authorLink;
             var authorImage = $(authorDiv.find('img').get(0));
 
             // others
