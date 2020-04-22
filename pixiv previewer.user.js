@@ -1,7 +1,7 @@
 ﻿// ==UserScript==
 // @name                       Pixiv Previewer
 // @namespace              https://github.com/Ocrosoft/PixivPreviewer
-// @version                    3.1.9
+// @version                    3.1.10
 // @description              Display preview images (support single image, multiple images, moving images); Download animation(.zip); Sorting the search page by favorite count(and display it). Updated for the latest search page.
 // @description:zh-CN   显示预览图（支持单图，多图，动图）；动图压缩包下载；搜索页按热门度（收藏数）排序并显示收藏数，适配11月更新。
 // @description:ja           プレビュー画像の表示（単一画像、複数画像、動画のサポート）; アニメーションのダウンロード（.zip）; お気に入りの数で検索ページをソートします（そして表示します）。 最新の検索ページ用に更新されました。
@@ -1142,8 +1142,88 @@ Pages[PageType.Artwork] = {
             canvas.addClass('pp-canvas');
         }
 
+        if (location.href.indexOf('#preview') == -1) {
+            // 相关作品
+            var containerDiv = $('.gtm-illust-recommend-zone');
+            if (containerDiv.length > 0) {
+                DoLog(LogLevel.Info, 'Found container div.');
+                DoLog(LogLevel.Elements, containerDiv);
+            } else {
+                DoLog(LogLevel.Error, 'Can not found container div.');
+                return returnMap;
+            }
+
+            containerDiv.children().each(function (i, e) {
+                var _this = $(e);
+
+                var img = _this.find('img');
+                if (img.length === 0) {
+                    DoLog(LogLevel.Warning, 'Can not found <img>, skip this element.');
+                    return;
+                }
+
+                var link = _this.find('a:first');
+                if (link.length === 0) {
+                    DoLog(LogLevel.Warning, 'Can not found <a>, skip this element.');
+                    return;
+                }
+
+                var ctlAttrs = {
+                    illustId: 0,
+                    illustType: 0,
+                    pageCount: 1,
+                };
+
+                var href = link.attr('href');
+                if (href == null || href === '') {
+                    DoLog(LogLevel.Warning, 'No href found, skip.');
+                    return;
+                } else {
+                    var matched = href.match(/artworks\/(\d+)/);
+                    if (matched) {
+                        ctlAttrs.illustId = matched[1];
+                    } else {
+                        DoLog(LogLevel.Warning, 'Can not found illust id, skip.');
+                        return;
+                    }
+                }
+
+                if (link.children().length > 1) {
+                    if (link.children('div:first').find('span').length > 0) {
+                        var span = link.children('div:first').find('span:first');
+                        if (span.length === 0) {
+                            DoLog(LogLevel.Warning, 'Can not found <span>, skip this element.');
+                            return;
+                        }
+                        ctlAttrs.pageCount = span.next().text();
+                    } else if (link.children('div:last').find('svg').length > 0) {
+                        ctlAttrs.illustType = 2;
+                    }
+                }
+
+                var control = link.parent();
+                control.attr({
+                    'illustId': ctlAttrs.illustId,
+                    'illustType': ctlAttrs.illustType,
+                    'pageCount': ctlAttrs.pageCount
+                });
+
+                returnMap.controlElements.push(control.get(0));
+            });
+
+            DoLog(LogLevel.Info, 'Process page elements complete.');
+            DoLog(LogLevel.Elements, returnMap);
+        }
+
         returnMap.loadingComplete = true;
+        this.private.returnMap = returnMap;
         return returnMap;
+    },
+    GetProcessedPageElements: function () {
+        if (this.private.returnMap == null) {
+            return this.ProcessPageElements();
+        }
+        return this.private.returnMap;
     },
     GetToolBar: function () {
         var div = $('#root').children('div');
@@ -1153,7 +1233,7 @@ Pages[PageType.Artwork] = {
             }
         }
     },
-    HasAutoLoad: false,
+    HasAutoLoad: true,
     Work: function () {
         function AddDownloadButton(div, button, offsetToOffsetTop) {
             if (!g_settings.enableAnimeDownload) {
@@ -1317,6 +1397,7 @@ Pages[PageType.Artwork] = {
     },
     private: {
         needProcess: false,
+        returnMap: null,
     },
 };
 
@@ -2758,6 +2839,9 @@ var loadInterval = setInterval(function () {
         try {
             if (g_pageType == PageType.Artwork) {
                 Pages[g_pageType].Work();
+                if (g_settings.enablePreview) {
+                    PixivPreview();
+                }
             }
             else if (g_pageType == PageType.Search) {
                 if (g_settings.enableSort) {
