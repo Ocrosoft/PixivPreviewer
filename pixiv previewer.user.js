@@ -1,7 +1,7 @@
 ﻿// ==UserScript==
 // @name                       Pixiv Previewer
 // @namespace              https://github.com/Ocrosoft/PixivPreviewer
-// @version                    3.1.11
+// @version                    3.1.12
 // @description              Display preview images (support single image, multiple images, moving images); Download animation(.zip); Sorting the search page by favorite count(and display it). Updated for the latest search page.
 // @description:zh-CN   显示预览图（支持单图，多图，动图）；动图压缩包下载；搜索页按热门度（收藏数）排序并显示收藏数，适配11月更新。
 // @description:ja           プレビュー画像の表示（単一画像、複数画像、動画のサポート）; アニメーションのダウンロード（.zip）; お気に入りの数で検索ページをソートします（そして表示します）。 最新の検索ページ用に更新されました。
@@ -549,7 +549,7 @@ Pages[PageType.Discovery] = {
                         return;
                     }
                     ctlAttrs.pageCount = span.text();
-                } else if (link.children('div:last').find('svg').length > 0) {
+                } else if (link.children('div:last').css('background-image').indexOf('.svg') != -1) {
                     ctlAttrs.illustType = 2;
                 }
             }
@@ -863,13 +863,7 @@ Pages[PageType.NewIllust] = {
             controlElements: [],
         };
 
-        var firstDiv = $('#root').children('div:first');
-        if (firstDiv.length === 0) {
-            DoLog(LogLevel.Error, 'Can not found images\' container div!');
-            return returnMap;
-        }
-
-        var ul = firstDiv.children('div:last').find('ul');
+        var ul = $('#root').find('ul:first');
         if (ul.length === 0) {
             DoLog(LogLevel.Error, 'Can not found <ul>!');
             return returnMap;
@@ -900,8 +894,8 @@ Pages[PageType.NewIllust] = {
             }
 
             if (link.children().length > 1) {
-                var span = link.find('svg').next();
-                if (span.length > 0) {
+                var span = link.find('svg').parent().parent().next();
+                if (span.length > 0 && span.get(0).tagName == 'SPAN') {
                     ctlAttrs.pageCount = span.text();
                 } else if (link.find('svg').length > 0) {
                     ctlAttrs.illustType = 2;
