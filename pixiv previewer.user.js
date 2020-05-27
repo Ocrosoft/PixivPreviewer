@@ -1,7 +1,7 @@
 ﻿// ==UserScript==
 // @name                       Pixiv Previewer
 // @namespace              https://github.com/Ocrosoft/PixivPreviewer
-// @version                    3.1.12
+// @version                    3.1.14
 // @description              Display preview images (support single image, multiple images, moving images); Download animation(.zip); Sorting the search page by favorite count(and display it). Updated for the latest search page.
 // @description:zh-CN   显示预览图（支持单图，多图，动图）；动图压缩包下载；搜索页按热门度（收藏数）排序并显示收藏数，适配11月更新。
 // @description:ja           プレビュー画像の表示（単一画像、複数画像、動画のサポート）; アニメーションのダウンロード（.zip）; お気に入りの数で検索ページをソートします（そして表示します）。 最新の検索ページ用に更新されました。
@@ -203,6 +203,8 @@ var ReturnMapSample = {
     loadingComplete: false,
     // 控制元素，每个图片的鼠标响应元素
     controlElements: [],
+    // 可有可无，如果为 true，强制重新刷新预览功能
+    forceUpdate: false,
 };
 var ControlElementsAttributesSample = {
     // 图片信息，内容如下：
@@ -368,7 +370,12 @@ Pages[PageType.Search] = {
         return this.private.returnMap;
     },
     GetToolBar: function () {
-        return $('#root').children('div:last').prev().find('li:first').parent().get(0);
+        var div = $('#root').children('div');
+        for (var i = div.length - 1; i >= 0; i--) {
+            if ($(div.get(i)).children('ul').length > 0) {
+                return $(div.get(i)).children('ul').get(0);
+            }
+        }
     },
     // 搜索页有 lazyload，不开排序的情况下，最后几张图片可能会无法预览。这里把它当做自动加载处理
     HasAutoLoad: true,
@@ -695,60 +702,64 @@ Pages[PageType.Home] = {
         var returnMap = {
             loadingComplete: false,
             controlElements: [],
+            forceUpdate: false,
         };
 
-        var uls = $('._image-items');
+        var illust_div = $('div[type="illust"]');
 
-        DoLog(LogLevel.Info, 'This page has ' + uls.length + ' <ul>.');
-        if (uls.length < 1) {
-            DoLog(LogLevel.Warning, 'Less than 1 <ul>, continue waiting.');
+        DoLog(LogLevel.Info, 'This page has ' + illust_div.length + ' illust <div>.');
+        if (illust_div.length < 1) {
+            DoLog(LogLevel.Warning, 'Less than one <div>, continue waiting.');
             return returnMap;
-        } else if (uls.length != 4) {
-            DoLog(LogLevel.Warning, 'Normaly, should found 4 <ul>.');
         }
 
-        uls.each(function (i, e) {
+        // 实际里面还套了一个 div，处理一下，方便一点
+        let illust_div_c = [];
+        illust_div.each(function(i, e) {
+            illust_div_c.push($(e).children('div:first'));
+        });
+        illust_div = illust_div_c;
+        $.each(illust_div, function (i, e) {
             var _this = $(e);
 
-            var li = _this.find('.image-item');
-            if (li.length < 1) {
-                DoLog(LogLevel.Warning, 'This <ul> has 0 <li>, will be skipped.');
+            var a = _this.children('a:first');
+            if (a.length == 0 || a.attr('href').indexOf('artworks') == -1) {
+                DoLog(LogLevel.Warning, 'No href or an invalid href was found, skip this.');
                 return;
             }
 
-            li.each(function (j, ee) {
-                var __this = $(ee);
+            var ctlAttrs = {
+                illustId: 0,
+                illustType: 0,
+                pageCount: 1,
+            };
 
-                var ctlAttrs = {
-                    illustId: 0,
-                    illustType: 0,
-                    pageCount: 1,
-                };
+            var illustId = a.attr('href').match(/\d+/);
+            if (illustId == null) {
+                DoLog(LogLevel.Warning, 'Can not found illust id of this image, skip.');
+                return;
+            } else {
+                ctlAttrs.illustId = illustId[0];
+            }
+            var pageCount = a.children('div:first').find('span');
+            if (pageCount.length > 0) {
+                ctlAttrs.pageCount = parseInt($(pageCount.get(pageCount.length - 1)).text());
+            }
+            if ($(a.children('div').get(1)).find('svg').length > 0) {
+                ctlAttrs.illustType = 2;
+            }
 
-                var illustId = __this.find('a:first').attr('data-gtm-recommend-illust-id') || __this.find('img:first').attr('data-id');
-                if (illustId == null) {
-                    DoLog(LogLevel.Warning, 'Can not found illust id of this image, skip.');
-                    return;
-                } else {
-                    ctlAttrs.illustId = illustId;
-                }
-                var pageCount = __this.find('.page-count');
-                if (pageCount.length > 0) {
-                    pageCount = parseInt(pageCount.find('span').text());
-                }
-                if (__this.find('a:first').hasClass('ugoku-illust')) {
-                    ctlAttrs.illustType = 2;
-                }
-
-                var control = __this.children('a:first');
-                control.attr({
-                    'illustId': ctlAttrs.illustId,
-                    'illustType': ctlAttrs.illustType,
-                    'pageCount': ctlAttrs.pageCount
-                });
-
-                returnMap.controlElements.push(control.get(0));
+            var control = a;
+            if (control.attr('illustId') != ctlAttrs.illustId) {
+                returnMap.forceUpdate = true;
+            }
+            control.attr({
+                'illustId': ctlAttrs.illustId,
+                'illustType': ctlAttrs.illustType,
+                'pageCount': ctlAttrs.pageCount
             });
+
+            returnMap.controlElements.push(control.get(0));
         });
 
         DoLog(LogLevel.Info, 'Process page elements complete.');
@@ -765,9 +776,14 @@ Pages[PageType.Home] = {
         return this.private.returnMap;
     },
     GetToolBar: function () {
-        return $('._toolmenu').get(0);
+        let div = $('#root').children('div');
+        for (let i = div.length - 1; i >= 0; i--) {
+            if ($(div.get(i)).children('ul').length > 0) {
+                return $(div.get(i)).children('ul').get(0);
+            }
+        }
     },
-    HasAutoLoad: false,
+    HasAutoLoad: true,
     private: {
         returnMap: null,
     },
@@ -1828,7 +1844,7 @@ function PixivPreview() {
         var newReturnMap = Pages[g_pageType].ProcessPageElements();
 
         if (newReturnMap.loadingComplete) {
-            if (oldReturnMap.controlElements.length < newReturnMap.controlElements.length) {
+            if (oldReturnMap.controlElements.length < newReturnMap.controlElements.length || newReturnMap.forceUpdate) {
                 DoLog(LogLevel.Info, 'Page loaded ' + (newReturnMap.controlElements.length - oldReturnMap.controlElements.length) + ' new work(s).');
 
                 if (g_settings.linkBlank) {
@@ -1954,7 +1970,7 @@ function PixivSK(callback) {
         var hideWorkCount = 0;
         $(works).each(function (i, work) {
             var found = false;
-            for (var i = 0; i < members.length; i++) {
+            for (let i = 0; i < members.length; i++) {
                 if (members[i] == work.userId) {
                     found = true;
                     break;
