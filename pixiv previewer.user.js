@@ -1,7 +1,7 @@
 ﻿// ==UserScript==
 // @name                       Pixiv Previewer
 // @namespace              https://github.com/Ocrosoft/PixivPreviewer
-// @version                    3.1.14
+// @version                    3.1.16
 // @description              Display preview images (support single image, multiple images, moving images); Download animation(.zip); Sorting the search page by favorite count(and display it). Updated for the latest search page.
 // @description:zh-CN   显示预览图（支持单图，多图，动图）；动图压缩包下载；搜索页按热门度（收藏数）排序并显示收藏数，适配11月更新。
 // @description:ja           プレビュー画像の表示（単一画像、複数画像、動画のサポート）; アニメーションのダウンロード（.zip）; お気に入りの数で検索ページをソートします（そして表示します）。 最新の検索ページ用に更新されました。
@@ -397,7 +397,8 @@ Pages[PageType.Search] = {
 Pages[PageType.BookMarkNew] = {
     PageTypeString: 'BookMarkNewPage',
     CheckUrl: function (url) {
-        return /^https:\/\/www.pixiv.net\/bookmark_new_illust.php.*/.test(url);
+        return /^https:\/\/www.pixiv.net\/bookmark_new_illust.php.*/.test(url) ||
+            /^https:\/\/www.pixiv.net\/bookmark_new_illust_r18.php.*/.test(url);
     },
     ProcessPageElements: function () {
         var returnMap = {
@@ -2421,11 +2422,16 @@ function PixivSK(callback) {
         }
 
         // 监听加入书签点击事件，监听父节点，但是按照 <svg> 节点处理
-        $('.ppBookmarkSvg').parent().on('click', function () {
+        $('.ppBookmarkSvg').parent().on('click', function (ev) {
             if (g_csrfToken == '') {
                 DoLog(LogLevel.Error, 'No g_csrfToken, failed to add bookmark!');
                 alert('获取 Token 失败，无法添加，请到详情页操作。');
                 return;
+            }
+            // 非公开收藏
+            var restrict = 0;
+            if (ev.ctrlKey) {
+                restrict = 1;
             }
 
             var _this = $(this).children('svg:first');
@@ -2437,7 +2443,7 @@ function PixivSK(callback) {
                     method: 'POST',
                     contentType: 'application/json;charset=utf-8',
                     headers: { 'x-csrf-token': g_csrfToken },
-                    data: '{"illust_id":"' + illustId + '","restrict":0,"comment":"","tags":[]}',
+                    data: '{"illust_id":"' + illustId + '","restrict":' +restrict + ',"comment":"","tags":[]}',
                     success: function (data) {
                         DoLog(LogLevel.Info, 'addBookmark result: ');
                         DoLog(LogLevel.Elements, data);
