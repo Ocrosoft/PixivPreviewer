@@ -1,7 +1,7 @@
 ﻿// ==UserScript==
 // @name                       Pixiv Previewer
 // @namespace              https://github.com/Ocrosoft/PixivPreviewer
-// @version                    3.1.16
+// @version                    3.1.17
 // @description              Display preview images (support single image, multiple images, moving images); Download animation(.zip); Sorting the search page by favorite count(and display it). Updated for the latest search page.
 // @description:zh-CN   显示预览图（支持单图，多图，动图）；动图压缩包下载；搜索页按热门度（收藏数）排序并显示收藏数，适配11月更新。
 // @description:ja           プレビュー画像の表示（単一画像、複数画像、動画のサポート）; アニメーションのダウンロード（.zip）; お気に入りの数で検索ページをソートします（そして表示します）。 最新の検索ページ用に更新されました。
@@ -33,7 +33,7 @@ var Texts = {};
 Texts[Lang.zh_CN] = {
     // 安装或更新后弹出的提示
     install_title: '欢迎使用 PixivPreviewer v',
-    install_body: '<div style="position: absolute;width: 40%;left: 30%;top: 30%;font-size: 20px; color: white;"><p style="text-indent: 2em;">语言更新（v3.0.15）: 这个版本更新了英语翻译，对使用简体/繁体中文版本 Pixiv 的用户没有任何影响。</p><br><p style="text-indent: 2em;"> v3.0.x 是对 v2.08 进行了大量改动后的版本，因此可能不稳定，如果发现问题，请到<a style="color: green;" href="https://greasyfork.org/zh-CN/scripts/30766-pixiv-previewer/feedback" target="_blank"> 反馈页面 </a>反馈，我会尽快修复，也欢迎提出建议，非常感谢！</p><p style="text-indent: 2em;">排序功能会比之前的版本慢，具体时间视Pixiv的加载速度而定，原因是新的搜索页面不会再显示排序所必须的收藏量。</p><br><p style="text-indent: 2em;">如果您是第一次使用，推荐到<a style="color: green;" href="https://greasyfork.org/zh-CN/scripts/30766-pixiv-previewer" target="_blank"> 详情页 </a>查看脚本介绍。</p></div>',
+    install_body: '<div style="position: absolute;width: 40%;left: 30%;top: 30%;font-size: 20px; color: white;"><p style="text-indent: 2em; color: skyblue;">功能更新（v3.1.16）: 排序之后的搜索页，按住 Ctrl 点击爱心，收藏对其他人是不可见哒~（非公开）。</p><br><p style="text-indent: 2em;"> v3.0.x 是对 v2.08 进行了大量改动后的版本，因此可能不稳定，如果发现问题，请到<a style="color: green;" href="https://greasyfork.org/zh-CN/scripts/30766-pixiv-previewer/feedback" target="_blank"> 反馈页面 </a>反馈，我会尽快修复，也欢迎提出建议，非常感谢！</p><p style="text-indent: 2em;">排序功能会比之前的版本慢，具体时间视Pixiv的加载速度而定，原因是新的搜索页面不会再显示排序所必须的收藏量。</p><br><p style="text-indent: 2em;">如果您是第一次使用，推荐到<a style="color: green;" href="https://greasyfork.org/zh-CN/scripts/30766-pixiv-previewer" target="_blank"> 详情页 </a>查看脚本介绍。</p></div>',
     // 设置项
     setting_preview: '预览',
     setting_sort: '排序（仅搜索页生效）',
@@ -53,7 +53,7 @@ Texts[Lang.zh_CN] = {
 // translate by google
 Texts[Lang.en_US] = {
     install_title: 'Welcome to PixivPreviewer v',
-    install_body: '<div style="position: absolute;width: 40%;left: 30%;top: 30%;font-size: 20px; color: white;"><p style="text-indent: 2em;">Language update(v3.0.15): If your Pixiv\'s language is not Simplified Chinese or Traditional Chinese, script will display in English now.</p><br><p style="text-indent: 2em;"> v3.0.x is a version with a lot of changes to v2.08, so it may be unstable. If you find a problem, please go to<a style="color: green;" href="https://greasyfork.org/zh-CN/scripts/30766-pixiv-previewer/feedback" target="_blank"> Feedback Page </a>to feedback, I will fix it as soon as possible, and suggestions are welcome, thank you very much!</p><p style="text-indent: 2em;">The sorting function will be slower than the previous version. The specific time depends on the loading speed of Pixiv, because the new search page will no longer display the amount of favorites necessary for sorting.</p><br><p style="text-indent: 2em;">If you are using it for the first time, it is recommended to go to the<a style="color: green;" href="https://greasyfork.org/zh-CN/scripts/30766-pixiv-previewer" target="_blank"> Details Page </a>to see the script introduction.</p></div>',
+    install_body: '<div style="position: absolute;width: 40%;left: 30%;top: 30%;font-size: 20px; color: white;"><p style="text-indent: 2em; color: skyblue;">Feature update(v3.1.16): Hold down Ctrl and click the like button (search page only), the collection is private..</p><br><p style="text-indent: 2em;"> v3.0.x is a version with a lot of changes to v2.08, so it may be unstable. If you find a problem, please go to<a style="color: green;" href="https://greasyfork.org/zh-CN/scripts/30766-pixiv-previewer/feedback" target="_blank"> Feedback Page </a>to feedback, I will fix it as soon as possible, and suggestions are welcome, thank you very much!</p><p style="text-indent: 2em;">The sorting function will be slower than the previous version. The specific time depends on the loading speed of Pixiv, because the new search page will no longer display the amount of favorites necessary for sorting.</p><br><p style="text-indent: 2em;">If you are using it for the first time, it is recommended to go to the<a style="color: green;" href="https://greasyfork.org/zh-CN/scripts/30766-pixiv-previewer" target="_blank"> Details Page </a>to see the script introduction.</p></div>',
     setting_preview: 'Preview',
     setting_sort: 'Sorting (Search page)',
     setting_anime: 'Animation download (Preview and Artwork page)',
@@ -119,7 +119,7 @@ var g_language = Lang.zh_CN;
 // 自动检测语言，开启后 g_language 的默认值将无效
 var g_autoDetectLanguage = true;
 // 版本号，第三位不需要跟脚本的版本号对上，第三位更新只有需要弹更新提示的时候才需要更新这里
-var g_version = '3.0.16';
+var g_version = '3.1.16';
 // 添加收藏需要这个
 var g_csrfToken = '';
 // 打的日志数量，超过一定数值清空控制台
@@ -223,6 +223,29 @@ var ControlElementsAttributesSample = {
     // [可选] 收藏数
     bookmarkCount: 0,
 };
+
+function findToolbarCommon() {
+    let div = $('#root').children('div');
+    // 搜索页前面插入了一个新的 div 节点
+    if ($('#root').children('#gtm-var-theme-kind').length > 0) {
+        let max_children = 0;
+        let max_children_i = 0;
+        for (let i = 0; i < div.length; ++i) {
+            if (div.children().length > max_children) {
+                max_children_i = i;
+            }
+        }
+        div = $(div[max_children_i]).children();
+    }
+    for (var i = div.length - 1; i >= 0; i--) {
+        if ($(div.get(i)).children('ul').length > 0) {
+            return $(div.get(i)).children('ul').get(0);
+        }
+    }
+}
+function findToolbarOld() {
+    return $('._toolmenu').get(0);
+}
 
 Pages[PageType.Search] = {
     PageTypeString: 'SearchPage',
@@ -370,12 +393,7 @@ Pages[PageType.Search] = {
         return this.private.returnMap;
     },
     GetToolBar: function () {
-        var div = $('#root').children('div');
-        for (var i = div.length - 1; i >= 0; i--) {
-            if ($(div.get(i)).children('ul').length > 0) {
-                return $(div.get(i)).children('ul').get(0);
-            }
-        }
+        return findToolbarCommon();
     },
     // 搜索页有 lazyload，不开排序的情况下，最后几张图片可能会无法预览。这里把它当做自动加载处理
     HasAutoLoad: true,
@@ -487,7 +505,7 @@ Pages[PageType.BookMarkNew] = {
         return this.private.returnMap;
     },
     GetToolBar: function () {
-        return $('._toolmenu').get(0);
+        return findToolbarOld();
     },
     HasAutoLoad: false,
     private: {
@@ -586,7 +604,7 @@ Pages[PageType.Discovery] = {
         return this.private.returnMap;
     },
     GetToolBar: function () {
-        return $('._toolmenu').get(0);
+         return findToolbarOld();
     },
     HasAutoLoad: true,
     private: {
@@ -680,12 +698,7 @@ Pages[PageType.Member] = {
         return this.private.returnMap;
     },
     GetToolBar: function () {
-        var div = $('#root').children('div');
-        for (var i = div.length - 1; i >= 0; i--) {
-            if ($(div.get(i)).children('ul').length > 0) {
-                return $(div.get(i)).children('ul').get(0);
-            }
-        }
+        return findToolbarCommon();
     },
     // 跟搜索页一样的情况
     HasAutoLoad: true,
@@ -777,12 +790,7 @@ Pages[PageType.Home] = {
         return this.private.returnMap;
     },
     GetToolBar: function () {
-        let div = $('#root').children('div');
-        for (let i = div.length - 1; i >= 0; i--) {
-            if ($(div.get(i)).children('ul').length > 0) {
-                return $(div.get(i)).children('ul').get(0);
-            }
-        }
+        return findToolbarCommon();
     },
     HasAutoLoad: true,
     private: {
@@ -862,7 +870,7 @@ Pages[PageType.Ranking] = {
         return this.private.returnMap;
     },
     GetToolBar: function () {
-        return $('._toolmenu').get(0);
+         return findToolbarOld();
     },
     HasAutoLoad: false,
     private: {
@@ -944,12 +952,7 @@ Pages[PageType.NewIllust] = {
         return this.private.returnMap;
     },
     GetToolBar: function () {
-        var div = $('#root').children('div');
-        for (var i = div.length - 1; i >= 0; i--) {
-            if ($(div.get(i)).children('ul').length > 0) {
-                return $(div.get(i)).children('ul').get(0);
-            }
-        }
+        return findToolbarCommon();
     },
     HasAutoLoad: true,
     private: {
@@ -1047,7 +1050,7 @@ Pages[PageType.BookMark] = {
         return this.private.returnMap;
     },
     GetToolBar: function () {
-        return $('._toolmenu').get(0);
+         return findToolbarOld();
     },
     HasAutoLoad: false,
     private: {
@@ -1127,7 +1130,7 @@ Pages[PageType.Stacc] = {
         return this.private.returnMap;
     },
     GetToolBar: function () {
-        return $('._toolmenu').get(0);
+         return findToolbarOld();
     },
     HasAutoLoad: true,
     private: {
@@ -1237,12 +1240,7 @@ Pages[PageType.Artwork] = {
         return this.private.returnMap;
     },
     GetToolBar: function () {
-        var div = $('#root').children('div');
-        for (var i = div.length - 1; i >= 0; i--) {
-            if ($(div.get(i)).children('ul').length > 0) {
-                return $(div.get(i)).children('ul').get(0);
-            }
-        }
+        return findToolbarCommon();
     },
     HasAutoLoad: true,
     Work: function () {
