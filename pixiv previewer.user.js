@@ -1,7 +1,7 @@
 ﻿// ==UserScript==
 // @name                       Pixiv Previewer
 // @namespace              https://github.com/Ocrosoft/PixivPreviewer
-// @version                    3.1.17
+// @version                    3.1.18
 // @description              Display preview images (support single image, multiple images, moving images); Download animation(.zip); Sorting the search page by favorite count(and display it). Updated for the latest search page.
 // @description:zh-CN   显示预览图（支持单图，多图，动图）；动图压缩包下载；搜索页按热门度（收藏数）排序并显示收藏数，适配11月更新。
 // @description:ja           プレビュー画像の表示（単一画像、複数画像、動画のサポート）; アニメーションのダウンロード（.zip）; お気に入りの数で検索ページをソートします（そして表示します）。 最新の検索ページ用に更新されました。
@@ -251,8 +251,8 @@ Pages[PageType.Search] = {
     PageTypeString: 'SearchPage',
     CheckUrl: function (url) {
         // 没有 /artworks 的页面不支持
-        return /^https?:\/\/www.pixiv.net\/tags\/.*\//.test(url) ||
-            /^https?:\/\/www.pixiv.net\/en\/tags\/.*\//.test(url);
+        return /^https?:\/\/www.pixiv.net\/tags\/.*\/(illustrations|manga)/.test(url) ||
+            /^https?:\/\/www.pixiv.net\/en\/tags\/.*\/(illustrations|manga)/.test(url);
     },
     ProcessPageElements: function () {
         var returnMap = {
@@ -1698,7 +1698,7 @@ function PixivPreview() {
 
             // 设置新的宽高
             if ($('.pp-main').find('iframe').length > 0) {
-                var iframe = $('.pp-main').find('iframe');
+                let iframe = $('.pp-main').find('iframe');
                 iframe.get(0).contentWindow.ResizeCanvas(newWidth, newHeight);
                 iframe.css({ 'width': newWidth, 'height': newHeight });
             }
@@ -1953,7 +1953,7 @@ function PixivSK(callback) {
                     if (input) {
                         members.push(input.attr('value'));
                     } else {
-                        DoLot(LogLevel.Error, 'No <input> found.');
+                        DoLog(LogLevel.Error, 'No <input> found.');
                     }
                 });
             },
@@ -2126,12 +2126,13 @@ function PixivSK(callback) {
                 if (json.hasOwnProperty('error')) {
                     if (json.error === false) {
                         var data;
-                        if (json.body.illustManga)
+                        if (json.body.illustManga) {
                             data = json.body.illustManga.data;
-                        else if (json.body.manga)
+                        } else if (json.body.manga) {
                             data = json.body.manga.data;
-                        else if (json.body.illust)
+                        } else if (json.body.illust) {
                             data = json.body.illust.data;
+                        }
                         if (data.length > 0) {
                             works = works.concat(data);
                         } else {
@@ -2596,7 +2597,7 @@ function PixivSK(callback) {
                 // 很奇怪不能用 click()
                 location.href = btn.attr('href');
             } else if (e.keyCode == 37) {
-                var btn = $('.pp-prevPage');
+                let btn = $('.pp-prevPage');
                 if (btn.length < 1 || btn.attr('hidden') == 'hidden') {
                     return;
                 }
