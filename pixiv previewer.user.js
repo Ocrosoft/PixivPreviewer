@@ -1,7 +1,7 @@
 ﻿// ==UserScript==
 // @name                       Pixiv Previewer
 // @namespace              https://github.com/Ocrosoft/PixivPreviewer
-// @version                    3.1.23
+// @version                    3.2.0
 // @description              Display preview images (support single image, multiple images, moving images); Download animation(.zip); Sorting the search page by favorite count(and display it). Updated for the latest search page.
 // @description:zh-CN   显示预览图（支持单图，多图，动图）；动图压缩包下载；搜索页按热门度（收藏数）排序并显示收藏数，适配11月更新。
 // @description:ja           プレビュー画像の表示（単一画像、複数画像、動画のサポート）; アニメーションのダウンロード（.zip）; お気に入りの数で検索ページをソートします（そして表示します）。 最新の検索ページ用に更新されました。
@@ -22,7 +22,6 @@ try {
     document.head.appendChild(script);
 }
 
-// If you want to help improve the translate, please
 let Lang = {
     // 中文-中国大陆
     zh_CN: 0,
@@ -33,7 +32,7 @@ let Texts = {};
 Texts[Lang.zh_CN] = {
     // 安装或更新后弹出的提示
     install_title: '欢迎使用 PixivPreviewer v',
-    install_body: '<div style="position: absolute;width: 40%;left: 30%;top: 30%;font-size: 20px; color: white;"><p style="text-indent: 2em; color: skyblue;">功能更新（v3.1.16）: 排序之后的搜索页，按住 Ctrl 点击爱心，收藏对其他人是不可见哒~（非公开）。</p><br><p style="text-indent: 2em;"> v3.0.x 是对 v2.08 进行了大量改动后的版本，因此可能不稳定，如果发现问题，请到<a style="color: green;" href="https://greasyfork.org/zh-CN/scripts/30766-pixiv-previewer/feedback" target="_blank"> 反馈页面 </a>反馈，我会尽快修复，也欢迎提出建议，非常感谢！</p><p style="text-indent: 2em;">排序功能会比之前的版本慢，具体时间视Pixiv的加载速度而定，原因是新的搜索页面不会再显示排序所必须的收藏量。</p><br><p style="text-indent: 2em;">如果您是第一次使用，推荐到<a style="color: green;" href="https://greasyfork.org/zh-CN/scripts/30766-pixiv-previewer" target="_blank"> 详情页 </a>查看脚本介绍。</p></div>',
+    install_body: '<div style="position: absolute;width: 40%;left: 30%;top: 30%;font-size: 20px; color: white;"><p style="text-indent: 2em; color: skyblue;">功能更新（v3.2.0）: 增加“排序时隐藏已关注画师作品”选项，默认关闭，可到设置中开启。</p><br><p style="text-indent: 2em;">欢迎反馈问题和提出建议！><a style="color: green;" href="https://greasyfork.org/zh-CN/scripts/30766-pixiv-previewer/feedback" target="_blank">反馈页面</a><</p><br><p style="text-indent: 2em;">如果您是第一次使用，推荐到<a style="color: green;" href="https://greasyfork.org/zh-CN/scripts/30766-pixiv-previewer" target="_blank"> 详情页 </a>查看脚本介绍。</p></div>',
     // 设置项
     setting_preview: '预览',
     setting_sort: '排序（仅搜索页生效）',
@@ -42,6 +41,7 @@ Texts[Lang.zh_CN] = {
     setting_maxPage: '每次排序时统计的最大页数',
     setting_hideWork: '隐藏收藏数少于设定值的作品',
     setting_hideFav: '排序时隐藏已收藏的作品',
+    setting_hideFollowed: '排序时隐藏已关注画师作品',
     setting_blank: '使用新标签页打开作品详情页',
     setting_turnPage: '使用键盘←→进行翻页（排序后的搜索页）',
     setting_save: '保存设置',
@@ -53,7 +53,7 @@ Texts[Lang.zh_CN] = {
 // translate by google
 Texts[Lang.en_US] = {
     install_title: 'Welcome to PixivPreviewer v',
-    install_body: '<div style="position: absolute;width: 40%;left: 30%;top: 30%;font-size: 20px; color: white;"><p style="text-indent: 2em; color: skyblue;">Feature update(v3.1.16): Hold down Ctrl and click the like button (search page only), the collection is private..</p><br><p style="text-indent: 2em;"> v3.0.x is a version with a lot of changes to v2.08, so it may be unstable. If you find a problem, please go to<a style="color: green;" href="https://greasyfork.org/zh-CN/scripts/30766-pixiv-previewer/feedback" target="_blank"> Feedback Page </a>to feedback, I will fix it as soon as possible, and suggestions are welcome, thank you very much!</p><p style="text-indent: 2em;">The sorting function will be slower than the previous version. The specific time depends on the loading speed of Pixiv, because the new search page will no longer display the amount of favorites necessary for sorting.</p><br><p style="text-indent: 2em;">If you are using it for the first time, it is recommended to go to the<a style="color: green;" href="https://greasyfork.org/zh-CN/scripts/30766-pixiv-previewer" target="_blank"> Details Page </a>to see the script introduction.</p></div>',
+    install_body: '<div style="position: absolute;width: 40%;left: 30%;top: 30%;font-size: 20px; color: white;"><p style="text-indent: 2em; color: skyblue;">Feature update(v3.2.0): Add a options "Hide artworks of followed artists", this is disabled by default, you can enable it in settings.</p><br><p style="text-indent: 2em;">Feedback questions and suggestions are welcome! ><a style="color: green;" href="https://greasyfork.org/zh-CN/scripts/30766-pixiv-previewer/feedback" target="_blank">Feedback Page</a><</p><br><p style="text-indent: 2em;">If you are using it for the first time, it is recommended to go to the<a style="color: green;" href="https://greasyfork.org/zh-CN/scripts/30766-pixiv-previewer" target="_blank"> Details Page </a>to see the script introduction.</p></div>',
     setting_preview: 'Preview',
     setting_sort: 'Sorting (Search page)',
     setting_anime: 'Animation download (Preview and Artwork page)',
@@ -61,6 +61,7 @@ Texts[Lang.en_US] = {
     setting_maxPage: 'Maximum number of pages counted per sort',
     setting_hideWork: 'Hide works with less than set value',
     setting_hideFav: 'Hide favorites when sorting',
+    setting_hideFollowed: 'Hide artworks of followed artists when sorting',
     setting_blank: 'Open works\' details page in new tab',
     setting_turnPage: 'Use ← → to turn pages (Search page)',
     setting_save: 'Save',
@@ -119,7 +120,7 @@ let g_language = Lang.zh_CN;
 // 自动检测语言，开启后 g_language 的默认值将无效
 let g_autoDetectLanguage = true;
 // 版本号，第三位不需要跟脚本的版本号对上，第三位更新只有需要弹更新提示的时候才需要更新这里
-let g_version = '3.1.16';
+let g_version = '3.2.0';
 // 添加收藏需要这个
 let g_csrfToken = '';
 // 打的日志数量，超过一定数值清空控制台
@@ -147,6 +148,7 @@ let g_defaultSettings = {
     'pageCount': 2,
     'favFilter': 0,
     'hideFavorite': 0,
+    'hideFollowed': 0,
     'linkBlank': 1,
     'pageByKey': 0,
     'logLevel': 1,
@@ -158,8 +160,6 @@ let g_settings;
 let g_logLevel = LogLevel.Warning;
 // 排序时同时请求收藏量的 Request 数量，没必要太多，并不会加快速度
 let g_maxXhr = 64;
-// 排序是否隐藏已关注画师的作品，如果希望隐藏，将 "false" 修改为 "true" 即可
-let g_enableFilterByUser = false;
 // 排序是否完成（如果排序时页面出现了非刷新切换，强制刷新）
 let g_sortComplete = true;
 
@@ -1928,16 +1928,35 @@ function PixivSK(callback) {
 
     // 筛选已关注画师作品
     let filterByUser = function() {
-        if (!g_enableFilterByUser) {
-            return;
-        } else {
-            DoLog(LogLevel.Warning, 'All works by your favorite users will be hide!');
-        }
-
         let members = [];
 
-        // 只获取公开关注的用户，私有的就算了
+        // 获取公开关注的用户
         $.ajax('https://www.pixiv.net/bookmark.php?type=user&rest=show', {
+            async: false,
+            success: function(data) {
+                let searchResult = $(data).find('#search-result');
+                if (searchResult.length === 0) {
+                    DoLog(LogLevel.Error, 'Can not found users.');
+                    return;
+                }
+
+                let lis = searchResult.find('li');
+                DoLog(LogLevel.Elements, lis);
+                lis.each(function(i, e) {
+                    let input = $(this).children('input');
+                    if (input) {
+                        members.push(input.attr('value'));
+                    } else {
+                        DoLog(LogLevel.Error, 'No <input> found.');
+                    }
+                });
+            },
+            error: function() {
+                DoLog(LogLevel.Error, 'Request bookmarked user failed.');
+            },
+        });
+
+        $.ajax('https://www.pixiv.net/bookmark.php?type=user&rest=hide', {
             async: false,
             success: function(data) {
                 let searchResult = $(data).find('#search-result');
@@ -2001,7 +2020,9 @@ function PixivSK(callback) {
         });
         works = tmp;
 
-        filterByUser();
+        if (g_settings.hideFollowed) {
+            filterByUser();
+        }
 
         // 排序
         works.sort(function (a, b) {
@@ -2681,21 +2702,55 @@ function ShowSetting() {
 
     let settings = GetSettings();
 
-    let settingHTML = '<div style="color: white; font-size: 1em;"><img id="pps-close" src="https://pp-1252089172.cos.ap-chengdu.myqcloud.com/Close.png" style="position: absolute; right: 35px; top: 20px; width: 32px; height: 32px; cursor: pointer;"><div style="position: absolute; width: 40%; left: 25%; top: 25%; overflow: hidden;"><ul style="list-style: none; padding: 0; margin: 0;"><li style="height: 32px; font-size: 25px;">' + Texts[g_language].setting_preview + '</li><li style="height: 32px; font-size: 25px;">'+Texts[g_language].setting_sort +'</li><li style="height: 32px; font-size: 25px;">'+Texts[g_language].setting_anime+'</li><li style="height: 32px; font-size: 25px;">'+Texts[g_language].setting_origin+'</li><li style="height: 32px; font-size: 25px;"></li><li style="height: 32px; font-size: 25px;">'+Texts[g_language].setting_maxPage+'</li><li style="height: 32px; font-size: 25px;">'+Texts[g_language].setting_hideWork+'</li><li style="height: 32px; font-size: 25px;">'+Texts[g_language].setting_hideFav+'</li><li style="height: 32px; font-size: 25px;">'+Texts[g_language].setting_blank+'</li><li style="height: 32px; font-size: 25px;">'+Texts[g_language].setting_turnPage+'</li></ul></div><div id="pps-right" style="position: absolute; width: 10%; right: 25%; text-align: right; top: 25%;"><ul style="list-style: none; padding: 0; margin: 0;"><li style="height: 32px;"><img id="pps-preview" src="https://pp-1252089172.cos.ap-chengdu.myqcloud.com/On.png" style="height: 32px; cursor: pointer;"></li><li style="height: 32px;"><img id="pps-sort" src="https://pp-1252089172.cos.ap-chengdu.myqcloud.com/On.png" style="height: 32px; cursor: pointer;"></li><li style="height: 32px;"><img id="pps-anime" src="https://pp-1252089172.cos.ap-chengdu.myqcloud.com/On.png" style="height: 32px; cursor: pointer;"></li><li style="height: 32px;"><img id="pps-original" src="https://pp-1252089172.cos.ap-chengdu.myqcloud.com/On.png" style="height: 32px; cursor: pointer;"></li><li style="height: 32px;"></li><li style="height: 32px;"><input id="pps-maxPage" style="height: 28px; font-size: 24px; padding: 0px; margin: 0px; border-width: 0px; width: 64px; text-align: center;"></li><li style="height: 32px;"><input id="pps-hideLess" style="height: 28px; font-size: 24px; padding: 0px; margin: 0px; border-width: 0px; width: 64px; text-align: center;"></li><li style="height: 32px;"><img id="pps-hideBookmarked" src="https://pp-1252089172.cos.ap-chengdu.myqcloud.com/On.png" style="height: 32px; cursor: pointer;"></li><li style="height: 32px;"><img id="pps-newTab" src="https://pp-1252089172.cos.ap-chengdu.myqcloud.com/On.png" style="height: 32px; cursor: pointer;"></li><li style="height: 32px;"><img id="pps-pageKey" src="https://pp-1252089172.cos.ap-chengdu.myqcloud.com/On.png" style="height: 32px; cursor: pointer;"></li></ul></div><div style="margin-top: 10px;position: absolute;bottom: 20%;width: 100%;text-align: center;"><button id="pps-save" style="font-size: 25px;border-radius: 15px;height: 48px;width: 128px;background-color: green;color: white;margin: 0 32px 0 32px;cursor: pointer;border: none;">'+Texts[g_language].setting_save+'</button><button id="pps-reset" style="font-size: 25px;border-radius: 15px;height: 48px;width: 128px;background-color: darkred;color: white;margin: 0 32px 0 32px;cursor: pointer;border: none;">'+Texts[g_language].setting_reset+'</button></div></div>';
+    let settingHTML = '<div style="color: white; font-size: 1em;">' +
+        '<img id="pps-close" src="https://pp-1252089172.cos.ap-chengdu.myqcloud.com/Close.png" style="position: absolute; right: 35px; top: 20px; width: 32px; height: 32px; cursor: pointer;">' +
+        '<div style="position: absolute; width: 40%; left: 25%; top: 25%; overflow: hidden;">' +
+        '<ul style="list-style: none; padding: 0; margin: 0;">' +
+        '<li style="height: 32px; font-size: 25px;">' + Texts[g_language].setting_preview + '</li>' +
+        '<li style="height: 32px; font-size: 25px;">' + Texts[g_language].setting_sort + '</li>' +
+        '<li style="height: 32px; font-size: 25px;">' + Texts[g_language].setting_anime + '</li>' +
+        '<li style="height: 32px; font-size: 25px;">' + Texts[g_language].setting_origin + '</li>' +
+        '<li style="height: 32px; font-size: 25px;"></li>' +
+        '<li style="height: 32px; font-size: 25px;">' + Texts[g_language].setting_maxPage + '</li>' +
+        '<li style="height: 32px; font-size: 25px;">' + Texts[g_language].setting_hideWork + '</li>' +
+        '<li style="height: 32px; font-size: 25px;">' + Texts[g_language].setting_hideFav + '</li>' +
+        '<li style="height: 32px; font-size: 25px;">' + Texts[g_language].setting_hideFollowed + '</li>' +
+        '<li style="height: 32px; font-size: 25px;">' + Texts[g_language].setting_blank + '</li>' +
+        '<li style="height: 32px; font-size: 25px;">' + Texts[g_language].setting_turnPage + '</li>' +
+        '</ul></div>' +
+        '<div id="pps-right" style="position: absolute; width: 10%; right: 25%; text-align: right; top: 25%;">' +
+        '<ul style="list-style: none; padding: 0; margin: 0;">' +
+        '<li style="height: 32px;"><img id="pps-preview" src="https://pp-1252089172.cos.ap-chengdu.myqcloud.com/On.png" style="height: 32px; cursor: pointer;"></li>' +
+        '<li style="height: 32px;"><img id="pps-sort" src="https://pp-1252089172.cos.ap-chengdu.myqcloud.com/On.png" style="height: 32px; cursor: pointer;"></li>' +
+        '<li style="height: 32px;"><img id="pps-anime" src="https://pp-1252089172.cos.ap-chengdu.myqcloud.com/On.png" style="height: 32px; cursor: pointer;"></li>' +
+        '<li style="height: 32px;"><img id="pps-original" src="https://pp-1252089172.cos.ap-chengdu.myqcloud.com/On.png" style="height: 32px; cursor: pointer;"></li>' +
+        '<li style="height: 32px;"></li>' +
+        '<li style="height: 32px;"><input id="pps-maxPage" style="height: 28px; font-size: 24px; padding: 0px; margin: 0px; border-width: 0px; width: 64px; text-align: center;"></li>' +
+        '<li style="height: 32px;"><input id="pps-hideLess" style="height: 28px; font-size: 24px; padding: 0px; margin: 0px; border-width: 0px; width: 64px; text-align: center;"></li>' +
+        '<li style="height: 32px;"><img id="pps-hideBookmarked" src="https://pp-1252089172.cos.ap-chengdu.myqcloud.com/On.png" style="height: 32px; cursor: pointer;"></li>' +
+        '<li style="height: 32px;"><img id="pps-hideFollowed" src="https://pp-1252089172.cos.ap-chengdu.myqcloud.com/On.png" style="height: 32px; cursor: pointer;"></li>' +
+        '<li style="height: 32px;"><img id="pps-newTab" src="https://pp-1252089172.cos.ap-chengdu.myqcloud.com/On.png" style="height: 32px; cursor: pointer;"></li>' +
+        '<li style="height: 32px;"><img id="pps-pageKey" src="https://pp-1252089172.cos.ap-chengdu.myqcloud.com/On.png" style="height: 32px; cursor: pointer;"></li>' +
+        '</ul></div>' +
+        '<div style="margin-top: 10px;position: absolute;bottom: 20%;width: 100%;text-align: center;">' +
+        '<button id="pps-save" style="font-size: 25px;border-radius: 15px;height: 48px;width: 128px;background-color: green;color: white;margin: 0 32px 0 32px;cursor: pointer;border: none;">' + Texts[g_language].setting_save + '</button>' +
+        '<button id="pps-reset" style="font-size: 25px;border-radius: 15px;height: 48px;width: 128px;background-color: darkred;color: white;margin: 0 32px 0 32px;cursor: pointer;border: none;">' + Texts[g_language].setting_reset + '</button>' +
+        '</div></div>';
 
     bg.get(0).innerHTML = settingHTML;
 
     let imgOn = 'https://pp-1252089172.cos.ap-chengdu.myqcloud.com/On.png';
     let imgOff = 'https://pp-1252089172.cos.ap-chengdu.myqcloud.com/Off.png'
-    $('#pps-preview').attr('src', settings.enablePreview ? imgOn : imgOff).addClass(settings.enablePreview ? 'on' : 'off');
-    $('#pps-sort').attr('src', settings.enableSort ? imgOn : imgOff).addClass(settings.enableSort ? 'on' : 'off');
-    $('#pps-anime').attr('src', settings.enableAnimeDownload ? imgOn : imgOff).addClass(settings.enableAnimeDownload ? 'on' : 'off');
-    $('#pps-original').attr('src', settings.original ? imgOn : imgOff).addClass(settings.original ? 'on' : 'off');
+    $('#pps-preview').attr('src', settings.enablePreview ? imgOn : imgOff).addClass(settings.enablePreview ? 'on' : 'off').css('cursor: pointer');
+    $('#pps-sort').attr('src', settings.enableSort ? imgOn : imgOff).addClass(settings.enableSort ? 'on' : 'off').css('cursor: pointer');
+    $('#pps-anime').attr('src', settings.enableAnimeDownload ? imgOn : imgOff).addClass(settings.enableAnimeDownload ? 'on' : 'off').css('cursor: pointer');
+    $('#pps-original').attr('src', settings.original ? imgOn : imgOff).addClass(settings.original ? 'on' : 'off').css('cursor: pointer');
     $('#pps-maxPage').val(settings.pageCount);
     $('#pps-hideLess').val(settings.favFilter);
-    $('#pps-hideBookmarked').attr('src', settings.hideFavorite ? imgOn : imgOff).addClass(settings.hideFavorite ? 'on' : 'off');
-    $('#pps-newTab').attr('src', settings.linkBlank ? imgOn : imgOff).addClass(settings.linkBlank ? 'on' : 'off');
-    $('#pps-pageKey').attr('src', settings.pageByKey ? imgOn : imgOff).addClass(settings.pageByKey ? 'on' : 'off');
+    $('#pps-hideBookmarked').attr('src', settings.hideFavorite ? imgOn : imgOff).addClass(settings.hideFavorite ? 'on' : 'off').css('cursor: pointer');
+    $('#pps-hideFollowed').attr('src', settings.hideFollowed ? imgOn : imgOff).addClass(settings.hideFollowed ? 'on' : 'off').css('cursor: pointer');
+    $('#pps-newTab').attr('src', settings.linkBlank ? imgOn : imgOff).addClass(settings.linkBlank ? 'on' : 'off').css('cursor: pointer');
+    $('#pps-pageKey').attr('src', settings.pageByKey ? imgOn : imgOff).addClass(settings.pageByKey ? 'on' : 'off').css('cursor: pointer');
 
     $('#pps-right').find('img').click(function () {
         let _this = $(this);
@@ -2723,6 +2778,7 @@ function ShowSetting() {
             'pageCount': parseInt($('#pps-maxPage').val()),
             'favFilter': parseInt($('#pps-hideLess').val()),
             'hideFavorite': $('#pps-hideBookmarked').hasClass('on') ? 1 : 0,
+            'hideFollowed': $('#pps-hideFollowed').hasClass('on') ? 1 : 0,
             'linkBlank': $('#pps-newTab').hasClass('on') ? 1 : 0,
             'pageByKey': $('#pps-pageKey').hasClass('on') ? 1 : 0,
             'version': g_version,
