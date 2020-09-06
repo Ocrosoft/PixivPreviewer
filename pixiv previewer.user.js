@@ -1,7 +1,7 @@
 ﻿// ==UserScript==
 // @name                       Pixiv Previewer
 // @namespace              https://github.com/Ocrosoft/PixivPreviewer
-// @version                    3.2.0
+// @version                    3.2.1
 // @description              Display preview images (support single image, multiple images, moving images); Download animation(.zip); Sorting the search page by favorite count(and display it). Updated for the latest search page.
 // @description:zh-CN   显示预览图（支持单图，多图，动图）；动图压缩包下载；搜索页按热门度（收藏数）排序并显示收藏数，适配11月更新。
 // @description:ja           プレビュー画像の表示（単一画像、複数画像、動画のサポート）; アニメーションのダウンロード（.zip）; お気に入りの数で検索ページをソートします（そして表示します）。 最新の検索ページ用に更新されました。
@@ -49,6 +49,8 @@ Texts[Lang.zh_CN] = {
     setting_resetHint: '这会删除所有设置，相当于重新安装脚本，确定要重置吗？',
     // 搜索时过滤值太高
     sort_noWork: '没有可以显示的作品',
+    sort_getWorks: '正在获取第%1/%2页作品',
+    sort_getBookmarkCount: '获取收藏数：%1/%2',
 };
 // translate by google
 Texts[Lang.en_US] = {
@@ -68,6 +70,8 @@ Texts[Lang.en_US] = {
     setting_reset: 'Reset',
     setting_resetHint: 'This will delete all settings and set it to default. Are you sure?',
     sort_noWork: 'No works to display',
+    sort_getWorks: 'Getting artworks of page: %1 of %2',
+    sort_getBookmarkCount: 'Getting bookmark count of artworks：%1 of %2',
 };
 
 let LogLevel = {
@@ -1893,6 +1897,8 @@ function PixivSK(callback) {
 
     // 获取第 currentPage 页的作品
     let getWorks = function (onloadCallback) {
+        $('#progress').text(Texts[g_language].sort_getWorks.replace('%1', currentGettingPageCount + 1).replace('%2', g_settings.pageCount));
+
         let url = currentUrl.replace(/p=\d+/, 'p=' + currentPage);
 
         if (location.href.indexOf('?') != -1) {
@@ -2085,7 +2091,7 @@ function PixivSK(callback) {
 
     let imageContainer = Pages[PageType.Search].GetImageListContainer();
     // loading
-    $(imageContainer).hide().before('<div id="loading" style="width:50px;margin-left:auto;margin-right:auto;"><img src="' + g_loadingImage + '" /><p id="progress" style="text-align: center;font-size: large;font-weight: bold;padding-top: 10px;">0%</p></div>');
+    $(imageContainer).hide().before('<div id="loading" style="width:100%;text-align:center;"><img src="' + g_loadingImage + '" /><p id="progress" style="text-align: center;font-size: large;font-weight: bold;padding-top: 10px;">0%</p></div>');
 
     // page
     if (true) {
@@ -2221,7 +2227,6 @@ function PixivSK(callback) {
             }
 
             if (json) {
-                let bookmarkCount = json.body.illust_details.bookmark_user_total;
                 let illustId = '';
                 let illustIdMatched = event.currentTarget.responseURL.match(/illust_id=(\d+)/);
                 if (illustIdMatched) {
@@ -2243,17 +2248,27 @@ function PixivSK(callback) {
                 }
                 xhrs[indexOfThisRequest].complete = true;
 
-                works[currentRequestGroupMinimumIndex + indexOfThisRequest].bookmarkCount = parseInt(bookmarkCount);
-                DoLog(LogLevel.Info, 'IllustId: ' + illustId + ', bookmarkCount: ' + bookmarkCount);
+                if (!json.error) {
+                    let bookmarkCount = json.body.illust_details.bookmark_user_total;
+                    works[currentRequestGroupMinimumIndex + indexOfThisRequest].bookmarkCount = parseInt(bookmarkCount);
+                    DoLog(LogLevel.Info, 'IllustId: ' + illustId + ', bookmarkCount: ' + bookmarkCount);
+                } else {
+                    DoLog(LogLevel.Error, 'Some error occured: ' + json.message);
+                }
 
                 let completeCount = 0;
+                // 真实完成数（不包含没有发起请求的XHR，最后一批请求时）
+                let completeReally = 0;
                 for (let j = 0; j < g_maxXhr; j++) {
                     if (xhrs[j].complete) {
                         completeCount++;
+                        if (xhrs[j].illustId != '') {
+                            completeReally++;
+                        }
                     }
                 }
+                $('#loading').find('#progress').text(Texts[g_language].sort_getBookmarkCount.replace('%1', currentRequestGroupMinimumIndex + completeReally).replace('%2', works.length));
                 if (completeCount == g_maxXhr) {
-                    $('#loading').find('#progress').text(parseInt((currentRequestGroupMinimumIndex + 1) * 1.0 / works.length * 100) + '%');
                     currentRequestGroupMinimumIndex += g_maxXhr;
                     GetBookmarkCount(currentRequestGroupMinimumIndex);
                 }
@@ -2261,7 +2276,7 @@ function PixivSK(callback) {
         };
         let onerrorFunc = function (event) {
             let illustId = '';
-            let illustIdMatched = event.currentTarget.responseUrl.match(/artworks\/(\d+)/);
+            let illustIdMatched = event.currentTarget.__sentry_xhr__.url.match(/artworks\/(\d+)/);
             if (illustIdMatched) {
                 illustId = illustIdMatched[1];
             } else {
@@ -2285,13 +2300,17 @@ function PixivSK(callback) {
             xhrs[indexOfThisRequest].complete = true;
 
             let completeCount = 0;
+            let completeReally = 0;
             for (let j = 0; j < g_maxXhr; j++) {
                 if (xhrs[j].complete) {
                     completeCount++;
+                    if (xhrs[j].illustId != '') {
+                        completeReally++;
+                    }
                 }
             }
+            $('#loading').find('#progress').text(Texts[g_language].sort_getBookmarkCount.replace('%1', currentRequestGroupMinimumIndex + completeReally).replace('%2', works.length));
             if (completeCount == g_maxXhr) {
-                $('#loading').find('#progress').text(parseInt((currentRequestGroupMinimumIndex + 1) * 1.0 / works.length * 100) + '%');
                 GetBookmarkCount(currentRequestGroupMinimumIndex + g_maxXhr);
             }
         };
@@ -2319,6 +2338,7 @@ function PixivSK(callback) {
         for (let i = 0; i < g_maxXhr; i++) {
             if (index + i >= works.length) {
                 xhrs[i].complete = true;
+                xhrs[i].illustId = '';
                 continue;
             }
 
