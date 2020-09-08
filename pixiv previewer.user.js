@@ -1,7 +1,7 @@
 ﻿// ==UserScript==
 // @name                       Pixiv Previewer
 // @namespace              https://github.com/Ocrosoft/PixivPreviewer
-// @version                    3.2.2
+// @version                    3.2.3
 // @description              Display preview images (support single image, multiple images, moving images); Download animation(.zip); Sorting the search page by favorite count(and display it). Updated for the latest search page.
 // @description:zh-CN   显示预览图（支持单图，多图，动图）；动图压缩包下载；搜索页按热门度（收藏数）排序并显示收藏数，适配11月更新。
 // @description:ja           プレビュー画像の表示（単一画像、複数画像、動画のサポート）; アニメーションのダウンロード（.zip）; お気に入りの数で検索ページをソートします（そして表示します）。 最新の検索ページ用に更新されました。
@@ -51,6 +51,10 @@ Texts[Lang.zh_CN] = {
     sort_noWork: '没有可以显示的作品',
     sort_getWorks: '正在获取第%1/%2页作品',
     sort_getBookmarkCount: '获取收藏数：%1/%2',
+    sort_getPublicFollowing: '获取公开关注画师',
+    sort_getPrivateFollowing: '获取私有关注画师',
+    sort_filtering: '过滤%1收藏量低于%2的作品',
+    sort_filteringHideFavorite: '已收藏和',
 };
 // translate by google
 Texts[Lang.en_US] = {
@@ -61,7 +65,7 @@ Texts[Lang.en_US] = {
     setting_anime: 'Animation download (Preview and Artwork page)',
     setting_origin: 'Display original image when preview (slow)',
     setting_maxPage: 'Maximum number of pages counted per sort',
-    setting_hideWork: 'Hide works with less than set value',
+    setting_hideWork: 'Hide works with bookmark count less than set value',
     setting_hideFav: 'Hide favorites when sorting',
     setting_hideFollowed: 'Hide artworks of followed artists when sorting',
     setting_blank: 'Open works\' details page in new tab',
@@ -72,6 +76,10 @@ Texts[Lang.en_US] = {
     sort_noWork: 'No works to display',
     sort_getWorks: 'Getting artworks of page: %1 of %2',
     sort_getBookmarkCount: 'Getting bookmark count of artworks：%1 of %2',
+    sort_getPublicFollowing: 'Getting public following list',
+    sort_getPrivateFollowing: 'Getting private following list',
+    sort_filtering: 'Filtering%1works with bookmark count less than %2',
+    sort_filteringHideFavorite: ' favorited works and ',
 };
 
 let LogLevel = {
@@ -1932,143 +1940,140 @@ function PixivSK(callback) {
         req.send(null);
     };
 
-    function getFollowingOfCurrentUser() {
-        let user_id = '';
-
-        try {
-            user_id = dataLayer[0].user_id;
-        } catch(ex) {
-            DoLog(LogLevel.Error, 'Get user id failed.');
-            return [];
-        }
-
-        // 获取公开关注的用户
-        let offset = 0;
-        let limit = 100;
-        let following_show = [];
-        let continue_request = true;
-        while (continue_request) {
-            $.ajax('https://www.pixiv.net/ajax/user/' + user_id + '/following?offset=' + offset + '&limit=' + limit + '&rest=show', {
-                async: false,
+    function getFollowingOfType(user_id, type, offset) {
+        return new Promise(function(resolve, reject) {
+            if (offset == null) {
+                offset = 0;
+            }
+            let limit = 100;
+            let following_show = [];
+            $.ajax('https://www.pixiv.net/ajax/user/' + user_id + '/following?offset=' + offset + '&limit=' + limit + '&rest=' + type, {
+                async: true,
                 success: function(data) {
                     if (data == null || data.error) {
                         DoLog(LogLevel.Error, 'Following response contains an error.');
-                        continue_request = false;
+                        resolve([]);
                         return;
                     }
                     if (data.body.users.length == 0) {
-                        continue_request = false;
+                        resolve([]);
                         return;
                     }
                     $.each(data.body.users, function(i, user) {
                         following_show.push(user.userId);
                     });
-                },
-                error: function() {
-                    DoLog(LogLevel.Error, 'Request following failed.');
-                },
-            });
-            offset += limit;
-        }
-        DoLog(LogLevel.Info, 'Request show following complete,');
-        DoLog(LogLevel.Element, following_show);
-        // 私有关注
-        offset = 0;
-        let following_hide = [];
-        continue_request = true;
-        while (continue_request) {
-            $.ajax('https://www.pixiv.net/ajax/user/' + user_id + '/following?offset=' + offset + '&limit=' + limit + '&rest=hide', {
-                async: false,
-                success: function(data) {
-                    if (data == null || data.error) {
-                        DoLog(LogLevel.Error, 'Following response contains an error.');
-                        continue_request = false;
+                    getFollowingOfType(user_id, type, offset + limit).then(function(members) {
+                        resolve(following_show.concat(members));
                         return;
-                    }
-                    if (data.body.users.length == 0) {
-                        continue_request = false;
-                        return;
-                    }
-                    $.each(data.body.users, function(i, user) {
-                        following_hide.push(user.userId);
                     });
                 },
                 error: function() {
                     DoLog(LogLevel.Error, 'Request following failed.');
-                },
+                    resolve([]);
+                }
             });
-            offset += limit;
-        }
-        DoLog(LogLevel.Info, 'Request hide following complete,');
-        DoLog(LogLevel.Element, following_hide);
+        });
+    }
 
-        return following_show.concat(following_hide);
+    function getFollowingOfCurrentUser() {
+        return new Promise(function(resolve, reject) {
+            let user_id = '';
+
+            try {
+                user_id = dataLayer[0].user_id;
+            } catch(ex) {
+                DoLog(LogLevel.Error, 'Get user id failed.');
+                resolve([]);
+                return;
+            }
+
+            // show/hide
+            $('#progress').text(Texts[g_language].sort_getPublicFollowing);
+            getFollowingOfType(user_id, 'show').then(function(members) {
+                $('#progress').text(Texts[g_language].sort_getPrivateFollowing);
+                getFollowingOfType(user_id, 'hide').then(function(members2) {
+                    resolve(members.concat(members2));
+                });
+            });
+        });
     }
 
     // 筛选已关注画师作品
     let filterByUser = function() {
-        let members = getFollowingOfCurrentUser();
+        return new Promise(function(resolve, reject) {
+            if (!g_settings.hideFollowed) {
+                resolve();
+            }
 
-        let tempWorks = [];
-        let hideWorkCount = 0;
-        $(works).each(function (i, work) {
-            let found = false;
-            for (let i = 0; i < members.length; i++) {
-                if (members[i] == work.userId) {
-                    found = true;
-                    break;
-                }
-            }
-            if (!found) {
-                tempWorks.push(work);
-            } else {
-                hideWorkCount++;
-            }
+            getFollowingOfCurrentUser().then(function(members) {
+                let tempWorks = [];
+                let hideWorkCount = 0;
+                $(works).each(function (i, work) {
+                    let found = false;
+                    for (let i = 0; i < members.length; i++) {
+                        if (members[i] == work.userId) {
+                            found = true;
+                            break;
+                        }
+                    }
+                    if (!found) {
+                        tempWorks.push(work);
+                    } else {
+                        hideWorkCount++;
+                    }
+                });
+                works = tempWorks;
+
+                DoLog(LogLevel.Info, hideWorkCount + ' works were hide.');
+                DoLog(LogLevel.Elements, works);
+                resolve();
+            });
         });
-        works = tempWorks;
-
-        DoLog(LogLevel.Info, hideWorkCount + ' works were hide.');
-        DoLog(LogLevel.Elements, works);
     };
 
     // 排序和筛选
     let filterAndSort = function () {
-        DoLog(LogLevel.Info, 'Start sort.');
-        DoLog(LogLevel.Elements, works);
-        // 收藏量低于 FAV_FILTER 的作品不显示
-        let tmp = [];
-        $(works).each(function (i, work) {
-            let bookmarkCount = work.bookmarkCount ? work.bookmarkCount : 0;
-            if (bookmarkCount >= g_settings.favFilter && !(g_settings.hideFavorite && work.bookmarkData)) {
-                tmp.push(work);
-            }
-        });
-        works = tmp;
+        return new Promise(function(resolve, reject) {
+            DoLog(LogLevel.Info, 'Start sort.');
+            DoLog(LogLevel.Elements, works);
 
-        if (g_settings.hideFollowed) {
-            filterByUser();
-        }
+            // 收藏量低于 FAV_FILTER 的作品不显示
+            let text = Texts[g_language].sort_filtering.replace('%2', g_settings.favFilter);
+            text = text.replace('%1', (g_settings.hideFavorite ? Texts[g_language].sort_filteringHideFavorite : ''));
+            $('#progress').text(text); // 实际上这个太快完全看不到
+            let tmp = [];
+            $(works).each(function (i, work) {
+                let bookmarkCount = work.bookmarkCount ? work.bookmarkCount : 0;
+                if (bookmarkCount >= g_settings.favFilter && !(g_settings.hideFavorite && work.bookmarkData)) {
+                    tmp.push(work);
+                }
+            });
+            works = tmp;
 
-        // 排序
-        works.sort(function (a, b) {
-            let favA = a.bookmarkCount;
-            let favB = b.bookmarkCount;
-            if (!favA) {
-                favA = 0;
-            }
-            if (!favB) {
-                favB = 0;
-            }
-            if (favA > favB) {
-                return -1;
-            }
-            if (favA < favB) {
-                return 1;
-            }
-            return 0;
+            filterByUser().then(function() {
+                // 排序
+                works.sort(function (a, b) {
+                    let favA = a.bookmarkCount;
+                    let favB = b.bookmarkCount;
+                    if (!favA) {
+                        favA = 0;
+                    }
+                    if (!favB) {
+                        favB = 0;
+                    }
+                    if (favA > favB) {
+                        return -1;
+                    }
+                    if (favA < favB) {
+                        return 1;
+                    }
+                    return 0;
+                });
+                DoLog(LogLevel.Info, 'Sort complete.');
+                DoLog(LogLevel.Elements, works);
+                resolve();
+            });
         });
-        DoLog(LogLevel.Info, 'Sort complete.');
-        DoLog(LogLevel.Elements, works);
     };
 
     if (currentPage === 0) {
@@ -2385,291 +2390,292 @@ function PixivSK(callback) {
     ---div: 作者头像和昵称
     */
     let clearAndUpdateWorks = function () {
-        filterAndSort();
+        filterAndSort().then(function() {
 
-        let container = Pages[PageType.Search].GetImageListContainer();
-        let firstImageElement = Pages[PageType.Search].GetFirstImageElement();
-        if (imageElementTemplate == null) {
-            imageElementTemplate = firstImageElement.cloneNode(true);
+            let container = Pages[PageType.Search].GetImageListContainer();
+            let firstImageElement = Pages[PageType.Search].GetFirstImageElement();
+            if (imageElementTemplate == null) {
+                imageElementTemplate = firstImageElement.cloneNode(true);
 
-            // 清理模板
-            // image
-            let img = $($(imageElementTemplate).find('img').get(0));
-            let imageDiv = img.parent();
-            let imageLink = imageDiv.parent();
-            let imageLinkDiv = imageLink.parent();
-            let titleLink = imageLinkDiv.parent().next();
-            if (img == null || imageDiv == null || imageLink == null || imageLinkDiv == null || titleLink == null) {
-                DoLog(LogLevel.Error, 'Can not found some elements!');
-            }
+                // 清理模板
+                // image
+                let img = $($(imageElementTemplate).find('img').get(0));
+                let imageDiv = img.parent();
+                let imageLink = imageDiv.parent();
+                let imageLinkDiv = imageLink.parent();
+                let titleLink = imageLinkDiv.parent().next();
+                if (img == null || imageDiv == null || imageLink == null || imageLinkDiv == null || titleLink == null) {
+                    DoLog(LogLevel.Error, 'Can not found some elements!');
+                }
 
-            // author
-            let authorDiv = titleLink.next();
-            let authorLinkProfileImage = authorDiv.find('a:first');
-            let authorLink = authorDiv.find('a:last');
-            let authorName = authorLink;
-            let authorImage = $(authorDiv.find('img').get(0));
+                // author
+                let authorDiv = titleLink.next();
+                let authorLinkProfileImage = authorDiv.find('a:first');
+                let authorLink = authorDiv.find('a:last');
+                let authorName = authorLink;
+                let authorImage = $(authorDiv.find('img').get(0));
 
-            // others
-            let bookmarkDiv = imageLink.next();
-            let bookmarkSvg = bookmarkDiv.find('svg');
-            let additionTagDiv = imageDiv.prev();
-            let animationTag = imageDiv.find('svg');
+                // others
+                let bookmarkDiv = imageLink.next();
+                let bookmarkSvg = bookmarkDiv.find('svg');
+                let additionTagDiv = imageDiv.prev();
+                let animationTag = imageDiv.find('svg');
 
-            let bookmarkCountDiv = additionTagDiv.clone();
-            bookmarkCountDiv.css({ 'top': 'auto', 'bottom': '0px', 'width': '50%' });
-            additionTagDiv.parent().append(bookmarkCountDiv);
+                let bookmarkCountDiv = additionTagDiv.clone();
+                bookmarkCountDiv.css({ 'top': 'auto', 'bottom': '0px', 'width': '50%' });
+                additionTagDiv.parent().append(bookmarkCountDiv);
 
-            // 添加 class，方便后面修改内容
-            img.addClass('ppImg');
-            imageLink.addClass('ppImageLink');
-            titleLink.addClass('ppTitleLink');
-            authorLinkProfileImage.addClass('ppAuthorLinkProfileImage');
-            authorLink.addClass('ppAuthorLink');
-            authorName.addClass('ppAuthorName');
-            authorImage.addClass('ppAuthorImage');
-            bookmarkSvg.addClass('ppBookmarkSvg');
-            additionTagDiv.addClass('ppAdditionTag');
-            bookmarkCountDiv.addClass('ppBookmarkCount');
+                // 添加 class，方便后面修改内容
+                img.addClass('ppImg');
+                imageLink.addClass('ppImageLink');
+                titleLink.addClass('ppTitleLink');
+                authorLinkProfileImage.addClass('ppAuthorLinkProfileImage');
+                authorLink.addClass('ppAuthorLink');
+                authorName.addClass('ppAuthorName');
+                authorImage.addClass('ppAuthorImage');
+                bookmarkSvg.addClass('ppBookmarkSvg');
+                additionTagDiv.addClass('ppAdditionTag');
+                bookmarkCountDiv.addClass('ppBookmarkCount');
 
-            img.attr('src', '');
-            additionTagDiv.empty();
-            bookmarkCountDiv.empty();
-            animationTag.remove();
-            bookmarkSvg.find('path:first').css('fill', 'rgb(31, 31, 31)');
-            bookmarkSvg.find('path:last').css('fill', 'rgb(255, 255, 255)');
+                img.attr('src', '');
+                additionTagDiv.empty();
+                bookmarkCountDiv.empty();
+                animationTag.remove();
+                bookmarkSvg.find('path:first').css('fill', 'rgb(31, 31, 31)');
+                bookmarkSvg.find('path:last').css('fill', 'rgb(255, 255, 255)');
 
-            if (g_settings.linkBlank) {
-                imageLink.attr('target', '_blank');
-                titleLink.attr('target', '_blank');
-                authorLinkProfileImage.attr('target', '_blank');
-                authorLink.attr('target', '_blank');
-            }
-        }
-
-        $(container).empty();
-        for (let i = 0; i < works.length; i++) {
-            let li = $(imageElementTemplate.cloneNode(true));
-
-            li.find('.ppImg').attr('src', works[i].url);
-            li.find('.ppImageLink').attr('href', '/artworks/' + works[i].illustId);
-            li.find('.ppTitleLink').attr('href', '/artworks/' + works[i].illustId).text(works[i].title);
-            li.find('.ppAuthorLink, .ppAuthorLinkProfileImage').attr('href', '/member.php?id=' + works[i].userId).attr({'userId': works[i].userId, 'profileImageUrl': works[i].profileImageUrl, 'userName': works[i].userName});
-            li.find('.ppAuthorName').text(works[i].userName);
-            li.find('.ppAuthorImage').attr('src', works[i].profileImageUrl);
-            li.find('.ppBookmarkSvg').attr('illustId', works[i].illustId);
-            if (works[i].bookmarkData) {
-                li.find('.ppBookmarkSvg').find('path').css('fill', 'rgb(255, 64, 96)');
-                li.find('.ppBookmarkSvg').attr('bookmarkId', works[i].bookmarkData.id);
-            }
-            if (works[i].xRestrict !== 0) {
-                let R18HTML = '<div style="margin-top: 2px; margin-left: 2px;"><div style="color: rgb(255, 255, 255);font-weight: bold;font-size: 10px;line-height: 1;padding: 3px 6px;border-radius: 3px;background: rgb(255, 64, 96);">R-18</div></div>';
-                li.find('.ppAdditionTag').append(R18HTML);
-            }
-            if (works[i].pageCount > 1) {
-                let pageCountHTML = '<div style="display: flex;-webkit-box-align: center;align-items: center;box-sizing: border-box;margin-left: auto;height: 20px;color: rgb(255, 255, 255);font-size: 10px;line-height: 12px;font-weight: bold;flex: 0 0 auto;padding: 4px 6px;background: rgba(0, 0, 0, 0.32);border-radius: 10px;">\<svg viewBox="0 0 9 10" width="9" height="10" style="stroke: none;line-height: 0;font-size: 0px;fill: currentcolor;"><path d="M8,3 C8.55228475,3 9,3.44771525 9,4 L9,9 C9,9.55228475 8.55228475,10 8,10 L3,10 C2.44771525,10 2,9.55228475 2,9 L6,9 C7.1045695,9 8,8.1045695 8,7 L8,3 Z M1,1 L6,1 C6.55228475,1 7,1.44771525 7,2 L7,7 C7,7.55228475 6.55228475,8 6,8 L1,8 C0.44771525,8 0,7.55228475 0,7 L0,2 C0,1.44771525 0.44771525,1 1,1 Z"></path></svg><span style="margin-left: 2px;">' + works[i].pageCount + '</span></div>';
-                li.find('.ppAdditionTag').append(pageCountHTML);
-            }
-            let bookmarkCountHTML = '<div style="margin-bottom: 6px; margin-left: 2px;"><div style="color: rgb(7, 95, 166);font-weight: bold;font-size: 13px;line-height: 1;padding: 3px 6px;border-radius: 3px;background: rgb(204, 236, 255);">' + works[i].bookmarkCount + ' likes</div></div>';
-            li.find('.ppBookmarkCount').append(bookmarkCountHTML);
-            if (works[i].illustType == 2) {
-                let animationHTML = '<svg viewBox="0 0 24 24" style="width: 48px; height: 48px;stroke: none;fill: rgb(255, 255, 255);line-height: 0;font-size: 0px;vertical-align: middle;position:absolute;"><circle cx="12" cy="12" r="10" style="fill: rgb(0, 0, 0);fill-opacity: 0.4;"></circle><path d="M9,8.74841664 L9,15.2515834 C9,15.8038681 9.44771525,16.2515834 10,16.2515834 C10.1782928,16.2515834 10.3533435,16.2039156 10.5070201,16.1135176 L16.0347118,12.8619342 C16.510745,12.5819147 16.6696454,11.969013 16.3896259,11.4929799 C16.3034179,11.3464262 16.1812655,11.2242738 16.0347118,11.1380658 L10.5070201,7.88648243 C10.030987,7.60646294 9.41808527,7.76536339 9.13806578,8.24139652 C9.04766776,8.39507316 9,8.57012386 9,8.74841664 Z"></path></svg>';
-                li.find('.ppImg').after(animationHTML);
-            }
-
-            $(container).append(li);
-        }
-
-        // 监听加入书签点击事件，监听父节点，但是按照 <svg> 节点处理
-        $('.ppBookmarkSvg').parent().on('click', function (ev) {
-            if (g_csrfToken == '') {
-                DoLog(LogLevel.Error, 'No g_csrfToken, failed to add bookmark!');
-                alert('获取 Token 失败，无法添加，请到详情页操作。');
-                return;
-            }
-            // 非公开收藏
-            let restrict = 0;
-            if (ev.ctrlKey) {
-                restrict = 1;
-            }
-
-            let _this = $(this).children('svg:first');
-            let illustId = _this.attr('illustId');
-            let bookmarkId = _this.attr('bookmarkId');
-            if (bookmarkId == null || bookmarkId == '') {
-                DoLog(LogLevel.Info, 'Add bookmark, illustId: ' + illustId);
-                $.ajax('/ajax/illusts/bookmarks/add', {
-                    method: 'POST',
-                    contentType: 'application/json;charset=utf-8',
-                    headers: { 'x-csrf-token': g_csrfToken },
-                    data: '{"illust_id":"' + illustId + '","restrict":' +restrict + ',"comment":"","tags":[]}',
-                    success: function (data) {
-                        DoLog(LogLevel.Info, 'addBookmark result: ');
-                        DoLog(LogLevel.Elements, data);
-                        if (data.error) {
-                            DoLog(LogLevel.Error, 'Server returned an error: ' + data.message);
-                            return;
-                        }
-                        let bookmarkId = data.body.last_bookmark_id;
-                        DoLog(LogLevel.Info, 'Add bookmark success, bookmarkId is ' + bookmarkId);
-                        _this.attr('bookmarkId', bookmarkId);
-                        _this.find('path').css('fill', 'rgb(255, 64, 96)');
-                    }
-                });
-            } else {
-                DoLog(LogLevel.Info, 'Delete bookmark, bookmarkId: ' + bookmarkId);
-                $.ajax('/rpc/index.php', {
-                    method: 'POST',
-                    headers: { 'x-csrf-token': g_csrfToken },
-                    data: { "mode": "delete_illust_bookmark", "bookmark_id": bookmarkId },
-                    success: function (data) {
-                        DoLog(LogLevel.Info, 'addBookmark result: ');
-                        DoLog(LogLevel.Elements, data);
-                        if (data.error) {
-                            DoLog(LogLevel.Error, 'Server returned an error: ' + data.message);
-                            return;
-                        }
-                        DoLog(LogLevel.Info, 'Delete bookmark success.');
-                        _this.attr('bookmarkId', '');
-                        _this.find('path:first').css('fill', 'rgb(31, 31, 31)');
-                        _this.find('path:last').css('fill', 'rgb(255, 255, 255)');
-                    }
-                });
-            }
-
-            _this.parent().focus();
-        });
-
-        $('.ppAuthorLink').on('mouseenter', function(e){
-            let _this = $(this);
-
-            function getOffset(e) {
-                if (e.offsetParent) {
-                    let offset = getOffset(e.offsetParent);
-                    return {
-                        offsetTop: e.offsetTop + offset.offsetTop,
-                        offsetLeft: e.offsetLeft + offset.offsetLeft,
-                    };
-                } else {
-                    return {
-                        offsetTop: e.offsetTop,
-                        offsetLeft: e.offsetLeft,
-                    };
+                if (g_settings.linkBlank) {
+                    imageLink.attr('target', '_blank');
+                    titleLink.attr('target', '_blank');
+                    authorLinkProfileImage.attr('target', '_blank');
+                    authorLink.attr('target', '_blank');
                 }
             }
 
-            let isFollowed = false;
-            $.ajax('https://www.pixiv.net/ajax/user/' + _this.attr('userId') + '?full=1', {
-                method: 'GET',
-                async: false,
-                success: function(data) {
-                    if (data.error == false && data.body.isFollowed) {
-                        isFollowed = true;
-                    }
-                },
-            });
+            $(container).empty();
+            for (let i = 0; i < works.length; i++) {
+                let li = $(imageElementTemplate.cloneNode(true));
 
-            $('.pp-authorDiv').remove();
-            let pres = $('<div class="pp-authorDiv"><div class="ppa-main" style="position: absolute; top: 0px; left: 0px; border-width: 1px; border-style: solid; z-index: 1; border-color: rgba(0, 0, 0, 0.08); border-radius: 8px;"><div class=""style="    width: 336px;    background-color: rgb(255, 255, 255);    padding-top: 24px;    flex-flow: column;"><div class=""style=" display: flex; align-items: center; flex-flow: column;"><a class="ppa-authorLink"><div role="img"size="64"class=""style=" display: inline-block; width: 64px; height: 64px; border-radius: 50%; overflow: hidden;"><img class="ppa-authorImage" width="64"height="64"style="object-fit: cover; object-position: center top;"></div></a><a class="ppa-authorLink"><div class="ppa-authorName" style=" line-height: 24px; font-size: 16px; font-weight: bold; margin: 4px 0px 0px;"></div></a><div class=""style=" margin: 12px 0px 24px;"><button type="button"class="ppa-follow"style=" padding: 9px 25px; line-height: 1; border: none; border-radius: 16px; font-weight: 700; background-color: #0096fa; color: #fff; cursor: pointer;"><span style="margin-right: 4px;"><svg viewBox="0 0 8 8"width="10"height="10"class=""style=" stroke: rgb(255, 255, 255); stroke-linecap: round; stroke-width: 2;"><line x1="1"y1="4"x2="7"y2="4"></line><line x1="4"y1="1"x2="4"y2="7"></line></svg></span>关注</button></div></div></div></div></div>');
-            $('body').append(pres);
-            let offset = getOffset(this);
-            pres.find('.ppa-main').css({'top': offset.offsetTop - 196 + 'px', 'left': offset.offsetLeft - 113 + 'px'});
-            pres.find('.ppa-authorLink').attr('href', '/member.php?id=' + _this.attr('userId'));
-            pres.find('.ppa-authorImage').attr('src', _this.attr('profileImageUrl'));
-            pres.find('.ppa-authorName').text(_this.attr('userName'));
-            if (isFollowed) {
-                pres.find('.ppa-follow').get(0).outerHTML = '<button type="button" class="ppa-follow followed" data-click-action="click" data-click-label="follow" style="padding: 9px 25px;line-height: 1;border: none;border-radius: 16px;font-size: 14px;font-weight: 700;cursor: pointer;">关注中</button>';
+                li.find('.ppImg').attr('src', works[i].url);
+                li.find('.ppImageLink').attr('href', '/artworks/' + works[i].illustId);
+                li.find('.ppTitleLink').attr('href', '/artworks/' + works[i].illustId).text(works[i].title);
+                li.find('.ppAuthorLink, .ppAuthorLinkProfileImage').attr('href', '/member.php?id=' + works[i].userId).attr({'userId': works[i].userId, 'profileImageUrl': works[i].profileImageUrl, 'userName': works[i].userName});
+                li.find('.ppAuthorName').text(works[i].userName);
+                li.find('.ppAuthorImage').attr('src', works[i].profileImageUrl);
+                li.find('.ppBookmarkSvg').attr('illustId', works[i].illustId);
+                if (works[i].bookmarkData) {
+                    li.find('.ppBookmarkSvg').find('path').css('fill', 'rgb(255, 64, 96)');
+                    li.find('.ppBookmarkSvg').attr('bookmarkId', works[i].bookmarkData.id);
+                }
+                if (works[i].xRestrict !== 0) {
+                    let R18HTML = '<div style="margin-top: 2px; margin-left: 2px;"><div style="color: rgb(255, 255, 255);font-weight: bold;font-size: 10px;line-height: 1;padding: 3px 6px;border-radius: 3px;background: rgb(255, 64, 96);">R-18</div></div>';
+                    li.find('.ppAdditionTag').append(R18HTML);
+                }
+                if (works[i].pageCount > 1) {
+                    let pageCountHTML = '<div style="display: flex;-webkit-box-align: center;align-items: center;box-sizing: border-box;margin-left: auto;height: 20px;color: rgb(255, 255, 255);font-size: 10px;line-height: 12px;font-weight: bold;flex: 0 0 auto;padding: 4px 6px;background: rgba(0, 0, 0, 0.32);border-radius: 10px;">\<svg viewBox="0 0 9 10" width="9" height="10" style="stroke: none;line-height: 0;font-size: 0px;fill: currentcolor;"><path d="M8,3 C8.55228475,3 9,3.44771525 9,4 L9,9 C9,9.55228475 8.55228475,10 8,10 L3,10 C2.44771525,10 2,9.55228475 2,9 L6,9 C7.1045695,9 8,8.1045695 8,7 L8,3 Z M1,1 L6,1 C6.55228475,1 7,1.44771525 7,2 L7,7 C7,7.55228475 6.55228475,8 6,8 L1,8 C0.44771525,8 0,7.55228475 0,7 L0,2 C0,1.44771525 0.44771525,1 1,1 Z"></path></svg><span style="margin-left: 2px;">' + works[i].pageCount + '</span></div>';
+                    li.find('.ppAdditionTag').append(pageCountHTML);
+                }
+                let bookmarkCountHTML = '<div style="margin-bottom: 6px; margin-left: 2px;"><div style="color: rgb(7, 95, 166);font-weight: bold;font-size: 13px;line-height: 1;padding: 3px 6px;border-radius: 3px;background: rgb(204, 236, 255);">' + works[i].bookmarkCount + ' likes</div></div>';
+                li.find('.ppBookmarkCount').append(bookmarkCountHTML);
+                if (works[i].illustType == 2) {
+                    let animationHTML = '<svg viewBox="0 0 24 24" style="width: 48px; height: 48px;stroke: none;fill: rgb(255, 255, 255);line-height: 0;font-size: 0px;vertical-align: middle;position:absolute;"><circle cx="12" cy="12" r="10" style="fill: rgb(0, 0, 0);fill-opacity: 0.4;"></circle><path d="M9,8.74841664 L9,15.2515834 C9,15.8038681 9.44771525,16.2515834 10,16.2515834 C10.1782928,16.2515834 10.3533435,16.2039156 10.5070201,16.1135176 L16.0347118,12.8619342 C16.510745,12.5819147 16.6696454,11.969013 16.3896259,11.4929799 C16.3034179,11.3464262 16.1812655,11.2242738 16.0347118,11.1380658 L10.5070201,7.88648243 C10.030987,7.60646294 9.41808527,7.76536339 9.13806578,8.24139652 C9.04766776,8.39507316 9,8.57012386 9,8.74841664 Z"></path></svg>';
+                    li.find('.ppImg').after(animationHTML);
+                }
+
+                $(container).append(li);
             }
-            pres.find('.ppa-follow').attr('userId', _this.attr('userId'));
-            pres.on('mouseleave', function(e) {
-                $(this).remove();
-            }).on('mouseenter', function() {
-                $(this).addClass('mouseenter');
-            });
 
-            pres.find('.ppa-follow').on('click', function() {
-                let userId = $(this).attr('userId');
-                if ($(this).hasClass('followed')) {
-                    // 取关
-                    $.ajax('https://www.pixiv.net/rpc_group_setting.php', {
+            // 监听加入书签点击事件，监听父节点，但是按照 <svg> 节点处理
+            $('.ppBookmarkSvg').parent().on('click', function (ev) {
+                if (g_csrfToken == '') {
+                    DoLog(LogLevel.Error, 'No g_csrfToken, failed to add bookmark!');
+                    alert('获取 Token 失败，无法添加，请到详情页操作。');
+                    return;
+                }
+                // 非公开收藏
+                let restrict = 0;
+                if (ev.ctrlKey) {
+                    restrict = 1;
+                }
+
+                let _this = $(this).children('svg:first');
+                let illustId = _this.attr('illustId');
+                let bookmarkId = _this.attr('bookmarkId');
+                if (bookmarkId == null || bookmarkId == '') {
+                    DoLog(LogLevel.Info, 'Add bookmark, illustId: ' + illustId);
+                    $.ajax('/ajax/illusts/bookmarks/add', {
                         method: 'POST',
+                        contentType: 'application/json;charset=utf-8',
                         headers: { 'x-csrf-token': g_csrfToken },
-                        data: 'mode=del&type=bookuser&id=' + userId,
-                        success: function(data) {
-                            DoLog(LogLevel.Info, 'delete bookmark result: ');
-                            DoLog(LogLevel.Elements, data);
-
-                            if (data.type == 'bookuser') {
-                                $('.ppa-follow').get(0).outerHTML = '<button type="button"class="ppa-follow"style=" padding: 9px 25px; line-height: 1; border: none; border-radius: 16px; font-weight: 700; background-color: #0096fa; color: #fff; cursor: pointer;"><span style="margin-right: 4px;"><svg viewBox="0 0 8 8"width="10"height="10"class=""style=" stroke: rgb(255, 255, 255); stroke-linecap: round; stroke-width: 2;"><line x1="1"y1="4"x2="7"y2="4"></line><line x1="4"y1="1"x2="4"y2="7"></line></svg></span>关注</button>';
-                            }
-                            else {
-                                DoLog(LogLevel.Error, 'Delete follow failed!');
-                            }
-                        }
-                    });
-                } else {
-                    // 关注
-                    $.ajax('https://www.pixiv.net/bookmark_add.php', {
-                        method: 'POST',
-                        headers: {'x-csrf-token': g_csrfToken},
-                        data: 'mode=add&type=user&user_id=' + userId + '&tag=&restrict=0&format=json',
+                        data: '{"illust_id":"' + illustId + '","restrict":' +restrict + ',"comment":"","tags":[]}',
                         success: function (data) {
                             DoLog(LogLevel.Info, 'addBookmark result: ');
                             DoLog(LogLevel.Elements, data);
-                            // success
-                            if (data.length === 0) {
-                                $('.ppa-follow').get(0).outerHTML = '<button type="button" class="ppa-follow followed" data-click-action="click" data-click-label="follow" style="padding: 9px 25px;line-height: 1;border: none;border-radius: 16px;font-size: 14px;font-weight: 700;cursor: pointer;">关注中</button>';
-                            } else {
-                                DoLog(LogLevel.Error, 'Follow failed!');
+                            if (data.error) {
+                                DoLog(LogLevel.Error, 'Server returned an error: ' + data.message);
+                                return;
                             }
+                            let bookmarkId = data.body.last_bookmark_id;
+                            DoLog(LogLevel.Info, 'Add bookmark success, bookmarkId is ' + bookmarkId);
+                            _this.attr('bookmarkId', bookmarkId);
+                            _this.find('path').css('fill', 'rgb(255, 64, 96)');
+                        }
+                    });
+                } else {
+                    DoLog(LogLevel.Info, 'Delete bookmark, bookmarkId: ' + bookmarkId);
+                    $.ajax('/rpc/index.php', {
+                        method: 'POST',
+                        headers: { 'x-csrf-token': g_csrfToken },
+                        data: { "mode": "delete_illust_bookmark", "bookmark_id": bookmarkId },
+                        success: function (data) {
+                            DoLog(LogLevel.Info, 'addBookmark result: ');
+                            DoLog(LogLevel.Elements, data);
+                            if (data.error) {
+                                DoLog(LogLevel.Error, 'Server returned an error: ' + data.message);
+                                return;
+                            }
+                            DoLog(LogLevel.Info, 'Delete bookmark success.');
+                            _this.attr('bookmarkId', '');
+                            _this.find('path:first').css('fill', 'rgb(31, 31, 31)');
+                            _this.find('path:last').css('fill', 'rgb(255, 255, 255)');
                         }
                     });
                 }
+
+                _this.parent().focus();
             });
-        }).on('mouseleave', function(e) {
-            setTimeout(function() {
-                if (!$('.pp-authorDiv').hasClass('mouseenter')) {
-                    $('.pp-authorDiv').remove();
+
+            $('.ppAuthorLink').on('mouseenter', function(e){
+                let _this = $(this);
+
+                function getOffset(e) {
+                    if (e.offsetParent) {
+                        let offset = getOffset(e.offsetParent);
+                        return {
+                            offsetTop: e.offsetTop + offset.offsetTop,
+                            offsetLeft: e.offsetLeft + offset.offsetLeft,
+                        };
+                    } else {
+                        return {
+                            offsetTop: e.offsetTop,
+                            offsetLeft: e.offsetLeft,
+                        };
+                    }
                 }
-            }, 200);
-        });
 
-        if (works.length === 0) {
-            $(container).show().get(0).outerHTML = '<div class=""style="display: flex;align-items: center;justify-content: center; height: 408px;flex-flow: column;"><div class=""style="margin-bottom: 12px;color: rgba(0, 0, 0, 0.16);"><svg viewBox="0 0 16 16"size="72"style="fill: currentcolor;height: 72px;vertical-align: middle;"><path d="M8.25739 9.1716C7.46696 9.69512 6.51908 10 5.5 10C2.73858 10 0.5 7.76142 0.5 5C0.5			2.23858 2.73858 0 5.5 0C8.26142 0 10.5 2.23858 10.5 5C10.5 6.01908 10.1951 6.96696 9.67161			7.75739L11.7071 9.79288C12.0976 10.1834 12.0976 10.8166 11.7071 11.2071C11.3166 11.5976 10.6834			11.5976 10.2929 11.2071L8.25739 9.1716ZM8.5 5C8.5 6.65685 7.15685 8 5.5 8C3.84315 8 2.5 6.65685			2.5 5C2.5 3.34315 3.84315 2 5.5 2C7.15685 2 8.5 3.34315 8.5 5Z"transform="translate(2.25 2.25)"fill-rule="evenodd"clip-rule="evenodd"></path></svg></div><span class="sc-LzMCO fLDUzU">' + Texts[g_language].sort_noWork + '</span></div>';
-        }
+                let isFollowed = false;
+                $.ajax('https://www.pixiv.net/ajax/user/' + _this.attr('userId') + '?full=1', {
+                    method: 'GET',
+                    async: false,
+                    success: function(data) {
+                        if (data.error == false && data.body.isFollowed) {
+                            isFollowed = true;
+                        }
+                    },
+                });
 
-        // 恢复显示
-        $('#loading').remove();
-        $(container).show();
+                $('.pp-authorDiv').remove();
+                let pres = $('<div class="pp-authorDiv"><div class="ppa-main" style="position: absolute; top: 0px; left: 0px; border-width: 1px; border-style: solid; z-index: 1; border-color: rgba(0, 0, 0, 0.08); border-radius: 8px;"><div class=""style="    width: 336px;    background-color: rgb(255, 255, 255);    padding-top: 24px;    flex-flow: column;"><div class=""style=" display: flex; align-items: center; flex-flow: column;"><a class="ppa-authorLink"><div role="img"size="64"class=""style=" display: inline-block; width: 64px; height: 64px; border-radius: 50%; overflow: hidden;"><img class="ppa-authorImage" width="64"height="64"style="object-fit: cover; object-position: center top;"></div></a><a class="ppa-authorLink"><div class="ppa-authorName" style=" line-height: 24px; font-size: 16px; font-weight: bold; margin: 4px 0px 0px;"></div></a><div class=""style=" margin: 12px 0px 24px;"><button type="button"class="ppa-follow"style=" padding: 9px 25px; line-height: 1; border: none; border-radius: 16px; font-weight: 700; background-color: #0096fa; color: #fff; cursor: pointer;"><span style="margin-right: 4px;"><svg viewBox="0 0 8 8"width="10"height="10"class=""style=" stroke: rgb(255, 255, 255); stroke-linecap: round; stroke-width: 2;"><line x1="1"y1="4"x2="7"y2="4"></line><line x1="4"y1="1"x2="4"y2="7"></line></svg></span>关注</button></div></div></div></div></div>');
+                $('body').append(pres);
+                let offset = getOffset(this);
+                pres.find('.ppa-main').css({'top': offset.offsetTop - 196 + 'px', 'left': offset.offsetLeft - 113 + 'px'});
+                pres.find('.ppa-authorLink').attr('href', '/member.php?id=' + _this.attr('userId'));
+                pres.find('.ppa-authorImage').attr('src', _this.attr('profileImageUrl'));
+                pres.find('.ppa-authorName').text(_this.attr('userName'));
+                if (isFollowed) {
+                    pres.find('.ppa-follow').get(0).outerHTML = '<button type="button" class="ppa-follow followed" data-click-action="click" data-click-label="follow" style="padding: 9px 25px;line-height: 1;border: none;border-radius: 16px;font-size: 14px;font-weight: 700;cursor: pointer;">关注中</button>';
+                }
+                pres.find('.ppa-follow').attr('userId', _this.attr('userId'));
+                pres.on('mouseleave', function(e) {
+                    $(this).remove();
+                }).on('mouseenter', function() {
+                    $(this).addClass('mouseenter');
+                });
 
-        Pages[PageType.Search].ProcessPageElements();
+                pres.find('.ppa-follow').on('click', function() {
+                    let userId = $(this).attr('userId');
+                    if ($(this).hasClass('followed')) {
+                        // 取关
+                        $.ajax('https://www.pixiv.net/rpc_group_setting.php', {
+                            method: 'POST',
+                            headers: { 'x-csrf-token': g_csrfToken },
+                            data: 'mode=del&type=bookuser&id=' + userId,
+                            success: function(data) {
+                                DoLog(LogLevel.Info, 'delete bookmark result: ');
+                                DoLog(LogLevel.Elements, data);
 
-        // 监听键盘的左右键，用来翻页
-        $(document).keydown(function (e) {
-            if (g_settings.pageByKey != 1) {
-                return;
+                                if (data.type == 'bookuser') {
+                                    $('.ppa-follow').get(0).outerHTML = '<button type="button"class="ppa-follow"style=" padding: 9px 25px; line-height: 1; border: none; border-radius: 16px; font-weight: 700; background-color: #0096fa; color: #fff; cursor: pointer;"><span style="margin-right: 4px;"><svg viewBox="0 0 8 8"width="10"height="10"class=""style=" stroke: rgb(255, 255, 255); stroke-linecap: round; stroke-width: 2;"><line x1="1"y1="4"x2="7"y2="4"></line><line x1="4"y1="1"x2="4"y2="7"></line></svg></span>关注</button>';
+                                }
+                                else {
+                                    DoLog(LogLevel.Error, 'Delete follow failed!');
+                                }
+                            }
+                        });
+                    } else {
+                        // 关注
+                        $.ajax('https://www.pixiv.net/bookmark_add.php', {
+                            method: 'POST',
+                            headers: {'x-csrf-token': g_csrfToken},
+                            data: 'mode=add&type=user&user_id=' + userId + '&tag=&restrict=0&format=json',
+                            success: function (data) {
+                                DoLog(LogLevel.Info, 'addBookmark result: ');
+                                DoLog(LogLevel.Elements, data);
+                                // success
+                                if (data.length === 0) {
+                                    $('.ppa-follow').get(0).outerHTML = '<button type="button" class="ppa-follow followed" data-click-action="click" data-click-label="follow" style="padding: 9px 25px;line-height: 1;border: none;border-radius: 16px;font-size: 14px;font-weight: 700;cursor: pointer;">关注中</button>';
+                                } else {
+                                    DoLog(LogLevel.Error, 'Follow failed!');
+                                }
+                            }
+                        });
+                    }
+                });
+            }).on('mouseleave', function(e) {
+                setTimeout(function() {
+                    if (!$('.pp-authorDiv').hasClass('mouseenter')) {
+                        $('.pp-authorDiv').remove();
+                    }
+                }, 200);
+            });
+
+            if (works.length === 0) {
+                $(container).show().get(0).outerHTML = '<div class=""style="display: flex;align-items: center;justify-content: center; height: 408px;flex-flow: column;"><div class=""style="margin-bottom: 12px;color: rgba(0, 0, 0, 0.16);"><svg viewBox="0 0 16 16"size="72"style="fill: currentcolor;height: 72px;vertical-align: middle;"><path d="M8.25739 9.1716C7.46696 9.69512 6.51908 10 5.5 10C2.73858 10 0.5 7.76142 0.5 5C0.5			2.23858 2.73858 0 5.5 0C8.26142 0 10.5 2.23858 10.5 5C10.5 6.01908 10.1951 6.96696 9.67161			7.75739L11.7071 9.79288C12.0976 10.1834 12.0976 10.8166 11.7071 11.2071C11.3166 11.5976 10.6834			11.5976 10.2929 11.2071L8.25739 9.1716ZM8.5 5C8.5 6.65685 7.15685 8 5.5 8C3.84315 8 2.5 6.65685			2.5 5C2.5 3.34315 3.84315 2 5.5 2C7.15685 2 8.5 3.34315 8.5 5Z"transform="translate(2.25 2.25)"fill-rule="evenodd"clip-rule="evenodd"></path></svg></div><span class="sc-LzMCO fLDUzU">' + Texts[g_language].sort_noWork + '</span></div>';
             }
-            if (e.keyCode == 39) {
-                let btn = $('.pp-nextPage');
-                if (btn.length < 1 || btn.attr('hidden') == 'hidden') {
+
+            // 恢复显示
+            $('#loading').remove();
+            $(container).show();
+
+            Pages[PageType.Search].ProcessPageElements();
+
+            // 监听键盘的左右键，用来翻页
+            $(document).keydown(function (e) {
+                if (g_settings.pageByKey != 1) {
                     return;
                 }
-                // 很奇怪不能用 click()
-                location.href = btn.attr('href');
-            } else if (e.keyCode == 37) {
-                let btn = $('.pp-prevPage');
-                if (btn.length < 1 || btn.attr('hidden') == 'hidden') {
-                    return;
+                if (e.keyCode == 39) {
+                    let btn = $('.pp-nextPage');
+                    if (btn.length < 1 || btn.attr('hidden') == 'hidden') {
+                        return;
+                    }
+                    // 很奇怪不能用 click()
+                    location.href = btn.attr('href');
+                } else if (e.keyCode == 37) {
+                    let btn = $('.pp-prevPage');
+                    if (btn.length < 1 || btn.attr('hidden') == 'hidden') {
+                        return;
+                    }
+                    location.href = btn.attr('href');
                 }
-                location.href = btn.attr('href');
+            });
+
+            if (callback) {
+                callback();
             }
         });
-
-        if (callback) {
-            callback();
-        }
     }
-    }
+};
 /* ---------------------------------------- 设置 ---------------------------------------- */
 function SetCookie(name, value) {
     let Days = 180;
