@@ -1,7 +1,7 @@
 ﻿// ==UserScript==
 // @name                       Pixiv Previewer
 // @namespace              https://github.com/Ocrosoft/PixivPreviewer
-// @version                    3.2.1
+// @version                    3.2.2
 // @description              Display preview images (support single image, multiple images, moving images); Download animation(.zip); Sorting the search page by favorite count(and display it). Updated for the latest search page.
 // @description:zh-CN   显示预览图（支持单图，多图，动图）；动图压缩包下载；搜索页按热门度（收藏数）排序并显示收藏数，适配11月更新。
 // @description:ja           プレビュー画像の表示（単一画像、複数画像、動画のサポート）; アニメーションのダウンロード（.zip）; お気に入りの数で検索ページをソートします（そして表示します）。 最新の検索ページ用に更新されました。
@@ -1932,63 +1932,82 @@ function PixivSK(callback) {
         req.send(null);
     };
 
-    // 筛选已关注画师作品
-    let filterByUser = function() {
-        let members = [];
+    function getFollowingOfCurrentUser() {
+        let user_id = '';
+
+        try {
+            user_id = dataLayer[0].user_id;
+        } catch(ex) {
+            DoLog(LogLevel.Error, 'Get user id failed.');
+            return [];
+        }
 
         // 获取公开关注的用户
-        $.ajax('https://www.pixiv.net/bookmark.php?type=user&rest=show', {
-            async: false,
-            success: function(data) {
-                let searchResult = $(data).find('#search-result');
-                if (searchResult.length === 0) {
-                    DoLog(LogLevel.Error, 'Can not found users.');
-                    return;
-                }
-
-                let lis = searchResult.find('li');
-                DoLog(LogLevel.Elements, lis);
-                lis.each(function(i, e) {
-                    let input = $(this).children('input');
-                    if (input) {
-                        members.push(input.attr('value'));
-                    } else {
-                        DoLog(LogLevel.Error, 'No <input> found.');
+        let offset = 0;
+        let limit = 100;
+        let following_show = [];
+        let continue_request = true;
+        while (continue_request) {
+            $.ajax('https://www.pixiv.net/ajax/user/' + user_id + '/following?offset=' + offset + '&limit=' + limit + '&rest=show', {
+                async: false,
+                success: function(data) {
+                    if (data == null || data.error) {
+                        DoLog(LogLevel.Error, 'Following response contains an error.');
+                        continue_request = false;
+                        return;
                     }
-                });
-            },
-            error: function() {
-                DoLog(LogLevel.Error, 'Request bookmarked user failed.');
-            },
-        });
-
-        $.ajax('https://www.pixiv.net/bookmark.php?type=user&rest=hide', {
-            async: false,
-            success: function(data) {
-                let searchResult = $(data).find('#search-result');
-                if (searchResult.length === 0) {
-                    DoLog(LogLevel.Error, 'Can not found users.');
-                    return;
-                }
-
-                let lis = searchResult.find('li');
-                DoLog(LogLevel.Elements, lis);
-                lis.each(function(i, e) {
-                    let input = $(this).children('input');
-                    if (input) {
-                        members.push(input.attr('value'));
-                    } else {
-                        DoLog(LogLevel.Error, 'No <input> found.');
+                    if (data.body.users.length == 0) {
+                        continue_request = false;
+                        return;
                     }
-                });
-            },
-            error: function() {
-                DoLog(LogLevel.Error, 'Request bookmarked user failed.');
-            },
-        });
+                    $.each(data.body.users, function(i, user) {
+                        following_show.push(user.userId);
+                    });
+                },
+                error: function() {
+                    DoLog(LogLevel.Error, 'Request following failed.');
+                },
+            });
+            offset += limit;
+        }
+        DoLog(LogLevel.Info, 'Request show following complete,');
+        DoLog(LogLevel.Element, following_show);
+        // 私有关注
+        offset = 0;
+        let following_hide = [];
+        continue_request = true;
+        while (continue_request) {
+            $.ajax('https://www.pixiv.net/ajax/user/' + user_id + '/following?offset=' + offset + '&limit=' + limit + '&rest=hide', {
+                async: false,
+                success: function(data) {
+                    if (data == null || data.error) {
+                        DoLog(LogLevel.Error, 'Following response contains an error.');
+                        continue_request = false;
+                        return;
+                    }
+                    if (data.body.users.length == 0) {
+                        continue_request = false;
+                        return;
+                    }
+                    $.each(data.body.users, function(i, user) {
+                        following_hide.push(user.userId);
+                    });
+                },
+                error: function() {
+                    DoLog(LogLevel.Error, 'Request following failed.');
+                },
+            });
+            offset += limit;
+        }
+        DoLog(LogLevel.Info, 'Request hide following complete,');
+        DoLog(LogLevel.Element, following_hide);
 
-        DoLog(LogLevel.Info, 'Get users success.');
-        DoLog(LogLevel.Elements, members);
+        return following_show.concat(following_hide);
+    }
+
+    // 筛选已关注画师作品
+    let filterByUser = function() {
+        let members = getFollowingOfCurrentUser();
 
         let tempWorks = [];
         let hideWorkCount = 0;
