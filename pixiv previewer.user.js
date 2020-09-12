@@ -1,7 +1,7 @@
 ﻿// ==UserScript==
 // @name                       Pixiv Previewer
 // @namespace              https://github.com/Ocrosoft/PixivPreviewer
-// @version                    3.2.4
+// @version                    3.2.5
 // @description              Display preview images (support single image, multiple images, moving images); Download animation(.zip); Sorting the search page by favorite count(and display it). Updated for the latest search page.
 // @description:zh-CN   显示预览图（支持单图，多图，动图）；动图压缩包下载；搜索页按热门度（收藏数）排序并显示收藏数，适配11月更新。
 // @description:ja           プレビュー画像の表示（単一画像、複数画像、動画のサポート）; アニメーションのダウンロード（.zip）; お気に入りの数で検索ページをソートします（そして表示します）。 最新の検索ページ用に更新されました。
@@ -2403,13 +2403,19 @@ function PixivSK(callback) {
                 let imageDiv = img.parent();
                 let imageLink = imageDiv.parent();
                 let imageLinkDiv = imageLink.parent();
-                let titleLink = imageLinkDiv.parent().next();
-                if (img == null || imageDiv == null || imageLink == null || imageLinkDiv == null || titleLink == null) {
+                let titleLinkParent = imageLinkDiv.parent().next();
+                if (img == null || imageDiv == null || imageLink == null || imageLinkDiv == null || titleLinkParent == null) {
                     DoLog(LogLevel.Error, 'Can not found some elements!');
+                }
+                let titleLink = $('<a></a>');
+                if (titleLinkParent.children().length == 0) {
+                    titleLinkParent.append(titleLink);
+                } else {
+                    titleLink = titleLinkParent.children('a:first');
                 }
 
                 // author
-                let authorDiv = titleLink.next();
+                let authorDiv = titleLinkParent.next();
                 let authorLinkProfileImage = authorDiv.find('a:first');
                 let authorLink = authorDiv.find('a:last');
                 let authorName = authorLink;
@@ -2428,7 +2434,11 @@ function PixivSK(callback) {
                 // 添加 class，方便后面修改内容
                 img.addClass('ppImg');
                 imageLink.addClass('ppImageLink');
-                titleLink.addClass('ppTitleLink');
+                //if (titleLink.get(0).tagName == 'A') {
+                    titleLink.addClass('ppTitleLink');
+                //} else {
+                //    titleLink.append('<a class="ppTitleLink"></a>');
+                //}
                 authorLinkProfileImage.addClass('ppAuthorLinkProfileImage');
                 authorLink.addClass('ppAuthorLink');
                 authorName.addClass('ppAuthorName');
