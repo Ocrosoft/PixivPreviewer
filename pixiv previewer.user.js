@@ -1,15 +1,15 @@
 ﻿// ==UserScript==
-// @name                       Pixiv Previewer
-// @namespace              https://github.com/Ocrosoft/PixivPreviewer
-// @version                    3.2.5
-// @description              Display preview images (support single image, multiple images, moving images); Download animation(.zip); Sorting the search page by favorite count(and display it). Updated for the latest search page.
+// @name                Pixiv Previewer
+// @namespace           https://github.com/Ocrosoft/PixivPreviewer
+// @version             3.2.7
+// @description         Display preview images (support single image, multiple images, moving images); Download animation(.zip); Sorting the search page by favorite count(and display it). Updated for the latest search page.
 // @description:zh-CN   显示预览图（支持单图，多图，动图）；动图压缩包下载；搜索页按热门度（收藏数）排序并显示收藏数，适配11月更新。
-// @description:ja           プレビュー画像の表示（単一画像、複数画像、動画のサポート）; アニメーションのダウンロード（.zip）; お気に入りの数で検索ページをソートします（そして表示します）。 最新の検索ページ用に更新されました。
+// @description:ja      プレビュー画像の表示（単一画像、複数画像、動画のサポート）; アニメーションのダウンロード（.zip）; お気に入りの数で検索ページをソートします（そして表示します）。 最新の検索ページ用に更新されました。
 // @description:zh_TW   顯示預覽圖像（支持單幅圖像，多幅圖像，運動圖像）； 下載動畫（.zip）; 按收藏夾數對搜索頁進行排序（並顯示）。 已為最新的搜索頁面適配。
-// @author                     Ocrosoft
-// @match                      *://www.pixiv.net/*
-// @grant                       none
-// @compatible             Chrome
+// @author              Ocrosoft
+// @match               *://www.pixiv.net/*
+// @grant               none
+// @compatible          Chrome
 // ==/UserScript==
 
 // 测试 JQuery，如果不支持就插入
@@ -239,7 +239,7 @@ let ControlElementsAttributesSample = {
 };
 
 function findToolbarCommon() {
-    let div = $('#root').children('div');
+    /*let div = $('#root').children('div');
     // 搜索页前面插入了一个新的 div 节点
     if ($('#root').children('#gtm-var-theme-kind').length > 0) {
         let max_children = 0;
@@ -256,7 +256,9 @@ function findToolbarCommon() {
         if ($(div.get(i)).children('ul').length > 0) {
             return $(div.get(i)).children('ul').get(0);
         }
-    }
+    }*/
+    // 目前第三级div，除了目标div外，子元素都是div
+    return $('#root>div>div>ul').get(0);
 }
 function findToolbarOld() {
     return $('._toolmenu').get(0);
@@ -2219,7 +2221,7 @@ function PixivSK(callback) {
                 // 获取到的作品里面可能有广告，先删掉，否则后面一些处理需要做判断
                 let tempWorks = [];
                 for (let i = 0; i < works.length; i++) {
-                    if (works[i].illustId) {
+                    if (works[i].id) {
                         tempWorks.push(works[i]);
                     }
                 }
@@ -2366,7 +2368,7 @@ function PixivSK(callback) {
                 continue;
             }
 
-            let illustId = works[index + i].illustId;
+            let illustId = works[index + i].id;
             let url = 'https://www.pixiv.net/touch/ajax/illust/details?illust_id=' + illustId;
             xhrs[i].illustId = illustId;
             xhrs[i].complete = false;
@@ -2467,12 +2469,12 @@ function PixivSK(callback) {
                 let li = $(imageElementTemplate.cloneNode(true));
 
                 li.find('.ppImg').attr('src', works[i].url);
-                li.find('.ppImageLink').attr('href', '/artworks/' + works[i].illustId);
-                li.find('.ppTitleLink').attr('href', '/artworks/' + works[i].illustId).text(works[i].title);
+                li.find('.ppImageLink').attr('href', '/artworks/' + works[i].id);
+                li.find('.ppTitleLink').attr('href', '/artworks/' + works[i].id).text(works[i].title);
                 li.find('.ppAuthorLink, .ppAuthorLinkProfileImage').attr('href', '/member.php?id=' + works[i].userId).attr({'userId': works[i].userId, 'profileImageUrl': works[i].profileImageUrl, 'userName': works[i].userName});
                 li.find('.ppAuthorName').text(works[i].userName);
                 li.find('.ppAuthorImage').attr('src', works[i].profileImageUrl);
-                li.find('.ppBookmarkSvg').attr('illustId', works[i].illustId);
+                li.find('.ppBookmarkSvg').attr('illustId', works[i].id);
                 if (works[i].bookmarkData) {
                     li.find('.ppBookmarkSvg').find('path').css('fill', 'rgb(255, 64, 96)');
                     li.find('.ppBookmarkSvg').attr('bookmarkId', works[i].bookmarkData.id);
