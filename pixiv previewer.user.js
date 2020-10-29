@@ -159,7 +159,7 @@ let g_defaultSettings = {
     'enableSort': 1,
     'enableAnimeDownload': 1,
     'original': 0,
-    'previewDelay': 0,
+    'previewDelay': 200,
     'pageCount': 2,
     'favFilter': 0,
     'hideFavorite': 0,
