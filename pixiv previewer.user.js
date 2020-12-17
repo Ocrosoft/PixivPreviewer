@@ -1,7 +1,7 @@
 ﻿// ==UserScript==
 // @name                Pixiv Previewer
 // @namespace           https://github.com/Ocrosoft/PixivPreviewer
-// @version             3.3.0
+// @version             3.3.2
 // @description         Display preview images (support single image, multiple images, moving images); Download animation(.zip); Sorting the search page by favorite count(and display it). Updated for the latest search page.
 // @description:zh-CN   显示预览图（支持单图，多图，动图）；动图压缩包下载；搜索页按热门度（收藏数）排序并显示收藏数，适配11月更新。
 // @description:ja      プレビュー画像の表示（単一画像、複数画像、動画のサポート）; アニメーションのダウンロード（.zip）; お気に入りの数で検索ページをソートします（そして表示します）。 最新の検索ページ用に更新されました。
@@ -32,7 +32,7 @@ let Texts = {};
 Texts[Lang.zh_CN] = {
     // 安装或更新后弹出的提示
     install_title: '欢迎使用 PixivPreviewer v',
-    install_body: '<div style="position: absolute;width: 40%;left: 30%;top: 30%;font-size: 20px; color: white;"><p style="text-indent: 2em; color: skyblue;">功能更新（v3.2.0）: 增加“排序时隐藏已关注画师作品”选项，默认关闭，可到设置中开启。</p><br><p style="text-indent: 2em;">欢迎反馈问题和提出建议！><a style="color: green;" href="https://greasyfork.org/zh-CN/scripts/30766-pixiv-previewer/feedback" target="_blank">反馈页面</a><</p><br><p style="text-indent: 2em;">如果您是第一次使用，推荐到<a style="color: green;" href="https://greasyfork.org/zh-CN/scripts/30766-pixiv-previewer" target="_blank"> 详情页 </a>查看脚本介绍。</p></div>',
+    install_body: '<div style="position: absolute;width: 40%;left: 30%;top: 30%;font-size: 20px; color: white;"><p style="text-indent: 2em; color: skyblue;">功能更新（v3.3.0）: 增加“延迟显示预览图”设置项，默认延迟200毫秒显示，可在设置中调节以避免预览图遮挡操作。</p><br><p style="text-indent: 2em;">欢迎反馈问题和提出建议！><a style="color: green;" href="https://greasyfork.org/zh-CN/scripts/30766-pixiv-previewer/feedback" target="_blank">反馈页面</a><</p><br><p style="text-indent: 2em;">如果您是第一次使用，推荐到<a style="color: green;" href="https://greasyfork.org/zh-CN/scripts/30766-pixiv-previewer" target="_blank"> 详情页 </a>查看脚本介绍。</p></div>',
     // 设置项
     setting_preview: '预览',
     setting_sort: '排序（仅搜索页生效）',
@@ -60,7 +60,7 @@ Texts[Lang.zh_CN] = {
 // translate by google
 Texts[Lang.en_US] = {
     install_title: 'Welcome to PixivPreviewer v',
-    install_body: '<div style="position: absolute;width: 40%;left: 30%;top: 30%;font-size: 20px; color: white;"><p style="text-indent: 2em; color: skyblue;">Feature update(v3.2.0): Add a options "Hide artworks of followed artists", this is disabled by default, you can enable it in settings.</p><br><p style="text-indent: 2em;">Feedback questions and suggestions are welcome! ><a style="color: green;" href="https://greasyfork.org/zh-CN/scripts/30766-pixiv-previewer/feedback" target="_blank">Feedback Page</a><</p><br><p style="text-indent: 2em;">If you are using it for the first time, it is recommended to go to the<a style="color: green;" href="https://greasyfork.org/zh-CN/scripts/30766-pixiv-previewer" target="_blank"> Details Page </a>to see the script introduction.</p></div>',
+    install_body: '<div style="position: absolute;width: 40%;left: 30%;top: 30%;font-size: 20px; color: white;"><p style="text-indent: 2em; color: skyblue;">Feature update(v3.2.0): Add an option "Delay of display preview image", default value is 200 million seconds, you can change it in the settings.</p><br><p style="text-indent: 2em;">Feedback questions and suggestions are welcome! ><a style="color: green;" href="https://greasyfork.org/zh-CN/scripts/30766-pixiv-previewer/feedback" target="_blank">Feedback Page</a><</p><br><p style="text-indent: 2em;">If you are using it for the first time, it is recommended to go to the<a style="color: green;" href="https://greasyfork.org/zh-CN/scripts/30766-pixiv-previewer" target="_blank"> Details Page </a>to see the script introduction.</p></div>',
     setting_preview: 'Preview',
     setting_sort: 'Sorting (Search page)',
     setting_anime: 'Animation download (Preview and Artwork page)',
@@ -172,7 +172,7 @@ let g_defaultSettings = {
 // 设置
 let g_settings;
 // 日志等级
-let g_logLevel = LogLevel.Warning;
+let g_logLevel = LogLevel.Error;
 // 排序时同时请求收藏量的 Request 数量，没必要太多，并不会加快速度
 let g_maxXhr = 64;
 // 排序是否完成（如果排序时页面出现了非刷新切换，强制刷新）
@@ -1183,7 +1183,7 @@ Pages[PageType.Artwork] = {
                 DoLog(LogLevel.Info, 'Found container div.');
                 DoLog(LogLevel.Elements, containerDiv);
 
-                containerDiv.children().each(function (i, e) {
+                containerDiv.find('ul:first').children().each(function (i, e) {
                     let _this = $(e);
 
                     let img = _this.find('img');
@@ -2927,7 +2927,7 @@ function Load() {
     // 自动检测语言
     if (g_autoDetectLanguage) {
         let lang = $('html').attr('lang');
-        if (lang.indexOf('zh') != -1) {
+        if (lang && lang.indexOf('zh') != -1) {
             // 简体中文和繁体中文都用简体中文
             g_language = Lang.zh_CN;
         } else {
