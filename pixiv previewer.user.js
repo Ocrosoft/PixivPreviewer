@@ -1,7 +1,7 @@
 ﻿// ==UserScript==
 // @name                Pixiv Previewer
 // @namespace           https://github.com/Ocrosoft/PixivPreviewer
-// @version             3.3.3
+// @version             3.3.4
 // @description         Display preview images (support single image, multiple images, moving images); Download animation(.zip); Sorting the search page by favorite count(and display it). Updated for the latest search page.
 // @description:zh-CN   显示预览图（支持单图，多图，动图）；动图压缩包下载；搜索页按热门度（收藏数）排序并显示收藏数，适配11月更新。
 // @description:ja      プレビュー画像の表示（単一画像、複数画像、動画のサポート）; アニメーションのダウンロード（.zip）; お気に入りの数で検索ページをソートします（そして表示します）。 最新の検索ページ用に更新されました。
@@ -42,7 +42,7 @@ Texts[Lang.zh_CN] = {
     setting_maxPage: '每次排序时统计的最大页数',
     setting_hideWork: '隐藏收藏数少于设定值的作品',
     setting_hideFav: '排序时隐藏已收藏的作品',
-    setting_hideFollowed: '排序时隐藏已关注画师作品',
+    setting_hideFollowed: '排序时隐藏已关注画师作品（<button id="pps-clearFollowingCache" style="cursor:pointer;background-color:gold;border-radius:12px;font-size:20px;" title="关注画师信息会在本地保存一天，如果希望立即更新，请点击清除缓存。">清除缓存?</button>）',
     setting_blank: '使用新标签页打开作品详情页',
     setting_turnPage: '使用键盘←→进行翻页（排序后的搜索页）',
     setting_save: '保存设置',
@@ -69,7 +69,7 @@ Texts[Lang.en_US] = {
     setting_maxPage: 'Maximum number of pages counted per sort',
     setting_hideWork: 'Hide works with bookmark count less than set value',
     setting_hideFav: 'Hide favorites when sorting',
-    setting_hideFollowed: 'Hide artworks of followed artists when sorting',
+    setting_hideFollowed: 'Hide artworks of followed artists when sorting(<button id="pps-clearFollowingCache" style="cursor:pointer;background-color:gold;border-radius:12px;font-size:20px;" title="Follow the artist information will be saved locally for one day, if you want to update immediately, please click Clear cache.">Clear cache?</button>)',
     setting_blank: 'Open works\' details page in new tab',
     setting_turnPage: 'Use ← → to turn pages (Search page)',
     setting_save: 'Save',
@@ -2027,10 +2027,20 @@ function PixivSK(callback) {
 
             // show/hide
             $('#progress').text(Texts[g_language].sort_getPublicFollowing);
+
+            // 首先从Cookie读取
+            let following = GetCookie('followingOfUid-' + user_id);
+            if (following != null) {
+                resolve(following);
+                return;
+            }
+
             getFollowingOfType(user_id, 'show').then(function(members) {
                 $('#progress').text(Texts[g_language].sort_getPrivateFollowing);
                 getFollowingOfType(user_id, 'hide').then(function(members2) {
-                    resolve(members.concat(members2));
+                    let following = members.concat(members2);
+                    SetCookie('followingOfUid-' + user_id, following, 1);
+                    resolve(following);
                 });
             });
         });
@@ -2725,8 +2735,11 @@ function PixivSK(callback) {
     }
     };
 /* ---------------------------------------- 设置 ---------------------------------------- */
-function SetCookie(name, value) {
+function SetCookie(name, value, days) {
     let Days = 180;
+    if (days) {
+        Days = days;
+    }
     let exp = new Date();
     exp.setTime(exp.getTime() + Days * 24 * 60 * 60 * 1000);
     let str = JSON.stringify(value);
@@ -2856,6 +2869,11 @@ function ShowSetting() {
         } else {
             _this.attr('src', imgOn).removeClass('off').addClass('on');
         }
+    });
+    $('#pps-clearFollowingCache').click(function() {
+        let user_id = dataLayer[0].user_id;
+        SetCookie('followingOfUid-' + user_id, null, -1);
+        alert('已清除，请刷新页面');
     });
 
     $('#pps-save').click(function () {
