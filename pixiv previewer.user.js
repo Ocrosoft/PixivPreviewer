@@ -301,6 +301,13 @@ function findToolbarCommon() {
 function findToolbarOld() {
     return $('._toolmenu').get(0);
 }
+function convertThumbUrlToRegular(thumbUrl) {
+    // 目前发现有以下两种格式的缩略图
+    // https://i.pximg.net/c/128x128/custom-thumb/img/2021/01/31/20/35/53/87426718_p0_custom1200.jpg
+    // https://i.pximg.net/c/128x128/img-master/img/2021/01/31/10/57/06/87425082_p0_square1200.jpg
+    return thumbUrl.replace(/c\/.*\/custom-thumb/, 'img-master').replace('_custom', '_master')
+        .replace(/c\/.*\/img-master/, 'img-master').replace('_square', '_master');
+}
 
 Pages[PageType.Search] = {
     PageTypeString: 'SearchPage',
@@ -2549,6 +2556,7 @@ function PixivSK(callback) {
             for (let i = 0; i < works.length; i++) {
                 let li = $(imageElementTemplate.cloneNode(true));
 
+                let regularUrl = convertThumbUrlToRegular(works[i].url);
                 li.find('.ppImg').attr('src', works[i].url);
                 li.find('.ppImageLink').attr('href', '/artworks/' + works[i].id);
                 li.find('.ppTitleLink').attr('href', '/artworks/' + works[i].id).text(works[i].title);
