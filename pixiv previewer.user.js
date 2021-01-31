@@ -1,7 +1,7 @@
 ﻿// ==UserScript==
 // @name                Pixiv Previewer
 // @namespace           https://github.com/Ocrosoft/PixivPreviewer
-// @version             3.4.1
+// @version             3.4.2
 // @description         Display preview images (support single image, multiple images, moving images); Download animation(.zip); Sorting the search page by favorite count(and display it). Updated for the latest search page.
 // @description:zh-CN   显示预览图（支持单图，多图，动图）；动图压缩包下载；搜索页按热门度（收藏数）排序并显示收藏数，适配11月更新。
 // @description:ja      プレビュー画像の表示（単一画像、複数画像、動画のサポート）; アニメーションのダウンロード（.zip）; お気に入りの数で検索ページをソートします（そして表示します）。 最新の検索ページ用に更新されました。
@@ -301,12 +301,15 @@ function findToolbarCommon() {
 function findToolbarOld() {
     return $('._toolmenu').get(0);
 }
-function convertThumbUrlToRegular(thumbUrl) {
+function convertThumbUrlToSmall(thumbUrl) {
     // 目前发现有以下两种格式的缩略图
     // https://i.pximg.net/c/128x128/custom-thumb/img/2021/01/31/20/35/53/87426718_p0_custom1200.jpg
     // https://i.pximg.net/c/128x128/img-master/img/2021/01/31/10/57/06/87425082_p0_square1200.jpg
-    return thumbUrl.replace(/c\/.*\/custom-thumb/, 'img-master').replace('_custom', '_master')
-        .replace(/c\/.*\/img-master/, 'img-master').replace('_square', '_master');
+    let replace1 = 'c/540x540_70/img-master';
+    //let replace1 = 'img-master'; // 这个是转到regular的，比small的大多了，会很慢
+    let replace2 = '_master';
+    return thumbUrl.replace(/c\/.*\/custom-thumb/, replace1).replace('_custom', replace2)
+        .replace(/c\/.*\/img-master/, replace1).replace('_square', replace2);
 }
 
 Pages[PageType.Search] = {
@@ -2556,8 +2559,8 @@ function PixivSK(callback) {
             for (let i = 0; i < works.length; i++) {
                 let li = $(imageElementTemplate.cloneNode(true));
 
-                let regularUrl = convertThumbUrlToRegular(works[i].url);
-                li.find('.ppImg').attr('src', works[i].url);
+                let regularUrl = convertThumbUrlToSmall(works[i].url);
+                li.find('.ppImg').attr('src', regularUrl).css('object-fit', 'contain');
                 li.find('.ppImageLink').attr('href', '/artworks/' + works[i].id);
                 li.find('.ppTitleLink').attr('href', '/artworks/' + works[i].id).text(works[i].title);
                 li.find('.ppAuthorLink, .ppAuthorLinkProfileImage').attr('href', '/member.php?id=' + works[i].userId).attr({'userId': works[i].userId, 'profileImageUrl': works[i].profileImageUrl, 'userName': works[i].userName});
