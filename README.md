@@ -14,3 +14,8 @@
 比稳定版大一个版本，包含新的功能，但新功能可能还不完善。
 
 安装方法：请前往 <a href="https://github.com/Ocrosoft/PixivPreviewer/releases">Release</a>，找到“Pre-release”，展开右侧的Asserts，点击“pixiv.previewer.user.js”即可安装。
+
+## 开发版（这个很开发）
+可能包含正在实现且非常不完整的功能，可能导致页面异常或其他功能错误。
+
+安装方法：请点击 <a href="https://github.com/Ocrosoft/PixivPreviewer/raw/master/pixiv%20previewer.user.js">此处</a> 进行安装。

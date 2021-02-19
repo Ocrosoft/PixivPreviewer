@@ -184,6 +184,8 @@ let g_artworkUrl = '/artworks/#id#';
 let g_getArtworkUrl = '/ajax/illust/#id#/pages';
 // 获取动图下载链接的链接
 let g_getUgoiraUrl = '/ajax/illust/#id#/ugoira_meta';
+// 获取小说列表的链接
+let g_getNovelUrl = '/ajax/search/novels/#key#?word=#key#&p=#page#'
 // 鼠标位置
 let g_mousePos = { x: 0, y: 0 };
 // 加载中图片
@@ -2771,6 +2773,188 @@ function PixivSK(callback) {
         });
     }
     };
+
+/* ---------------------------------------- 小说 ---------------------------------------- */
+// 一个独立的组件，等差不多了丢出去
+function PixivNS(callback) {
+    function findNovelSection() {
+        let ul = $('section>div>ul');
+        if (ul.length == 0) {
+            DoLog(LogLevel.Error, 'Can not found novel list.');
+            return null;
+        }
+        return ul;
+    }
+
+    function getNovelTemplate(ul) {
+        if (!ul) {
+            return null;
+        }
+        if (ul.length == 0) {
+            DoLog(LogLevel.Error, 'Empty list, can not create template.');
+            return null;
+        }
+        let template = ul.children().eq(0).clone(true)
+        // 左侧图片
+        let picDiv = template.children().eq(0).children().eq(0);
+        picDiv.find('a:first').addClass('pns-link');
+        picDiv.find('img:first').addClass('pns-img');
+        // 右侧详情
+        let detailDiv = template.children().eq(0).children().eq(1);
+        let titleDiv = detailDiv.children().eq(0);
+        titleDiv.children().eq(0).addClass('pns-series');
+        titleDiv.children().eq(1).addClass('pns-title').addClass('pns-link');
+        let authorDiv = detailDiv.children().eq(1);
+        authorDiv.children().eq(0).addClass('pns-author');
+        let tagDiv = detailDiv.children().eq(2);
+        let bookmarkDiv = tagDiv.children().eq(0);
+        bookmarkDiv.find('span:first').addClass('pns-text-count');
+        bookmarkDiv.find('span:last').addClass('pns-bookmark-count');
+        tagDiv.children().eq(1).empty().addClass('pns-tag-list');
+        let descDiv = detailDiv.children().eq(3);
+        descDiv.children().eq(0).addClass('pns-desc');
+        // 右下角爱心
+        let likeDiv = template.children().eq(0).children().eq(2);
+        likeDiv.find('svg').addClass('pns-like').css('fill', 'rgb(255, 255, 255)');
+
+        return template;
+    }
+
+    function fillTemplate(template, novel) {
+        if (template == null || novel == null) {
+            return null;
+        }
+        let link = template.find('.pns-link:first').attr('href').replace(/id=\d+/g, 'id=' + novel.id);
+        template.find('.pns-link').attr('href', link);
+        template.find('.pns-img').attr('src', novel.url);
+        if (novel.serriesId) {
+            let seriesLink = template.find('.pns-series').attr('href').replace(/\d+$/, novel.seriesId);
+            template.find('.pns-series').text(novel.seriesTitle).attr('title', novel.seriesTitle).attr('href', seriesLink);
+        } else {
+            template.find('.pns-series').hide();
+        }
+        template.find('.pns-title').text(novel.title).attr('title', novel.title);
+        let authorLink = template.find('.pns-author').attr('href').replace(/\d+$/, novel.userId);
+        template.find('.pns-author').text(novel.userName).attr('href', authorLink);
+        template.find('.pns-text-count').text(novel.textCount);
+        template.find('.pns-bookmark-count').text(novel.bookmarkCount);
+        let tagList = template.find('.pns-tag-list');
+        tagList.hide(); // 暂不支持
+        template.find('.pns-desc').text(novel.description).attr('title', novel.description);
+        template.find('.pns-like').hide(); // 暂不支持
+        return template;
+    }
+
+    function getNovelByPage(key, from, to) {
+        let url = location.origin + g_getNovelUrl.replace(/#key#/g, key).replace(/#page#/g, from);
+        let search = location.search.substr(1).replace(/&?p=\d+/);
+        if (search.length > 0) {
+            url += '&' + search;
+        }
+        
+        let novelList = [];
+        function onLoadFinish(data, resolve) {
+            if (data && data.body && data.body.novel && data.body.novel.data) {
+                novelList = novelList.concat(data.body.novel.data);
+            }
+
+            if (from >= to) {
+                resolve(novelList);
+            } else {
+                getNovelByPage(key, from + 1, to).then(function(list) {
+                    if (list && list.length > 0) {
+                        novelList = novelList.concat(list);
+                    }
+                    resolve(novelList);
+                });
+            }
+        }
+
+        return new Promise(function(resolve, reject) {
+            $.ajax({
+                url: url,
+                success: function(data) {
+                    onLoadFinish(data, resolve);
+                },
+                error: function() {
+                    DoLog(LogLevel.Error, 'get novel page ' + from + ' failed!');
+                    onLoadFinish(null, resolve);
+                },
+            });
+        });
+    }
+
+    function sortNovel(list) {
+        // 排序
+        list.sort(function (a, b) {
+            let bookmarkA = a.bookmarkCount;
+            let bookmarkB = b.bookmarkCount;
+            if (!bookmarkA) {
+                bookmarkA = 0;
+            }
+            if (!bookmarkB) {
+                bookmarkB = 0;
+            }
+            if (bookmarkA > bookmarkB) {
+                return -1;
+            }
+            if (bookmarkA < bookmarkB) {
+                return 1;
+            }
+            return 0;
+        });
+        return list;
+    }
+
+    function rearrangeNovel(list) {
+        let ul = findNovelSection();
+        if (ul == null) {
+            return;
+        }
+        let template = getNovelTemplate(ul);
+        if (template == null) {
+            return;
+        }
+        let newList = [];
+        $.each(list, function(i, novel) {
+            let e = fillTemplate(template.clone(true), novel);
+            if (e != null) {
+                newList.push(e);
+            }
+        });
+        ul.empty();
+        $.each(newList, function(i, e) {
+            ul.append(e);
+        });
+    }
+
+    function getKeyWord() {
+        let match = location.pathname.match(/\/tags\/(.+)\/novels/);
+        if (!match) {
+            return '';
+        }
+        return match[1];
+    }
+
+    function getCurrentPage() {
+        let match = location.search.match(/p=(\d+)/);
+        if (match) {
+            return parseInt(match[1]);
+        }
+        return 1;
+    }
+
+    let keyWord = getKeyWord();
+    if (keyWord.length == 0) {
+        DoLog(LogLevel.Error, 'Parse key word error.');
+        return;
+    }
+    let currentPage = getCurrentPage();
+
+    getNovelByPage(keyWord, currentPage, currentPage + 3).then(function(novelList) {
+        rearrangeNovel(sortNovel(novelList));
+    });
+}
 /* ---------------------------------------- 设置 ---------------------------------------- */
 function SetCookie(name, value, days) {
     let Days = 180;
@@ -2996,6 +3180,7 @@ function SetTargetBlank(returnMap) {
 let loadInterval = null;
 let itv = null;
 function Load() {
+    PixivNS();
     // 匹配当前页面
     for (let i = 0; i < PageType.PageTypeCount; i++) {
         if (Pages[i].CheckUrl(location.href)) {
