@@ -2301,9 +2301,11 @@ function PixivSK(callback) {
 
                 // 获取到的作品里面可能有广告，先删掉，否则后面一些处理需要做判断
                 let tempWorks = [];
+                let workIdsSet = new Set();
                 for (let i = 0; i < works.length; i++) {
-                    if (works[i].id) {
+                    if (works[i].id && !workIdsSet.has(works[i].id)) {
                         tempWorks.push(works[i]);
+                        workIdsSet.add(works[i].id);
                     }
                 }
                 works = tempWorks;
@@ -2350,7 +2352,7 @@ function PixivSK(callback) {
                     }
                 }
                 if (indexOfThisRequest == -1) {
-                    DoLog('This url not match any request!');
+                    DoLog(LogLevel.Error, 'This url not match any request!');
                     return;
                 }
                 xhrs[indexOfThisRequest].complete = true;
