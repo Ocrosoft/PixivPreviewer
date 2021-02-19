@@ -2808,8 +2808,12 @@ function PixivNS(callback) {
         authorDiv.children().eq(0).addClass('pns-author');
         let tagDiv = detailDiv.children().eq(2);
         let bookmarkDiv = tagDiv.children().eq(0);
-        bookmarkDiv.find('span:first').addClass('pns-text-count');
-        bookmarkDiv.find('span:last').addClass('pns-bookmark-count');
+        bookmarkDiv.children().eq(0).addClass('pns-text-count');
+        if (bookmarkDiv.children().length < 2) {
+            bookmarkDiv.find('.pns-text-count').after('<div class="sc-1c4k3wn-10 huRoWZ pns-bookmark-div"><span class="sc-14heosd-0 hZsYvc"><svg viewBox="0 0 12 12" size="12" class="sc-14heosd-1 dcwYur"><path fill-rule="evenodd" clip-rule="evenodd" d="M9 0.75C10.6569 0.75 12 2.09315 12 3.75C12 7.71703 7.33709 10.7126   6.23256 11.3666C6.08717 11.4526 5.91283 11.4526 5.76744 11.3666C4.6629 10.7126 0 7.71703 0 3.75C0 2.09315 1.34315 0.75 3 0.75C4.1265 0.75 5.33911 1.60202 6 2.66823C6.66089 1.60202 7.8735 0.75 9 0.75Z"></path></svg></span><span class="sc-1c4k3wn-11 jlMYck pns-bookmark-count">0</span></div>')
+        } else {
+            bookmarkDiv.find('span:last').addClass('pns-bookmark-count').parent().addClass('pns-bookmark-div');
+        }
         tagDiv.children().eq(1).empty().addClass('pns-tag-list');
         let descDiv = detailDiv.children().eq(3);
         descDiv.children().eq(0).addClass('pns-desc');
@@ -2836,8 +2840,12 @@ function PixivNS(callback) {
         template.find('.pns-title').text(novel.title).attr('title', novel.title);
         let authorLink = template.find('.pns-author').attr('href').replace(/\d+$/, novel.userId);
         template.find('.pns-author').text(novel.userName).attr('href', authorLink);
-        template.find('.pns-text-count').text(novel.textCount);
-        template.find('.pns-bookmark-count').text(novel.bookmarkCount);
+        template.find('.pns-text-count').text(novel.textCount + '文字');
+        if (novel.bookmarkCount == 0) {
+            template.find('.pns-bookmark-div').hide();
+        } else {
+            template.find('.pns-bookmark-count').text(novel.bookmarkCount);
+        }
         let tagList = template.find('.pns-tag-list');
         tagList.hide(); // 暂不支持
         template.find('.pns-desc').text(novel.description).attr('title', novel.description);
