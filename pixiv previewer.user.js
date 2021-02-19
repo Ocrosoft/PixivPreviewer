@@ -18,7 +18,7 @@ try {
     $();
 } catch (e) {
     let script = document.createElement('script');
-    script.src = 'https://code.jquery.com/jquery-2.2.4.min.js';
+    script.src = 'http://libs.baidu.com/jquery/2.1.4/jquery.min.js';
     document.head.appendChild(script);
 }
 
