@@ -64,6 +64,7 @@ Texts[Lang.zh_CN] = {
     sort_getPrivateFollowing: '获取私有关注画师',
     sort_filtering: '过滤%1收藏量低于%2的作品',
     sort_filteringHideFavorite: '已收藏和',
+    sort_fullSizeThumb: '排序后展示全尺寸图片',
 };
 // translate by google
 Texts[Lang.en_US] = {
@@ -94,6 +95,7 @@ Texts[Lang.en_US] = {
     sort_getPrivateFollowing: 'Getting private following list',
     sort_filtering: 'Filtering%1works with bookmark count less than %2',
     sort_filteringHideFavorite: ' favorited works and ',
+    sort_fullSizeThumb: 'Display not cropped images.',
 };
 // RU: перевод от  vanja-san
 Texts[Lang.ru_RU] = {
@@ -124,6 +126,7 @@ Texts[Lang.ru_RU] = {
     sort_getPrivateFollowing: 'Получение приватного списка подписок',
     sort_filtering: 'Фильтрация %1 работ с количеством закладок меньше чем %2',
     sort_filteringHideFavorite: ' избранные работы и ',
+    sort_fullSizeThumb: 'Показать неотредактированное изображение',
 };
 
 let LogLevel = {
@@ -201,6 +204,7 @@ let g_defaultSettings = {
     'hideFollowed': 0,
     'linkBlank': 1,
     'pageByKey': 0,
+    'fullSizeThumb': 0,
     'logLevel': 1,
     'version': g_version,
 };
@@ -277,24 +281,6 @@ let ControlElementsAttributesSample = {
 };
 
 function findToolbarCommon() {
-    /*let div = $('#root').children('div');
-    // 搜索页前面插入了一个新的 div 节点
-    if ($('#root').children('#gtm-var-theme-kind').length > 0) {
-        let max_children = 0;
-        let max_children_i = 0;
-        for (let i = 0; i < div.length; ++i) {
-            if ($(div[i]).children().length > max_children) {
-                max_children_i = i;
-                max_children = $(div[i]).children().length;
-            }
-        }
-        div = $(div[max_children_i]).children();
-    }
-    for (let i = div.length - 1; i >= 0; i--) {
-        if ($(div.get(i)).children('ul').length > 0) {
-            return $(div.get(i)).children('ul').get(0);
-        }
-    }*/
     // 目前第三级div，除了目标div外，子元素都是div
     return $('#root>div>div>ul').get(0);
 }
@@ -2559,7 +2545,10 @@ function PixivSK(callback) {
             for (let i = 0; i < works.length; i++) {
                 let li = $(imageElementTemplate.cloneNode(true));
 
-                let regularUrl = convertThumbUrlToSmall(works[i].url);
+                let regularUrl = works[i].url;
+                if (g_settings.fullSizeThumb) {
+                    regularUrl = convertThumbUrlToSmall(works[i].url);
+                }
                 li.find('.ppImg').attr('src', regularUrl).css('object-fit', 'contain');
                 li.find('.ppImageLink').attr('href', '/artworks/' + works[i].id);
                 li.find('.ppTitleLink').attr('href', '/artworks/' + works[i].id).text(works[i].title);
@@ -2888,9 +2877,10 @@ function ShowSetting() {
     addItem(getInputAction('pps-maxPage'), Texts[g_language].setting_maxPage);
     addItem(getInputAction('pps-hideLess'), Texts[g_language].setting_hideWork);
     addItem(getImageAction('pps-hideBookmarked'), Texts[g_language].setting_hideFav);
-    addItem(getImageAction('pps-hideFollowed'), Texts[g_language].setting_hideFollowed + '&nbsp<button id="pps-clearFollowingCache" style="cursor:pointer;background-color:gold;border-radius:12px;font-size:20px;" title="' + Texts[g_language].setting_clearFollowingCacheHelp + '">' + Texts[g_language].setting_clearFollowingCache + '</button>');
+    addItem(getImageAction('pps-hideFollowed'), Texts[g_language].setting_hideFollowed + '&nbsp<button id="pps-clearFollowingCache" style="cursor:pointer;background-color:gold;border-radius:12px;" title="' + Texts[g_language].setting_clearFollowingCacheHelp + '">' + Texts[g_language].setting_clearFollowingCache + '</button>');
     addItem(getImageAction('pps-newTab'), Texts[g_language].setting_blank);
     addItem(getImageAction('pps-pageKey'), Texts[g_language].setting_turnPage);
+    addItem(getImageAction('pps-fullSizeThumb'), Texts[g_language].sort_fullSizeThumb);
 
     let imgOn = 'https://pp-1252089172.cos.ap-chengdu.myqcloud.com/On.png';
     let imgOff = 'https://pp-1252089172.cos.ap-chengdu.myqcloud.com/Off.png'
@@ -2905,6 +2895,7 @@ function ShowSetting() {
     $('#pps-hideFollowed').attr('src', settings.hideFollowed ? imgOn : imgOff).addClass(settings.hideFollowed ? 'on' : 'off').css('cursor: pointer');
     $('#pps-newTab').attr('src', settings.linkBlank ? imgOn : imgOff).addClass(settings.linkBlank ? 'on' : 'off').css('cursor: pointer');
     $('#pps-pageKey').attr('src', settings.pageByKey ? imgOn : imgOff).addClass(settings.pageByKey ? 'on' : 'off').css('cursor: pointer');
+    $('#pps-fullSizeThumb').attr('src', settings.fullSizeThumb ? imgOn : imgOff).addClass(settings.fullSizeThumb ? 'on' : 'off').css('cursor: pointer');
 
     $('#pps-lang')
         .append('<option value="-1">Auto</option>')
@@ -2949,6 +2940,7 @@ function ShowSetting() {
             'hideFollowed': $('#pps-hideFollowed').hasClass('on') ? 1 : 0,
             'linkBlank': $('#pps-newTab').hasClass('on') ? 1 : 0,
             'pageByKey': $('#pps-pageKey').hasClass('on') ? 1 : 0,
+            'fullSizeThumb': $('#pps-fullSizeThumb').hasClass('on') ? 1 : 0,
             'version': g_version,
         }
 
