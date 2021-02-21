@@ -2526,7 +2526,7 @@ function PixivSK(callback) {
                 authorLink.addClass('ppAuthorLink');
                 authorName.addClass('ppAuthorName');
                 authorImage.addClass('ppAuthorImage');
-                bookmarkSvg.addClass('ppBookmarkSvg');
+                bookmarkSvg.attr('class', bookmarkSvg.attr('class') + ' ppBookmarkSvg');
                 additionTagDiv.addClass('ppAdditionTag');
                 bookmarkCountDiv.addClass('ppBookmarkCount');
 
