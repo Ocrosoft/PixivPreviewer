@@ -293,7 +293,7 @@ function DoLog(level, msgOrElement) {
 // 语言
 let g_language = Lang.zh_CN;
 // 版本号，第三位不需要跟脚本的版本号对上，第三位更新只有需要弹更新提示的时候才需要更新这里
-let g_version = '3.5.0';
+let g_version = '3.6.0';
 // 添加收藏需要这个
 let g_csrfToken = '';
 // 打的日志数量，超过一定数值清空控制台
