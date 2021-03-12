@@ -2784,7 +2784,7 @@ function PixivSK(callback) {
                         headers: { 'x-csrf-token': g_csrfToken },
                         data: { "mode": "delete_illust_bookmark", "bookmark_id": bookmarkId },
                         success: function (data) {
-                            DoLog(LogLevel.Info, 'addBookmark result: ');
+                            DoLog(LogLevel.Info, 'delete bookmark result: ');
                             DoLog(LogLevel.Elements, data);
                             if (data.error) {
                                 DoLog(LogLevel.Error, 'Server returned an error: ' + data.message);
@@ -2981,7 +2981,10 @@ function PixivNS(callback) {
         descDiv.children().eq(0).addClass('pns-desc');
         // 右下角爱心
         let likeDiv = template.children().eq(0).children().eq(2);
-        likeDiv.find('svg').addClass('pns-like').css('fill', 'rgb(255, 255, 255)');
+        let svg = likeDiv.find('svg');
+        svg.attr('class', svg.attr('class') + ' pns-like');
+        likeDiv.find('path:first').css('color', 'rgb(31, 31, 31)');
+        likeDiv.find('path:last').css('fill', 'rgb(255, 255, 255)');
 
         return template;
     }
@@ -3021,7 +3024,26 @@ function PixivNS(callback) {
             tagList.append(tagItem);
         });
         template.find('.pns-desc').html(novel.description).attr('title', template.find('.pns-desc').text());
-        template.find('.pns-like').hide(); // 暂不支持
+        let like = template.find('.pns-like');
+        like.attr('novel-id', novel.id);
+        if (novel.bookmarkData) {
+            like.attr('bookmark-id', novel.bookmarkData.id);
+            like.find('path:first').css('color', 'rgb(255, 64, 96)');
+            like.find('path:last').css('fill', 'rgb(255, 64, 96)');
+        }
+        like.click(function() {
+            if ($(this).attr('disable')) {
+                return;
+            }
+            let bid = $(this).attr('bookmark-id');
+            let nid = $(this).attr('novel-id');
+            if (bid) {
+                deleteBookmark($(this), bid);
+            } else {
+                addBookmark($(this), nid, 0);
+            }
+            $(this).blur();
+        });
         return template;
     }
 
@@ -3156,6 +3178,70 @@ function PixivNS(callback) {
     function updateProgress(msg) {
         let p = $('#progress');
         p.text(msg);
+    }
+
+    function addBookmark(element, novelId, restrict) {
+        if (g_csrfToken == '') {
+            iLog.e('No g_csrfToken, failed to add bookmark!');
+            alert('获取 Token 失败，无法添加，请到详情页操作。');
+            return;
+        }
+        element.attr('disable', 'disable');
+        iLog.i('add bookmark: ' + novelId);
+        $.ajax('/ajax/novels/bookmarks/add', {
+            method: 'POST',
+            contentType: 'application/json;charset=utf-8',
+            headers: { 'x-csrf-token': g_csrfToken },
+            data: '{"novel_id":"' + novelId + '","restrict":' + restrict + ',"comment":"","tags":[]}',
+            success: function (data) {
+                iLog.i('add novel bookmark result: ');
+                iLog.d(data);
+                if (data.error) {
+                    iLog.e('Server returned an error: ' + data.message);
+                    return;
+                }
+                let bookmarkId = data.body;
+                iLog.i('Add novel bookmark success, bookmarkId is ' + bookmarkId);
+                element.attr('bookmark-id', bookmarkId);
+                element.find('path:first').css('color', 'rgb(255, 64, 96)');
+                element.find('path:last').css('fill', 'rgb(255, 64, 96)');
+                element.removeAttr('disable');
+            },
+            error: function() {
+                element.removeAttr('disable');
+            }
+        });
+    }
+
+    function deleteBookmark(element, bookmarkId) {
+        if (g_csrfToken == '') {
+            iLog.e('No g_csrfToken, failed to add bookmark!');
+            alert('获取 Token 失败，无法添加，请到详情页操作。');
+            return;
+        }
+        element.attr('disable', 'disable');
+        iLog.i('delete bookmark: ' + bookmarkId);
+        $.ajax('/ajax/novels/bookmarks/delete', {
+            method: 'POST',
+            headers: { 'x-csrf-token': g_csrfToken },
+            data: { 'del': 1, 'book_id': bookmarkId },
+            success: function (data) {
+                iLog.i('delete novel bookmark result: ');
+                iLog.d(data);
+                if (data.error) {
+                    iLog.e('Server returned an error: ' + data.message);
+                    return;
+                }
+                iLog.i('delete novel bookmark success');
+                element.removeAttr('bookmark-id');
+                element.find('path:first').css('color', 'rgb(31, 31, 31)');
+                element.find('path:last').css('fill', 'rgb(255, 255, 255)');
+                element.removeAttr('disable');
+            },
+            error: function() {
+                element.removeAttr('disable');
+            }
+        });
     }
 
     function main() {
@@ -3493,7 +3579,7 @@ function Load() {
     }
 
     // g_csrfToken
-    if (g_pageType == PageType.Search) {
+    if (g_pageType == PageType.Search || g_pageType == PageType.NovelSearch) {
         $.get(location.href, function (data) {
             let matched = data.match(/token":"([a-z0-9]{32})/);
             if (matched.length > 0) {
