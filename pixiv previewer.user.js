@@ -145,7 +145,7 @@ let Texts = {};
 Texts[Lang.zh_CN] = {
     // 安装或更新后弹出的提示
     install_title: '欢迎使用 PixivPreviewer v',
-    install_body: '<div style="position: absolute;width: 40%;left: 30%;top: 30%;font-size: 20px; color: white;"><p style="text-indent: 2em;">欢迎反馈问题和提出建议！><a style="color: green;" href="https://greasyfork.org/zh-CN/scripts/30766-pixiv-previewer/feedback" target="_blank">反馈页面</a><</p><br><p style="text-indent: 2em;">如果您是第一次使用，推荐到<a style="color: green;" href="https://greasyfork.org/zh-CN/scripts/30766-pixiv-previewer" target="_blank"> 详情页 </a>查看脚本介绍。</p></div>',
+    install_body: '<div style="position: absolute;left: 50%;top: 30%;font-size: 20px; color: white;transform:translate(-50%,0);"><p style="text-indent: 2em;">欢迎反馈问题和提出建议！><a style="color: green;" href="https://greasyfork.org/zh-CN/scripts/30766-pixiv-previewer/feedback" target="_blank">反馈页面</a><</p><br><p style="text-indent: 2em;">如果您是第一次使用，推荐到<a style="color: green;" href="https://greasyfork.org/zh-CN/scripts/30766-pixiv-previewer" target="_blank"> 详情页 </a>查看脚本介绍。</p></div>',
     // 设置项
     setting_language: '语言',
     setting_preview: '预览',
@@ -183,7 +183,7 @@ Texts[Lang.zh_CN] = {
 // translate by google
 Texts[Lang.en_US] = {
     install_title: 'Welcome to PixivPreviewer v',
-    install_body: '<div style="position: absolute;width: 40%;left: 30%;top: 30%;font-size: 20px; color: white;"><p style="text-indent: 2em;">Feedback questions and suggestions are welcome! ><a style="color: green;" href="https://greasyfork.org/zh-CN/scripts/30766-pixiv-previewer/feedback" target="_blank">Feedback Page</a><</p><br><p style="text-indent: 2em;">If you are using it for the first time, it is recommended to go to the<a style="color: green;" href="https://greasyfork.org/zh-CN/scripts/30766-pixiv-previewer" target="_blank"> Details Page </a>to see the script introduction.</p></div>',
+    install_body: '<div style="position: absolute;left: 50%;top: 30%;font-size: 20px; color: white;transform:translate(-50%,0);"><p style="text-indent: 2em;">Feedback questions and suggestions are welcome! ><a style="color: green;" href="https://greasyfork.org/zh-CN/scripts/30766-pixiv-previewer/feedback" target="_blank">Feedback Page</a><</p><br><p style="text-indent: 2em;">If you are using it for the first time, it is recommended to go to the<a style="color: green;" href="https://greasyfork.org/zh-CN/scripts/30766-pixiv-previewer" target="_blank"> Details Page </a>to see the script introduction.</p></div>',
     setting_language: 'Language',
     setting_preview: 'Preview',
     setting_sort: 'Sorting (Search page)',
@@ -218,7 +218,7 @@ Texts[Lang.en_US] = {
 // RU: перевод от  vanja-san
 Texts[Lang.ru_RU] = {
     install_title: 'Добро пожаловать в PixivPreviewer v',
-    install_body: '<div style="position: absolute;width: 40%;left: 30%;top: 30%;font-size: 20px; color: white;"><p style="text-indent: 2em;">Вопросы и предложения приветствуются! ><a style="color: green;" href="https://greasyfork.org/zh-CN/scripts/30766-pixiv-previewer/feedback" target="_blank">Страница обратной связи</a><</p><br><p style="text-indent: 2em;">Если вы используете это впервые, рекомендуется перейти к<a style="color: green;" href="https://greasyfork.org/zh-CN/scripts/30766-pixiv-previewer" target="_blank"> Странице подробностей </a>, чтобы посмотреть введение в скрипт.</p></div>',
+    install_body: '<div style="position: absolute;left: 50%;top: 30%;font-size: 20px; color: white;transform:translate(-50%,0);"><p style="text-indent: 2em;">Вопросы и предложения приветствуются! ><a style="color: green;" href="https://greasyfork.org/zh-CN/scripts/30766-pixiv-previewer/feedback" target="_blank">Страница обратной связи</a><</p><br><p style="text-indent: 2em;">Если вы используете это впервые, рекомендуется перейти к<a style="color: green;" href="https://greasyfork.org/zh-CN/scripts/30766-pixiv-previewer" target="_blank"> Странице подробностей </a>, чтобы посмотреть введение в скрипт.</p></div>',
     setting_language: 'Язык',
     setting_preview: 'Предпросмотр',
     setting_sort: 'Сортировка (Страница поиска)',
@@ -3203,7 +3203,7 @@ function ShowInstallMessage() {
     });
     $('body').append(bg);
 
-    bg.get(0).innerHTML = '<img id="pps-close"src="https://pp-1252089172.cos.ap-chengdu.myqcloud.com/Close.png"style="position: absolute; right: 35px; top: 20px; width: 32px; height: 32px; cursor: pointer;"><div style="position:absolute;left:50%;top:30%;font-size:20px;color:white;transform:translate(-50%,0);">' + Texts[g_language].install_title + g_version + '</div><br>' + Texts[g_language].install_body;
+    bg.get(0).innerHTML = '<img id="pps-close"src="https://pp-1252089172.cos.ap-chengdu.myqcloud.com/Close.png"style="position: absolute; right: 35px; top: 20px; width: 32px; height: 32px; cursor: pointer;"><div style="position: absolute;width: 40%;left: 30%;top: 25%;font-size: 25px; text-align: center; color: white;">' + Texts[g_language].install_title + g_version + '</div><br>' + Texts[g_language].install_body;
     $('#pps-close').click(function () {
         $('#pp-bg').remove();
     });
