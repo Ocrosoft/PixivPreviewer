@@ -1612,6 +1612,9 @@ Pages[PageType.NovelSearch] = {
     GetToolBar: function () {
         return findToolbarCommon();
     },
+    GetPageSelector: function() {
+        return $('section:first').find('nav:first');
+    },
     HasAutoLoad: false,
     private: {
         returnMap: null,
@@ -3247,6 +3250,44 @@ function PixivNS(callback) {
         });
     }
 
+    function changePageSelector() {
+        let pager = Pages[PageType.NovelSearch].GetPageSelector();
+        if (pager.length == 0) {
+            iLog.e('can not found page selector!');
+            return;
+        }
+        let left = pager.find('a:first').clone().attr('aria-disabled', 'false').removeAttr('hidden');
+        let right = pager.find('a:last').clone().attr('aria-disabled', 'false').removeAttr('hidden');
+        let normal = pager.find('a').eq(1).clone().attr('href', '');
+        let href = location.href;
+        let match = href.match(/[?&]p=(\d+)/);
+        let page = 1;
+        if (match) {
+            page = parseInt(match[1]);
+        } else {
+            if (location.search == '') {
+                href += '?p=1';
+            } else {
+                href += '&p=1';
+            }
+        }
+        if (page == 1) {
+            left.attr('hidden', 'hidden');
+        }
+        pager.empty();
+        let lp = page - g_settings.novelPageCount;
+        left.attr('href', href.replace('?p=' + page, '?p=' + lp).replace('&p=' + page, '&p=' + lp));
+        pager.append(left);
+        let s = 'Previewer';
+        for (let i = 0; i < s.length; ++i) {
+            let n = normal.clone().text(s[i]);
+            pager.append(n);
+        }
+        let rp = page + g_settings.novelPageCount;
+        right.attr('href', href.replace('?p=' + page, '?p=' + rp).replace('&p=' + page, '&p=' + rp));
+        pager.append(right);
+    }
+
     function main() {
         let keyWord = getKeyWord();
         if (keyWord.length == 0) {
@@ -3258,6 +3299,7 @@ function PixivNS(callback) {
         showLoading();
         getNovelByPage(keyWord, currentPage, currentPage + g_settings.novelPageCount).then(function (novelList) {
             rearrangeNovel(sortNovel(novelList));
+            changePageSelector();
         });
     }
 
