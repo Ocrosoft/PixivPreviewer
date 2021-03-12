@@ -330,7 +330,7 @@ let g_sortComplete = true;
 
 // 页面相关的一些预定义，包括处理页面元素等
 let PageType = {
-    // 搜索
+    // 搜索（不包含小说搜索）
     Search: 0,
     // 关注的新作品
     BookMarkNew: 1,
@@ -352,9 +352,11 @@ let PageType = {
     Stacc: 9,
     // 作品详情页（处理动图预览及下载）
     Artwork: 10,
+    // 小说页
+    NovelSearch: 11,
 
     // 总数
-    PageTypeCount: 11,
+    PageTypeCount: 12,
 };
 let Pages = {};
 /* Pages 必须实现的函数
@@ -1568,6 +1570,38 @@ Pages[PageType.Artwork] = {
         returnMap: null,
     },
 };
+Pages[PageType.NovelSearch] = {
+    PageTypeString: 'NovelSearchPage',
+    CheckUrl: function(url) {
+        return /^https:\/\/www.pixiv.net\/tags\/.*\/novels/.test(url) ||
+            /^https:\/\/www.pixiv.net\/en\/tags\/.*\/novels/.test(url);
+    },
+    ProcessPageElements: function() {
+        let returnMap = {
+            loadingComplete: false,
+            controlElements: [],
+        };
+        let ul = $('section>div>ul');
+        if (ul.length > 0) {
+            returnMap.loadingComplete = true;
+        }
+        this.private.returnMap = returnMap;
+        return returnMap;
+    },
+    GetProcessedPageElements: function () {
+        if (this.private.returnMap == null) {
+            return this.ProcessPageElements();
+        }
+        return this.private.returnMap;
+    },
+    GetToolBar: function () {
+        return findToolbarCommon();
+    },
+    HasAutoLoad: false,
+    private: {
+        returnMap: null,
+    },
+}
 
 function CheckUrlTest() {
     let urls = [
@@ -1594,6 +1628,7 @@ function CheckUrlTest() {
         'https://www.pixiv.net/stacc?mode=unify',
         'https://www.pixiv.net/artworks/77996773',
         'https://www.pixiv.net/artworks/77996773#preview',
+        'https://www.pixiv.net/tags/miku/novels',
     ];
 
     for (let j = 0; j < urls.length; j++) {
@@ -2884,7 +2919,6 @@ function PixivSK(callback) {
     };
 
 /* ---------------------------------------- 小说 ---------------------------------------- */
-// 一个独立的组件，等差不多了丢出去
 function PixivNS(callback) {
     function findNovelSection() {
         let ul = $('section>div>ul');
@@ -3311,7 +3345,6 @@ function SetTargetBlank(returnMap) {
 let loadInterval = null;
 let itv = null;
 function Load() {
-    PixivNS();
     // 匹配当前页面
     for (let i = 0; i < PageType.PageTypeCount; i++) {
         if (Pages[i].CheckUrl(location.href)) {
@@ -3422,6 +3455,8 @@ function Load() {
                 } else if (g_settings.enablePreview) {
                     PixivPreview();
                 }
+            } else if (g_pageType == PageType.NovelSearch) {
+                PixivNS();
             } else if (g_settings.enablePreview) {
                 PixivPreview();
             }
