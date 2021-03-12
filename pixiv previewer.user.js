@@ -3044,6 +3044,9 @@ function PixivNS(callback) {
             }
             $(this).blur();
         });
+        if (g_settings.linkBlank) {
+            template.find('a').attr('target', '_blank');
+        }
         return template;
     }
 
