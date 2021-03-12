@@ -174,6 +174,9 @@ Texts[Lang.zh_CN] = {
     sort_filtering: '过滤%1收藏量低于%2的作品',
     sort_filteringHideFavorite: '已收藏和',
     sort_fullSizeThumb: '排序后展示全尺寸图片',
+    // 小说排序
+    nsort_getWorks: '正在获取第1%/2%页作品',
+    nsort_sorting: '正在按收藏量排序',
 };
 // translate by google
 Texts[Lang.en_US] = {
@@ -3010,12 +3013,18 @@ function PixivNS(callback) {
         return template;
     }
 
-    function getNovelByPage(key, from, to) {
+    function getNovelByPage(key, from, to, total) {
+        if (total == undefined) {
+            total = to - from;
+        }
+
         let url = location.origin + g_getNovelUrl.replace(/#key#/g, key).replace(/#page#/g, from);
         let search = getSearchParamsWithoutPage();
         if (search.length > 0) {
             url += '&' + search;
         }
+
+        updateProgress(Texts[g_language].nsort_getWorks.replace('1%', from).replace('2%', total));
         
         let novelList = [];
         function onLoadFinish(data, resolve) {
@@ -3023,10 +3032,10 @@ function PixivNS(callback) {
                 novelList = novelList.concat(data.body.novel.data);
             }
 
-            if (from >= to) {
+            if (from == to - 1) {
                 resolve(novelList);
             } else {
-                getNovelByPage(key, from + 1, to).then(function(list) {
+                getNovelByPage(key, from + 1, to, total).then(function(list) {
                     if (list && list.length > 0) {
                         novelList = novelList.concat(list);
                     }
@@ -3050,6 +3059,7 @@ function PixivNS(callback) {
     }
 
     function sortNovel(list) {
+        updateProgress(Texts[g_language].nsort_sorting);
         // 排序
         list.sort(function (a, b) {
             let bookmarkA = a.bookmarkCount;
@@ -3091,6 +3101,7 @@ function PixivNS(callback) {
         $.each(newList, function(i, e) {
             ul.append(e);
         });
+        hideLoading();
     }
 
     function getKeyWord() {
@@ -3109,16 +3120,47 @@ function PixivNS(callback) {
         return 1;
     }
 
-    let keyWord = getKeyWord();
-    if (keyWord.length == 0) {
-        DoLog(LogLevel.Error, 'Parse key word error.');
-        return;
-    }
-    let currentPage = getCurrentPage();
+    function showLoading() {
+        let ul = findNovelSection();
+        if (ul == null) {
+            iLog.e('Can not found novel section!');
+            return;
+        }
 
-    getNovelByPage(keyWord, currentPage, currentPage + 3).then(function(novelList) {
-        rearrangeNovel(sortNovel(novelList));
-    });
+        ul.hide().before('<div id="loading" style="width:100%;text-align:center;"><img src="' + g_loadingImage + '" /><p id="progress" style="text-align: center;font-size: large;font-weight: bold;padding-top: 10px;">0%</p></div>');
+    }
+
+    function hideLoading() {
+        let ul = findNovelSection();
+        if (ul == null) {
+            iLog.e('Can not found novel section!');
+            return;
+        }
+
+        $('#loading').remove();
+        ul.show();
+    }
+
+    function updateProgress(msg) {
+        let p = $('#progress');
+        p.text(msg);
+    }
+
+    function main() {
+        let keyWord = getKeyWord();
+        if (keyWord.length == 0) {
+            DoLog(LogLevel.Error, 'Parse key word error.');
+            return;
+        }
+        let currentPage = getCurrentPage();
+    
+        showLoading();
+        getNovelByPage(keyWord, currentPage, currentPage + 3).then(function(novelList) {
+            rearrangeNovel(sortNovel(novelList));
+        });
+    }
+
+    main();
 }
 /* ---------------------------------------- 设置 ---------------------------------------- */
 function SetCookie(name, value, days) {
