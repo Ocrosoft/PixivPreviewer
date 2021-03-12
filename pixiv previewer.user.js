@@ -3256,8 +3256,8 @@ function PixivNS(callback) {
             iLog.e('can not found page selector!');
             return;
         }
-        let left = pager.find('a:first').clone().attr('aria-disabled', 'false').removeAttr('hidden');
-        let right = pager.find('a:last').clone().attr('aria-disabled', 'false').removeAttr('hidden');
+        let left = pager.find('a:first').clone().attr('aria-disabled', 'false').removeAttr('hidden').addClass('pp-prevPage');
+        let right = pager.find('a:last').clone().attr('aria-disabled', 'false').removeAttr('hidden').addClass('pp-nextPage');
         let normal = pager.find('a').eq(1).clone().removeAttr('href');
         let href = location.href;
         let match = href.match(/[?&]p=(\d+)/);
@@ -3288,6 +3288,27 @@ function PixivNS(callback) {
         pager.append(right);
     }
 
+    function listnerToKeyBoard() {
+        $(document).keydown(function (e) {
+            if (g_settings.pageByKey != 1) {
+                return;
+            }
+            if (e.keyCode == 39) {
+                let btn = $('.pp-nextPage');
+                if (btn.length < 1 || btn.attr('hidden') == 'hidden') {
+                    return;
+                }
+                location.href = btn.attr('href');
+            } else if (e.keyCode == 37) {
+                let btn = $('.pp-prevPage');
+                if (btn.length < 1 || btn.attr('hidden') == 'hidden') {
+                    return;
+                }
+                location.href = btn.attr('href');
+            }
+        });
+    }
+
     function main() {
         let keyWord = getKeyWord();
         if (keyWord.length == 0) {
@@ -3300,6 +3321,7 @@ function PixivNS(callback) {
         getNovelByPage(keyWord, currentPage, currentPage + g_settings.novelPageCount).then(function (novelList) {
             rearrangeNovel(sortNovel(novelList));
             changePageSelector();
+            listnerToKeyBoard();
         });
     }
 
