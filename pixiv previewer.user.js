@@ -2948,7 +2948,7 @@ function PixivNS(callback) {
     }
 
     function getSearchParamsWithoutPage() {
-        return location.search.substr(1).replace(/&?p=\d+/);
+        return location.search.substr(1).replace(/&?p=\d+/, '');
     }
 
     function getNovelTemplate(ul) {
@@ -3064,7 +3064,7 @@ function PixivNS(callback) {
             url += '&' + search;
         }
 
-        updateProgress(Texts[g_language].nsort_getWorks.replace('1%', from).replace('2%', total));
+        updateProgress(Texts[g_language].nsort_getWorks.replace('1%', total - to + from + 1).replace('2%', total));
 
         let novelList = [];
         function onLoadFinish(data, resolve) {
@@ -3258,7 +3258,7 @@ function PixivNS(callback) {
         }
         let left = pager.find('a:first').clone().attr('aria-disabled', 'false').removeAttr('hidden');
         let right = pager.find('a:last').clone().attr('aria-disabled', 'false').removeAttr('hidden');
-        let normal = pager.find('a').eq(1).clone().attr('href', '');
+        let normal = pager.find('a').eq(1).clone().removeAttr('href');
         let href = location.href;
         let match = href.match(/[?&]p=(\d+)/);
         let page = 1;
