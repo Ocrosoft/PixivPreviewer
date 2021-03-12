@@ -202,6 +202,8 @@ Texts[Lang.en_US] = {
     setting_save: 'Save',
     setting_reset: 'Reset',
     setting_resetHint: 'This will delete all settings and set it to default. Are you sure?',
+    setting_novelSort: 'Sorting (Novel)',
+    setting_novelMaxPage: 'Maximum number of pages counted for novel sorting',
     sort_noWork: 'No works to display',
     sort_getWorks: 'Getting artworks of page: %1 of %2',
     sort_getBookmarkCount: 'Getting bookmark count of artworks：%1 of %2',
@@ -210,6 +212,8 @@ Texts[Lang.en_US] = {
     sort_filtering: 'Filtering%1works with bookmark count less than %2',
     sort_filteringHideFavorite: ' favorited works and ',
     sort_fullSizeThumb: 'Display not cropped images.',
+    nsort_getWorks: 'Getting novels of page: 1% of 2%',
+    nsort_sorting: 'Sorting by bookmark cound',
 };
 // RU: перевод от  vanja-san
 Texts[Lang.ru_RU] = {
@@ -233,6 +237,8 @@ Texts[Lang.ru_RU] = {
     setting_save: 'Сохранить',
     setting_reset: 'Сбросить',
     setting_resetHint: 'Это удалит все настройки и установит их по умолчанию. Продолжить?',
+    setting_novelSort: Texts[Lang.en_US].setting_novelSort,
+    setting_novelMaxPage: Texts[Lang.en_US].setting_novelMaxPage,
     sort_noWork: 'Нет работ для отображения',
     sort_getWorks: 'Получение иллюстраций страницы: %1 из %2',
     sort_getBookmarkCount: 'Получение количества закладок artworks：%1 из %2',
@@ -241,6 +247,8 @@ Texts[Lang.ru_RU] = {
     sort_filtering: 'Фильтрация %1 работ с количеством закладок меньше чем %2',
     sort_filteringHideFavorite: ' избранные работы и ',
     sort_fullSizeThumb: 'Показать неотредактированное изображение',
+    nsort_getWorks: Texts[Lang.en_US].nsort_getWorks,
+    nsort_sorting: Texts[Lang.en_US].nsort_sorting,
 };
 
 let LogLevel = {
