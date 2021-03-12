@@ -2980,9 +2980,9 @@ function PixivNS(callback) {
                 'max-width': '100%',
                 'line-height': '22px',
                 'font-size': '14px',
-                'color': 'rgba(0, 0, 0, 0, 0.32)',
                 'text-decoration': 'none'
-            })
+            });
+            $('head').append('<style>.pns-series:visited{color:rgb(173,173,173)}</style>');
             titleDiv.prepend(series);
         }
         titleDiv.children().eq(1).addClass('pns-title').addClass('pns-link');
