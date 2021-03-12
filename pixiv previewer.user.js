@@ -3318,10 +3318,10 @@ function PixivNS(callback) {
         let currentPage = getCurrentPage();
 
         showLoading();
+        changePageSelector();
+        listnerToKeyBoard();
         getNovelByPage(keyWord, currentPage, currentPage + g_settings.novelPageCount).then(function (novelList) {
             rearrangeNovel(sortNovel(novelList));
-            changePageSelector();
-            listnerToKeyBoard();
         });
     }
 
