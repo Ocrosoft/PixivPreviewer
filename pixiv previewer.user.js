@@ -16,54 +16,54 @@
 // 后面把DoLog替换掉
 function ILog() {
     this.prefix = '';
- 
+
     this.v = function (value) {
         if (level <= this.LogLevel.Verbose) {
             console.log(this.prefix + value);
         }
     }
- 
+
     this.i = function (info) {
         if (level <= this.LogLevel.Info) {
             console.info(this.prefix + info);
         }
     }
- 
+
     this.w = function (warning) {
         if (level <= this.LogLevel.Warning) {
             console.warn(this.prefix + warning);
         }
     }
- 
+
     this.e = function (error) {
         if (level <= this.LogLevel.Error) {
             console.error(this.prefix + error);
         }
     }
- 
+
     this.d = function (element) {
         if (level <= this.LogLevel.Verbose) {
             console.log(element);
         }
     }
- 
+
     this.setLogLevel = function (logLevel) {
         level = logLevel;
     }
- 
+
     this.LogLevel = {
         Verbose: 0,
         Info: 1,
         Warning: 2,
         Error: 3,
     };
- 
+
     let level = this.LogLevel.Verbose;
 }
 var iLog = new ILog();
 
 // https://greasyfork.org/zh-CN/scripts/417760-checkjquery
-var checkJQuery = function() {
+var checkJQuery = function () {
     let jqueryCdns = [
         'http://code.jquery.com/jquery-2.1.4.min.js',
         'https://ajax.aspnetcdn.com/ajax/jquery/jquery-2.1.4.min.js',
@@ -92,7 +92,7 @@ var checkJQuery = function() {
     function converProtocolIfNeeded(url) {
         let isHttps = location.href.indexOf('https://') != -1;
         let urlIsHttps = url.indexOf('https://') != -1;
- 
+
         if (isHttps && !urlIsHttps) {
             return url.replace('http://', 'https://');
         } else if (!isHttps && urlIsHttps) {
@@ -109,7 +109,7 @@ var checkJQuery = function() {
         let url = converProtocolIfNeeded(jqueryCdns[cdnIndex]);
         iLog.i('尝试第 ' + (cdnIndex + 1) + ' 个 JQuery CDN：' + url + '。');
         let script = insertJQuery(url);
-        setTimeout(function() {
+        setTimeout(function () {
             if (isJQueryValid()) {
                 iLog.i('已加载 JQuery。');
                 resolve(true);
@@ -120,7 +120,7 @@ var checkJQuery = function() {
             }
         }, 100);
     }
-    return new Promise(function(resolve) {
+    return new Promise(function (resolve) {
         if (isJQueryValid()) {
             iLog.i('已加载 jQuery。');
             resolve(true);
@@ -165,6 +165,8 @@ Texts[Lang.zh_CN] = {
     setting_save: '保存设置',
     setting_reset: '重置脚本',
     setting_resetHint: '这会删除所有设置，相当于重新安装脚本，确定要重置吗？',
+    setting_novelSort: '小说排序',
+    setting_novelMaxPage: '小说排序时统计的最大页数',
     // 搜索时过滤值太高
     sort_noWork: '没有可以显示的作品',
     sort_getWorks: '正在获取第%1/%2页作品',
@@ -283,7 +285,7 @@ function DoLog(level, msgOrElement) {
 // 语言
 let g_language = Lang.zh_CN;
 // 版本号，第三位不需要跟脚本的版本号对上，第三位更新只有需要弹更新提示的时候才需要更新这里
-let g_version = '3.2.0';
+let g_version = '3.5.0';
 // 添加收藏需要这个
 let g_csrfToken = '';
 // 打的日志数量，超过一定数值清空控制台
@@ -312,13 +314,15 @@ let g_defaultSettings = {
     'enableAnimeDownload': 1,
     'original': 0,
     'previewDelay': 200,
-    'pageCount': 2,
+    'pageCount': 3,
     'favFilter': 0,
     'hideFavorite': 0,
     'hideFollowed': 0,
     'linkBlank': 1,
     'pageByKey': 0,
     'fullSizeThumb': 0,
+    'enableNovelSort': 1,
+    'novelPageCount': 3,
     'logLevel': 1,
     'version': g_version,
 };
@@ -896,7 +900,7 @@ Pages[PageType.Home] = {
 
         // 实际里面还套了一个 div，处理一下，方便一点
         let illust_div_c = [];
-        illust_div.each(function(i, e) {
+        illust_div.each(function (i, e) {
             illust_div_c.push($(e).children('div:first'));
         });
         illust_div = illust_div_c;
@@ -1575,11 +1579,11 @@ Pages[PageType.Artwork] = {
 };
 Pages[PageType.NovelSearch] = {
     PageTypeString: 'NovelSearchPage',
-    CheckUrl: function(url) {
+    CheckUrl: function (url) {
         return /^https:\/\/www.pixiv.net\/tags\/.*\/novels/.test(url) ||
             /^https:\/\/www.pixiv.net\/en\/tags\/.*\/novels/.test(url);
     },
-    ProcessPageElements: function() {
+    ProcessPageElements: function () {
         let returnMap = {
             loadingComplete: false,
             controlElements: [],
@@ -1691,20 +1695,20 @@ function PixivPreview() {
             g_mousePos = { x: e.pageX, y: e.pageY };
             // 预览 Div
             let previewDiv = $(document.createElement('div')).addClass('pp-main').attr('illustId', illustId)
-            .css({
-                'position': 'absolute', 'z-index': '999999', 'left': g_mousePos.x + 'px', 'top': g_mousePos.y + 'px',
-                'border-style': 'solid', 'border-color': '#6495ed', 'border-width': '2px', 'border-radius': '20px',
-                'width': '48px', 'height': '48px',
-                'background-image': 'url(https://pp-1252089172.cos.ap-chengdu.myqcloud.com/transparent.png)',
-                'display': 'none'
-            });
+                .css({
+                    'position': 'absolute', 'z-index': '999999', 'left': g_mousePos.x + 'px', 'top': g_mousePos.y + 'px',
+                    'border-style': 'solid', 'border-color': '#6495ed', 'border-width': '2px', 'border-radius': '20px',
+                    'width': '48px', 'height': '48px',
+                    'background-image': 'url(https://pp-1252089172.cos.ap-chengdu.myqcloud.com/transparent.png)',
+                    'display': 'none'
+                });
             // 添加到 body
             $('.pp-main').remove();
             $('body').append(previewDiv);
 
             let waitTime = delay - (new Date().getTime() - startTime);
             if (waitTime > 0) {
-                setTimeout(function() {
+                setTimeout(function () {
                     previewDiv.show();
                 }, waitTime);
             } else {
@@ -1723,7 +1727,7 @@ function PixivPreview() {
 
             // 原图（笑脸）图标
             let originIcon = $(new Image()).addClass('pp-original').attr('src', 'https://source.pixiv.net/www/images/pixivcomic-favorite.png')
-            .css({ 'position': 'absolute', 'bottom': '5px', 'right': '5px', 'display': 'none' });
+                .css({ 'position': 'absolute', 'bottom': '5px', 'right': '5px', 'display': 'none' });
             previewDiv.append(originIcon);
 
             // 点击图标新网页打开原图
@@ -1734,7 +1738,7 @@ function PixivPreview() {
             // 右上角张数标记
             let pageCountHTML = '<div class="pp-pageCount" style="display: flex;-webkit-box-align: center;align-items: center;box-sizing: border-box;margin-left: auto;height: 20px;color: rgb(255, 255, 255);font-size: 10px;line-height: 12px;font-weight: bold;flex: 0 0 auto;padding: 4px 6px;background: rgba(0, 0, 0, 0.32);border-radius: 10px;margin-top:5px;margin-right:5px;">\<svg viewBox="0 0 9 10" width="9" height="10" style="stroke: none;line-height: 0;font-size: 0px;fill: currentcolor;"><path d="M8,3 C8.55228475,3 9,3.44771525 9,4 L9,9 C9,9.55228475 8.55228475,10 8,10 L3,10 C2.44771525,10 2,9.55228475 2,9 L6,9 C7.1045695,9 8,8.1045695 8,7 L8,3 Z M1,1 L6,1 C6.55228475,1 7,1.44771525 7,2 L7,7 C7,7.55228475 6.55228475,8 6,8 L1,8 C0.44771525,8 0,7.55228475 0,7 L0,2 C0,1.44771525 0.44771525,1 1,1 Z"></path></svg><span style="margin-left:2px;" class="pp-page">0/0</span></div>';
             let pageCountDiv = $(pageCountHTML)
-            .css({ 'position': 'absolute', 'top': '0px', 'display': 'none', 'right': '0px', 'display': 'none' });
+                .css({ 'position': 'absolute', 'top': '0px', 'display': 'none', 'right': '0px', 'display': 'none' });
             previewDiv.append(pageCountDiv);
 
             $('.pp-main').mouseleave(function (e) {
@@ -2159,7 +2163,7 @@ function PixivSK(callback) {
     };
 
     function getFollowingOfType(user_id, type, offset) {
-        return new Promise(function(resolve, reject) {
+        return new Promise(function (resolve, reject) {
             if (offset == null) {
                 offset = 0;
             }
@@ -2167,7 +2171,7 @@ function PixivSK(callback) {
             let following_show = [];
             $.ajax('https://www.pixiv.net/ajax/user/' + user_id + '/following?offset=' + offset + '&limit=' + limit + '&rest=' + type, {
                 async: true,
-                success: function(data) {
+                success: function (data) {
                     if (data == null || data.error) {
                         DoLog(LogLevel.Error, 'Following response contains an error.');
                         resolve([]);
@@ -2177,15 +2181,15 @@ function PixivSK(callback) {
                         resolve([]);
                         return;
                     }
-                    $.each(data.body.users, function(i, user) {
+                    $.each(data.body.users, function (i, user) {
                         following_show.push(user.userId);
                     });
-                    getFollowingOfType(user_id, type, offset + limit).then(function(members) {
+                    getFollowingOfType(user_id, type, offset + limit).then(function (members) {
                         resolve(following_show.concat(members));
                         return;
                     });
                 },
-                error: function() {
+                error: function () {
                     DoLog(LogLevel.Error, 'Request following failed.');
                     resolve([]);
                 }
@@ -2194,12 +2198,12 @@ function PixivSK(callback) {
     }
 
     function getFollowingOfCurrentUser() {
-        return new Promise(function(resolve, reject) {
+        return new Promise(function (resolve, reject) {
             let user_id = '';
 
             try {
                 user_id = dataLayer[0].user_id;
-            } catch(ex) {
+            } catch (ex) {
                 DoLog(LogLevel.Error, 'Get user id failed.');
                 resolve([]);
                 return;
@@ -2215,9 +2219,9 @@ function PixivSK(callback) {
                 return;
             }
 
-            getFollowingOfType(user_id, 'show').then(function(members) {
+            getFollowingOfType(user_id, 'show').then(function (members) {
                 $('#progress').text(Texts[g_language].sort_getPrivateFollowing);
-                getFollowingOfType(user_id, 'hide').then(function(members2) {
+                getFollowingOfType(user_id, 'hide').then(function (members2) {
                     let following = members.concat(members2);
                     SetCookie('followingOfUid-' + user_id, following, 1);
                     resolve(following);
@@ -2227,13 +2231,13 @@ function PixivSK(callback) {
     }
 
     // 筛选已关注画师作品
-    let filterByUser = function() {
-        return new Promise(function(resolve, reject) {
+    let filterByUser = function () {
+        return new Promise(function (resolve, reject) {
             if (!g_settings.hideFollowed) {
                 resolve();
             }
 
-            getFollowingOfCurrentUser().then(function(members) {
+            getFollowingOfCurrentUser().then(function (members) {
                 let tempWorks = [];
                 let hideWorkCount = 0;
                 $(works).each(function (i, work) {
@@ -2261,7 +2265,7 @@ function PixivSK(callback) {
 
     // 排序和筛选
     let filterAndSort = function () {
-        return new Promise(function(resolve, reject) {
+        return new Promise(function (resolve, reject) {
             DoLog(LogLevel.Info, 'Start sort.');
             DoLog(LogLevel.Elements, works);
 
@@ -2278,7 +2282,7 @@ function PixivSK(callback) {
             });
             works = tmp;
 
-            filterByUser().then(function() {
+            filterByUser().then(function () {
                 // 排序
                 works.sort(function (a, b) {
                     let favA = a.bookmarkCount;
@@ -2474,7 +2478,7 @@ function PixivSK(callback) {
             let json = null;
             try {
                 json = JSON.parse(event.currentTarget.responseText);
-            } catch(e) {
+            } catch (e) {
                 DoLog(LogLevel.Error, 'Parse json failed!');
                 DoLog(LogLevel.Element, e);
                 return;
@@ -2620,7 +2624,7 @@ function PixivSK(callback) {
     ---div: 作者头像和昵称
     */
     let clearAndUpdateWorks = function () {
-        filterAndSort().then(function() {
+        filterAndSort().then(function () {
 
             let container = Pages[PageType.Search].GetImageListContainer();
             let firstImageElement = Pages[PageType.Search].GetFirstImageElement();
@@ -2703,7 +2707,7 @@ function PixivSK(callback) {
                 li.find('.ppImg').attr('src', regularUrl).css('object-fit', 'contain');
                 li.find('.ppImageLink').attr('href', '/artworks/' + works[i].id);
                 li.find('.ppTitleLink').attr('href', '/artworks/' + works[i].id).text(works[i].title);
-                li.find('.ppAuthorLink, .ppAuthorLinkProfileImage').attr('href', '/member.php?id=' + works[i].userId).attr({'userId': works[i].userId, 'profileImageUrl': works[i].profileImageUrl, 'userName': works[i].userName});
+                li.find('.ppAuthorLink, .ppAuthorLinkProfileImage').attr('href', '/member.php?id=' + works[i].userId).attr({ 'userId': works[i].userId, 'profileImageUrl': works[i].profileImageUrl, 'userName': works[i].userName });
                 li.find('.ppAuthorName').text(works[i].userName);
                 li.find('.ppAuthorImage').attr('src', works[i].profileImageUrl);
                 li.find('.ppBookmarkSvg').attr('illustId', works[i].id);
@@ -2751,7 +2755,7 @@ function PixivSK(callback) {
                         method: 'POST',
                         contentType: 'application/json;charset=utf-8',
                         headers: { 'x-csrf-token': g_csrfToken },
-                        data: '{"illust_id":"' + illustId + '","restrict":' +restrict + ',"comment":"","tags":[]}',
+                        data: '{"illust_id":"' + illustId + '","restrict":' + restrict + ',"comment":"","tags":[]}',
                         success: function (data) {
                             DoLog(LogLevel.Info, 'addBookmark result: ');
                             DoLog(LogLevel.Elements, data);
@@ -2789,7 +2793,7 @@ function PixivSK(callback) {
                 _this.parent().focus();
             });
 
-            $('.ppAuthorLink').on('mouseenter', function(e){
+            $('.ppAuthorLink').on('mouseenter', function (e) {
                 let _this = $(this);
 
                 function getOffset(e) {
@@ -2811,7 +2815,7 @@ function PixivSK(callback) {
                 $.ajax('https://www.pixiv.net/ajax/user/' + _this.attr('userId') + '?full=1', {
                     method: 'GET',
                     async: false,
-                    success: function(data) {
+                    success: function (data) {
                         if (data.error == false && data.body.isFollowed) {
                             isFollowed = true;
                         }
@@ -2822,7 +2826,7 @@ function PixivSK(callback) {
                 let pres = $('<div class="pp-authorDiv"><div class="ppa-main" style="position: absolute; top: 0px; left: 0px; border-width: 1px; border-style: solid; z-index: 1; border-color: rgba(0, 0, 0, 0.08); border-radius: 8px;"><div class=""style="    width: 336px;    background-color: rgb(255, 255, 255);    padding-top: 24px;    flex-flow: column;"><div class=""style=" display: flex; align-items: center; flex-flow: column;"><a class="ppa-authorLink"><div role="img"size="64"class=""style=" display: inline-block; width: 64px; height: 64px; border-radius: 50%; overflow: hidden;"><img class="ppa-authorImage" width="64"height="64"style="object-fit: cover; object-position: center top;"></div></a><a class="ppa-authorLink"><div class="ppa-authorName" style=" line-height: 24px; font-size: 16px; font-weight: bold; margin: 4px 0px 0px;"></div></a><div class=""style=" margin: 12px 0px 24px;"><button type="button"class="ppa-follow"style=" padding: 9px 25px; line-height: 1; border: none; border-radius: 16px; font-weight: 700; background-color: #0096fa; color: #fff; cursor: pointer;"><span style="margin-right: 4px;"><svg viewBox="0 0 8 8"width="10"height="10"class=""style=" stroke: rgb(255, 255, 255); stroke-linecap: round; stroke-width: 2;"><line x1="1"y1="4"x2="7"y2="4"></line><line x1="4"y1="1"x2="4"y2="7"></line></svg></span>关注</button></div></div></div></div></div>');
                 $('body').append(pres);
                 let offset = getOffset(this);
-                pres.find('.ppa-main').css({'top': offset.offsetTop - 196 + 'px', 'left': offset.offsetLeft - 113 + 'px'});
+                pres.find('.ppa-main').css({ 'top': offset.offsetTop - 196 + 'px', 'left': offset.offsetLeft - 113 + 'px' });
                 pres.find('.ppa-authorLink').attr('href', '/member.php?id=' + _this.attr('userId'));
                 pres.find('.ppa-authorImage').attr('src', _this.attr('profileImageUrl'));
                 pres.find('.ppa-authorName').text(_this.attr('userName'));
@@ -2830,13 +2834,13 @@ function PixivSK(callback) {
                     pres.find('.ppa-follow').get(0).outerHTML = '<button type="button" class="ppa-follow followed" data-click-action="click" data-click-label="follow" style="padding: 9px 25px;line-height: 1;border: none;border-radius: 16px;font-size: 14px;font-weight: 700;cursor: pointer;">关注中</button>';
                 }
                 pres.find('.ppa-follow').attr('userId', _this.attr('userId'));
-                pres.on('mouseleave', function(e) {
+                pres.on('mouseleave', function (e) {
                     $(this).remove();
-                }).on('mouseenter', function() {
+                }).on('mouseenter', function () {
                     $(this).addClass('mouseenter');
                 });
 
-                pres.find('.ppa-follow').on('click', function() {
+                pres.find('.ppa-follow').on('click', function () {
                     let userId = $(this).attr('userId');
                     if ($(this).hasClass('followed')) {
                         // 取关
@@ -2844,7 +2848,7 @@ function PixivSK(callback) {
                             method: 'POST',
                             headers: { 'x-csrf-token': g_csrfToken },
                             data: 'mode=del&type=bookuser&id=' + userId,
-                            success: function(data) {
+                            success: function (data) {
                                 DoLog(LogLevel.Info, 'delete bookmark result: ');
                                 DoLog(LogLevel.Elements, data);
 
@@ -2860,7 +2864,7 @@ function PixivSK(callback) {
                         // 关注
                         $.ajax('https://www.pixiv.net/bookmark_add.php', {
                             method: 'POST',
-                            headers: {'x-csrf-token': g_csrfToken},
+                            headers: { 'x-csrf-token': g_csrfToken },
                             data: 'mode=add&type=user&user_id=' + userId + '&tag=&restrict=0&format=json',
                             success: function (data) {
                                 DoLog(LogLevel.Info, 'addBookmark result: ');
@@ -2875,8 +2879,8 @@ function PixivSK(callback) {
                         });
                     }
                 });
-            }).on('mouseleave', function(e) {
-                setTimeout(function() {
+            }).on('mouseleave', function (e) {
+                setTimeout(function () {
                     if (!$('.pp-authorDiv').hasClass('mouseenter')) {
                         $('.pp-authorDiv').remove();
                     }
@@ -2919,7 +2923,7 @@ function PixivSK(callback) {
             }
         });
     }
-    };
+};
 
 /* ---------------------------------------- 小说 ---------------------------------------- */
 function PixivNS(callback) {
@@ -3004,7 +3008,7 @@ function PixivNS(callback) {
         $.each(novel.tags, function (i, tag) {
             let tagItem = $('<span"><a style="color: rgb(61, 118, 153);" href="/tags/' + tag + '/novels' + search + '">' + tag + '</a></span>');
             if (tag == 'R-18' || tag == 'R-18G') {
-                tagItem.find('a').css({'color': 'rgb(255, 64, 96)', 'font-weight': 'bold'}).text(tag);
+                tagItem.find('a').css({ 'color': 'rgb(255, 64, 96)', 'font-weight': 'bold' }).text(tag);
             }
             tagList.append(tagItem);
         });
@@ -3025,7 +3029,7 @@ function PixivNS(callback) {
         }
 
         updateProgress(Texts[g_language].nsort_getWorks.replace('1%', from).replace('2%', total));
-        
+
         let novelList = [];
         function onLoadFinish(data, resolve) {
             if (data && data.body && data.body.novel && data.body.novel.data) {
@@ -3035,7 +3039,7 @@ function PixivNS(callback) {
             if (from == to - 1) {
                 resolve(novelList);
             } else {
-                getNovelByPage(key, from + 1, to, total).then(function(list) {
+                getNovelByPage(key, from + 1, to, total).then(function (list) {
                     if (list && list.length > 0) {
                         novelList = novelList.concat(list);
                     }
@@ -3044,13 +3048,13 @@ function PixivNS(callback) {
             }
         }
 
-        return new Promise(function(resolve, reject) {
+        return new Promise(function (resolve, reject) {
             $.ajax({
                 url: url,
-                success: function(data) {
+                success: function (data) {
                     onLoadFinish(data, resolve);
                 },
-                error: function() {
+                error: function () {
                     DoLog(LogLevel.Error, 'get novel page ' + from + ' failed!');
                     onLoadFinish(null, resolve);
                 },
@@ -3091,14 +3095,14 @@ function PixivNS(callback) {
             return;
         }
         let newList = [];
-        $.each(list, function(i, novel) {
+        $.each(list, function (i, novel) {
             let e = fillTemplate(template.clone(true), novel);
             if (e != null) {
                 newList.push(e);
             }
         });
         ul.empty();
-        $.each(newList, function(i, e) {
+        $.each(newList, function (i, e) {
             ul.append(e);
         });
         hideLoading();
@@ -3153,9 +3157,9 @@ function PixivNS(callback) {
             return;
         }
         let currentPage = getCurrentPage();
-    
+
         showLoading();
-        getNovelByPage(keyWord, currentPage, currentPage + 3).then(function(novelList) {
+        getNovelByPage(keyWord, currentPage, currentPage + g_settings.novelPageCount).then(function (novelList) {
             rearrangeNovel(sortNovel(novelList));
         });
     }
@@ -3191,33 +3195,65 @@ function ShowInstallMessage() {
     });
     $('body').append(bg);
 
-    bg.get(0).innerHTML = '<img id="pps-close"src="https://pp-1252089172.cos.ap-chengdu.myqcloud.com/Close.png"style="position: absolute; right: 35px; top: 20px; width: 32px; height: 32px; cursor: pointer;"><div style="position: absolute;width: 40%;left: 30%;top: 25%;font-size: 25px; text-align: center; color: white;">' + Texts[g_language].install_title + g_version + '</div><br>' + Texts[g_language].install_body;
+    bg.get(0).innerHTML = '<img id="pps-close"src="https://pp-1252089172.cos.ap-chengdu.myqcloud.com/Close.png"style="position: absolute; right: 35px; top: 20px; width: 32px; height: 32px; cursor: pointer;"><div style="position:absolute;left:50%;top:30%;font-size:20px;color:white;transform:translate(-50%,0);">' + Texts[g_language].install_title + g_version + '</div><br>' + Texts[g_language].install_body;
     $('#pps-close').click(function () {
         $('#pp-bg').remove();
     });
+}
+function ShowUpgradeMessage() {
+    $('#pp-bg').remove();
+    let bg = $('<div id="pp-bg"></div>').css({
+        'width': document.documentElement.clientWidth + 'px', 'height': document.documentElement.clientHeight + 'px', 'position': 'fixed',
+        'z-index': 999999, 'background-color': 'rgba(0,0,0,0.8)',
+        'left': '0px', 'top': '0px'
+    });
+    $('body').append(bg);
+
+    let body = '新功能：<br><dd>1.支持搜索页小说排序，可在设置中关闭。</dd>优化：<br><dd>1.减少jQuery引发的错误。<br>2.设置在小窗口下不会超出屏幕。</dd>修复：<br><dd>1.更新提示不会随窗口大小改变。</dd>';
+    bg.get(0).innerHTML = '<img id="pps-close"src="https://pp-1252089172.cos.ap-chengdu.myqcloud.com/Close.png"style="position: absolute; right: 35px; top: 20px; width: 32px; height: 32px; cursor: pointer;"><div style="position: absolute;width: 40%;left: 30%;top: 25%;font-size: 25px; text-align: center; color: white;">'
+        + Texts[g_language].install_title + g_version 
+        + '</div><br><div style="position:absolute;left:50%;top:30%;font-size:20px;color:white;transform:translate(-50%,0);">' 
+        + body + '</div>';
+    $('#pps-close').click(function () {
+        $('#pp-bg').remove();
+    });
+}
+function FillNewSetting(st) {
+    // 升级可能会有部分新加字段在cookie里读不到
+    let changed = false;
+    $.each(g_defaultSettings, function(k, v) {
+        if (st[k] == undefined) {
+            st[k] = g_defaultSettings[k];
+            changed = true;
+        }
+    });
+    return {
+        'st': st,
+        'change': changed
+    };
 }
 function GetSettings() {
     let settings;
 
     let cookie = GetCookie('PixivPreview');
-    // 新安装
     if (cookie == null || cookie == 'null') {
+        // 新安装
         settings = g_defaultSettings;
         SetCookie('PixivPreview', settings);
-
         ShowInstallMessage();
     } else {
         settings = JSON.parse(cookie);
-    }
-
-    // 升级
-    if (settings.version != g_version) {
-        ShowInstallMessage();
-    }
-
-    if (settings.version == null || settings.version != g_version) {
-        settings.version = g_version;
-        SetCookie('PixivPreview', settings);
+        let mp = FillNewSetting(settings);
+        if (mp.change) {
+            settings = mp.st;
+            SetCookie('PixivPreview', settings);
+        }
+        // 升级
+        if (settings.version != g_version) {
+            ShowUpgradeMessage();
+            settings.version = g_version;
+            SetCookie('PixivPreview', settings);
+        }
     }
 
     return settings;
@@ -3270,10 +3306,13 @@ function ShowSetting() {
     addItem(getInputAction('pps-maxPage'), Texts[g_language].setting_maxPage);
     addItem(getInputAction('pps-hideLess'), Texts[g_language].setting_hideWork);
     addItem(getImageAction('pps-hideBookmarked'), Texts[g_language].setting_hideFav);
-    addItem(getImageAction('pps-hideFollowed'), Texts[g_language].setting_hideFollowed + '&nbsp<button id="pps-clearFollowingCache" style="cursor:pointer;background-color:gold;border-radius:12px;" title="' + Texts[g_language].setting_clearFollowingCacheHelp + '">' + Texts[g_language].setting_clearFollowingCache + '</button>');
+    addItem(getImageAction('pps-hideFollowed'), Texts[g_language].setting_hideFollowed + '&nbsp<button id="pps-clearFollowingCache" style="cursor:pointer;background-color:gold;border-radius:12px;border:none;font-size:20px;padding:3px 10px;" title="' + Texts[g_language].setting_clearFollowingCacheHelp + '">' + Texts[g_language].setting_clearFollowingCache + '</button>');
     addItem(getImageAction('pps-newTab'), Texts[g_language].setting_blank);
     addItem(getImageAction('pps-pageKey'), Texts[g_language].setting_turnPage);
     addItem(getImageAction('pps-fullSizeThumb'), Texts[g_language].sort_fullSizeThumb);
+    addItem('', '&nbsp');
+    addItem(getImageAction('pps-novelSort'), Texts[g_language].setting_novelSort);
+    addItem(getInputAction('pps-novelMaxPage'), Texts[g_language].setting_novelMaxPage);
 
     let imgOn = 'https://pp-1252089172.cos.ap-chengdu.myqcloud.com/On.png';
     let imgOff = 'https://pp-1252089172.cos.ap-chengdu.myqcloud.com/Off.png'
@@ -3281,14 +3320,16 @@ function ShowSetting() {
     $('#pps-sort').attr('src', settings.enableSort ? imgOn : imgOff).addClass(settings.enableSort ? 'on' : 'off').css('cursor: pointer');
     $('#pps-anime').attr('src', settings.enableAnimeDownload ? imgOn : imgOff).addClass(settings.enableAnimeDownload ? 'on' : 'off').css('cursor: pointer');
     $('#pps-original').attr('src', settings.original ? imgOn : imgOff).addClass(settings.original ? 'on' : 'off').css('cursor: pointer');
-    $('#pps-previewDelay').val(settings.previewDelay == null ? g_defaultSettings.previewDelay : settings.previewDelay);
-    $('#pps-maxPage').val(settings.pageCount == null ? g_defaultSettings.pageCount : settings.pageCount);
-    $('#pps-hideLess').val(settings.favFilter == null ? g_defaultSettings.favFilter : settings.favFilter);
+    $('#pps-previewDelay').val(settings.previewDelay);
+    $('#pps-maxPage').val(settings.pageCount);
+    $('#pps-hideLess').val(settings.favFilter);
     $('#pps-hideBookmarked').attr('src', settings.hideFavorite ? imgOn : imgOff).addClass(settings.hideFavorite ? 'on' : 'off').css('cursor: pointer');
     $('#pps-hideFollowed').attr('src', settings.hideFollowed ? imgOn : imgOff).addClass(settings.hideFollowed ? 'on' : 'off').css('cursor: pointer');
     $('#pps-newTab').attr('src', settings.linkBlank ? imgOn : imgOff).addClass(settings.linkBlank ? 'on' : 'off').css('cursor: pointer');
     $('#pps-pageKey').attr('src', settings.pageByKey ? imgOn : imgOff).addClass(settings.pageByKey ? 'on' : 'off').css('cursor: pointer');
     $('#pps-fullSizeThumb').attr('src', settings.fullSizeThumb ? imgOn : imgOff).addClass(settings.fullSizeThumb ? 'on' : 'off').css('cursor: pointer');
+    $('#pps-novelSort').attr('src', settings.enableNovelSort ? imgOn : imgOff).addClass(settings.enableNovelSort ? 'on' : 'off').css('cursor: pointer');
+    $('#pps-novelMaxPage').val(settings.novelPageCount);
 
     $('#pps-lang')
         .append('<option value="-1">Auto</option>')
@@ -3306,7 +3347,7 @@ function ShowSetting() {
             _this.attr('src', imgOn).removeClass('off').addClass('on');
         }
     });
-    $('#pps-clearFollowingCache').click(function() {
+    $('#pps-clearFollowingCache').click(function () {
         let user_id = dataLayer[0].user_id;
         SetCookie('followingOfUid-' + user_id, null, -1);
         alert(Texts[g_language].setting_followingCacheCleared);
@@ -3334,6 +3375,8 @@ function ShowSetting() {
             'linkBlank': $('#pps-newTab').hasClass('on') ? 1 : 0,
             'pageByKey': $('#pps-pageKey').hasClass('on') ? 1 : 0,
             'fullSizeThumb': $('#pps-fullSizeThumb').hasClass('on') ? 1 : 0,
+            'enableNovelSort': $('#pps-novelSort').hasClass('on') ? 1 : 0,
+            'novelPageCount': parseInt($('#pps-novelMaxPage').val()),
             'version': g_version,
         }
 
@@ -3357,21 +3400,21 @@ function ShowSetting() {
 function SetTargetBlank(returnMap) {
     if (g_settings.linkBlank) {
         let target = [];
-        $.each(returnMap.controlElements, function(i, e) {
+        $.each(returnMap.controlElements, function (i, e) {
             if (e.tagName == 'A') {
                 target.push(e);
             }
         });
 
-        $.each($(returnMap.controlElements).find('a'), function(i, e) {
+        $.each($(returnMap.controlElements).find('a'), function (i, e) {
             target.push(e);
         });
 
-        $.each(target, function(i, e) {
-            $(e).attr({'target': '_blank', 'rel': 'external'});
+        $.each(target, function (i, e) {
+            $(e).attr({ 'target': '_blank', 'rel': 'external' });
             // 主页这里用的是js监听跳转，特殊处理
             if (g_pageType == PageType.Home || g_pageType == PageType.Member || g_pageType == PageType.Artwork) {
-                e.addEventListener("click", function(ev) {
+                e.addEventListener("click", function (ev) {
                     ev.stopPropagation();
                 })
             }
@@ -3407,11 +3450,11 @@ function Load() {
         return;
     }
 
-    window.onresize = function() {
-        if ($('#pps-save').length > 0) {
+    window.onresize = function () {
+        if ($('#pp-bg').length > 0) {
             let screenWidth = document.documentElement.clientWidth;
             let screenHeight = document.documentElement.clientHeight;
-            $('#pp-bg').css({'width': screenWidth + 'px', 'height': screenHeight + 'px'});
+            $('#pp-bg').css({ 'width': screenWidth + 'px', 'height': screenHeight + 'px' });
         }
     };
 
@@ -3478,7 +3521,7 @@ function Load() {
             else if (g_pageType == PageType.Search) {
                 if (g_settings.enableSort) {
                     g_sortComplete = false;
-                    PixivSK(function() {
+                    PixivSK(function () {
                         g_sortComplete = true;
                         if (g_settings.enablePreview) {
                             PixivPreview();
@@ -3488,7 +3531,9 @@ function Load() {
                     PixivPreview();
                 }
             } else if (g_pageType == PageType.NovelSearch) {
-                PixivNS();
+                if (g_settings.enableNovelSort) {
+                    PixivNS();
+                }
             } else if (g_settings.enablePreview) {
                 PixivPreview();
             }
@@ -3500,7 +3545,7 @@ function Load() {
 }
 function startLoad() {
     loadInterval = setInterval(Load, 1000);
-    setInterval(function() {
+    setInterval(function () {
         if (location.href != initialUrl) {
             // 排序中点击搜索tag，可能导致进行中的排序出现混乱，加取消太麻烦，直接走刷新
             if (!g_sortComplete) {
@@ -3521,11 +3566,17 @@ function startLoad() {
         }
     }, 1000);
 }
-let jqItv = setInterval(function() {
-    checkJQuery().then(function(isLoad) {
+let inChecking = false;
+let jqItv = setInterval(function () {
+    if (inChecking) {
+        return;
+    }
+    inChecking = true;
+    checkJQuery().then(function (isLoad) {
         if (isLoad) {
             clearInterval(jqItv);
             startLoad();
         }
+        inChecking = false;
     });
 }, 1000);
