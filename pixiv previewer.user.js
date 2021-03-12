@@ -3238,9 +3238,9 @@ function ShowSetting() {
 
     let settingHTML = '<div style="color: white; font-size: 1em;">' +
         '<img id="pps-close" src="https://pp-1252089172.cos.ap-chengdu.myqcloud.com/Close.png" style="position: absolute; right: 35px; top: 20px; width: 32px; height: 32px; cursor: pointer;">' +
-        '<div style="position: absolute; width: 60%; left: 25%; top: 10%; overflow: hidden;">' +
+        '<div style="position: absolute; height: 60%; left: 50%; top: 10%; overflow-y: auto; transform: translate(-50%, 0%);">' +
         '<ul id="pps-ul" style="list-style: none; padding: 0; margin: 0;"></ul></div>' +
-        '<div style="margin-top: 10px;position: absolute;bottom: 20%;width: 100%;text-align: center;">' +
+        '<div style="margin-top: 10px;position: absolute;bottom: 10%;width: 100%;text-align: center;">' +
         '<button id="pps-save" style="font-size: 25px; border-radius: 12px; height: 48px; min-width: 138px; max-width: 150px; background-color: green; color: white; margin: 0 32px 0 32px; cursor: pointer; border: none;">' + Texts[g_language].setting_save + '</button>' +
         '<button id="pps-reset" style="font-size: 25px; border-radius: 12px; height: 48px; min-width: 138px; max-width: 150px; background-color: darkred; color: white; margin: 0 32px 0 32px; cursor: pointer; border: none;">' + Texts[g_language].setting_reset + '</button>' +
         '</div></div>';
@@ -3353,11 +3353,6 @@ function ShowSetting() {
     $('#pps-close').click(function () {
         $('#pp-bg').remove();
     });
-
-    if (screenWidth < 1400) {
-        let fontSize = parseInt(25 - (1400 - screenWidth) / 40);
-        $('#pp-bg').find('li').css('font-size', fontSize + 'px');
-    }
 }
 function SetTargetBlank(returnMap) {
     if (g_settings.linkBlank) {
@@ -3417,11 +3412,6 @@ function Load() {
             let screenWidth = document.documentElement.clientWidth;
             let screenHeight = document.documentElement.clientHeight;
             $('#pp-bg').css({'width': screenWidth + 'px', 'height': screenHeight + 'px'});
-
-            if (screenWidth < 1400) {
-                let fontSize = parseInt(25 - (1400 - screenWidth) / 40);
-                $('#pp-bg').find('li').css('font-size', fontSize + 'px');
-            }
         }
     };
 
