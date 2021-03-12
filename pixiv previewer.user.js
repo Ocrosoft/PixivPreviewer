@@ -2967,7 +2967,25 @@ function PixivNS(callback) {
         // 右侧详情
         let detailDiv = template.children().eq(0).children().eq(1);
         let titleDiv = detailDiv.children().eq(0);
-        titleDiv.children().eq(0).addClass('pns-title').addClass('pns-link');
+        if (titleDiv.children().length > 1) {
+            titleDiv.children().eq(0).addClass('pns-series');
+        } else {
+            // 如果作为模板的DIV没有系列，就自己加一个
+            let series = $('<a class="pns-series" href="/novel/series/000000"></a>');
+            series.css({
+                'display': 'inline-block',
+                'white-space': 'nowrap',
+                'text-overflow': 'ellipsis',
+                'overflow': 'hidden',
+                'max-width': '100%',
+                'line-height': '22px',
+                'font-size': '14px',
+                'color': 'rgba(0, 0, 0, 0, 0.32)',
+                'text-decoration': 'none'
+            })
+            titleDiv.prepend(series);
+        }
+        titleDiv.children().eq(1).addClass('pns-title').addClass('pns-link');
         let authorDiv = detailDiv.children().eq(1);
         authorDiv.children().eq(0).addClass('pns-author');
         let tagDiv = detailDiv.children().eq(2);
@@ -2998,6 +3016,12 @@ function PixivNS(callback) {
         let link = template.find('.pns-link:first').attr('href').replace(/id=\d+/g, 'id=' + novel.id);
         template.find('.pns-link').attr('href', link);
         template.find('.pns-img').attr('src', novel.url);
+        if (novel.seriesId) {
+            let seriesLink = template.find('.pns-series').attr('href').replace(/\d+$/, novel.seriesId);
+            template.find('.pns-series').text(novel.seriesTitle).attr('title', novel.seriesTitle).attr('href', seriesLink);
+        } else {
+            template.find('.pns-series').hide();
+        }
         template.find('.pns-title').text(novel.title).attr('title', novel.title);
         let authorLink = template.find('.pns-author').attr('href').replace(/\d+$/, novel.userId);
         template.find('.pns-author').text(novel.userName).attr('href', authorLink);
