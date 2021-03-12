@@ -8,18 +8,127 @@
 // @description:zh_TW   顯示預覽圖像（支持單幅圖像，多幅圖像，運動圖像）； 下載動畫（.zip）; 按收藏夾數對搜索頁進行排序（並顯示）。 已為最新的搜索頁面適配。
 // @author              Ocrosoft
 // @match               *://www.pixiv.net/*
-// @grant               none
+// @grant               unsafeWindow
 // @compatible          Chrome
 // ==/UserScript==
 
-// 测试 JQuery，如果不支持就插入
-//let $ = function () { };
-try {
-    $();
-} catch (e) {
-    let script = document.createElement('script');
-    script.src = 'https://cdn.bootcdn.net/ajax/libs/jquery/2.1.4/jquery.min.js';
-    document.head.appendChild(script);
+// https://greasyfork.org/zh-CN/scripts/417761-ilog
+// 后面把DoLog替换掉
+function ILog() {
+    this.prefix = '';
+ 
+    this.v = function (value) {
+        if (level <= this.LogLevel.Verbose) {
+            console.log(this.prefix + value);
+        }
+    }
+ 
+    this.i = function (info) {
+        if (level <= this.LogLevel.Info) {
+            console.info(this.prefix + info);
+        }
+    }
+ 
+    this.w = function (warning) {
+        if (level <= this.LogLevel.Warning) {
+            console.warn(this.prefix + warning);
+        }
+    }
+ 
+    this.e = function (error) {
+        if (level <= this.LogLevel.Error) {
+            console.error(this.prefix + error);
+        }
+    }
+ 
+    this.d = function (element) {
+        if (level <= this.LogLevel.Verbose) {
+            console.log(element);
+        }
+    }
+ 
+    this.setLogLevel = function (logLevel) {
+        level = logLevel;
+    }
+ 
+    this.LogLevel = {
+        Verbose: 0,
+        Info: 1,
+        Warning: 2,
+        Error: 3,
+    };
+ 
+    let level = this.LogLevel.Verbose;
+}
+var iLog = new ILog();
+
+// https://greasyfork.org/zh-CN/scripts/417760-checkjquery
+var checkJQuery = function() {
+    let jqueryCdns = [
+        'http://code.jquery.com/jquery-2.1.4.min.js',
+        'https://ajax.aspnetcdn.com/ajax/jquery/jquery-2.1.4.min.js',
+        'https://ajax.googleapis.com/ajax/libs/jquery/2.1.4/jquery.min.js',
+        'https://cdn.staticfile.org/jquery/2.1.4/jquery.min.js',
+        'https://apps.bdimg.com/libs/jquery/2.1.4/jquery.min.js',
+    ];
+    function isJQueryValid() {
+        try {
+            let wd = unsafeWindow;
+            if (wd.jQuery && !wd.$) {
+                wd.$ = wd.jQuery;
+            }
+            $();
+            return true;
+        } catch (exception) {
+            return false;
+        }
+    }
+    function insertJQuery(url) {
+        let script = document.createElement('script');
+        script.src = url;
+        document.head.appendChild(script);
+        return script;
+    }
+    function converProtocolIfNeeded(url) {
+        let isHttps = location.href.indexOf('https://') != -1;
+        let urlIsHttps = url.indexOf('https://') != -1;
+ 
+        if (isHttps && !urlIsHttps) {
+            return url.replace('http://', 'https://');
+        } else if (!isHttps && urlIsHttps) {
+            return url.replace('https://', 'http://');
+        }
+        return url;
+    }
+    function waitAndCheckJQuery(cdnIndex, resolve) {
+        if (cdnIndex >= jqueryCdns.length) {
+            iLog.e('无法加载 JQuery，正在退出。');
+            resolve(false);
+            return;
+        }
+        let url = converProtocolIfNeeded(jqueryCdns[cdnIndex]);
+        iLog.i('尝试第 ' + (cdnIndex + 1) + ' 个 JQuery CDN：' + url + '。');
+        let script = insertJQuery(url);
+        setTimeout(function() {
+            if (isJQueryValid()) {
+                iLog.i('已加载 JQuery。');
+                resolve(true);
+            } else {
+                iLog.w('无法访问。');
+                script.remove();
+                waitAndCheckJQuery(cdnIndex + 1, resolve);
+            }
+        }, 100);
+    }
+    return new Promise(function(resolve) {
+        if (isJQueryValid()) {
+            iLog.i('已加载 jQuery。');
+            resolve(true);
+        } else {
+            iLog.i('未发现 JQuery，尝试加载。');
+            waitAndCheckJQuery(0, resolve);
+        }
+    });
 }
 
 let Lang = {
@@ -3322,24 +3431,34 @@ function Load() {
         }
     }, 500);
 }
-loadInterval = setInterval(Load, 1000);
-setInterval(function() {
-    if (location.href != initialUrl) {
-        // 排序中点击搜索tag，可能导致进行中的排序出现混乱，加取消太麻烦，直接走刷新
-        if (!g_sortComplete) {
-            location.href = location.href;
-            return;
+function startLoad() {
+    loadInterval = setInterval(Load, 1000);
+    setInterval(function() {
+        if (location.href != initialUrl) {
+            // 排序中点击搜索tag，可能导致进行中的排序出现混乱，加取消太麻烦，直接走刷新
+            if (!g_sortComplete) {
+                location.href = location.href;
+                return;
+            }
+            // fix 主页预览图出现后点击图片，进到详情页，预览图不消失的问题
+            if ($('.pp-main').length > 0) {
+                $('.pp-main').remove();
+            }
+            initialUrl = location.href;
+            clearInterval(loadInterval);
+            clearInterval(itv);
+            clearInterval(autoLoadInterval);
+            autoLoadInterval = null;
+            g_pageType = -1;
+            loadInterval = setInterval(Load, 300);
         }
-        // fix 主页预览图出现后点击图片，进到详情页，预览图不消失的问题
-        if ($('.pp-main').length > 0) {
-            $('.pp-main').remove();
+    }, 1000);
+}
+let jqItv = setInterval(function() {
+    checkJQuery().then(function(isLoad) {
+        if (isLoad) {
+            clearInterval(jqItv);
+            startLoad();
         }
-        initialUrl = location.href;
-        clearInterval(loadInterval);
-        clearInterval(itv);
-        clearInterval(autoLoadInterval);
-        autoLoadInterval = null;
-        g_pageType = -1;
-        loadInterval = setInterval(Load, 300);
-    }
+    });
 }, 1000);
