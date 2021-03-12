@@ -2967,8 +2967,7 @@ function PixivNS(callback) {
         // 右侧详情
         let detailDiv = template.children().eq(0).children().eq(1);
         let titleDiv = detailDiv.children().eq(0);
-        titleDiv.children().eq(0).addClass('pns-series');
-        titleDiv.children().eq(1).addClass('pns-title').addClass('pns-link');
+        titleDiv.children().eq(0).addClass('pns-title').addClass('pns-link');
         let authorDiv = detailDiv.children().eq(1);
         authorDiv.children().eq(0).addClass('pns-author');
         let tagDiv = detailDiv.children().eq(2);
@@ -2999,12 +2998,6 @@ function PixivNS(callback) {
         let link = template.find('.pns-link:first').attr('href').replace(/id=\d+/g, 'id=' + novel.id);
         template.find('.pns-link').attr('href', link);
         template.find('.pns-img').attr('src', novel.url);
-        if (novel.serriesId) {
-            let seriesLink = template.find('.pns-series').attr('href').replace(/\d+$/, novel.seriesId);
-            template.find('.pns-series').text(novel.seriesTitle).attr('title', novel.seriesTitle).attr('href', seriesLink);
-        } else {
-            template.find('.pns-series').hide();
-        }
         template.find('.pns-title').text(novel.title).attr('title', novel.title);
         let authorLink = template.find('.pns-author').attr('href').replace(/\d+$/, novel.userId);
         template.find('.pns-author').text(novel.userName).attr('href', authorLink);
