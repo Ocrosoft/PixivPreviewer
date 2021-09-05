@@ -1338,6 +1338,15 @@ Pages[PageType.Artwork] = {
         if (location.href.indexOf('#preview') == -1) {
             // 相关作品，container找不到说明还没加载
             let containerDiv = $('.gtm-illust-recommend-zone');
+            if (containerDiv.length == 0) {
+                let asides = $('#root').find('aside');
+                $.each(asides, function(i, e) {
+                    if ($(e).children('section').length == 1) {
+                        containerDiv = $(e);
+                        return false;
+                    }
+                });
+            }
             if (containerDiv.length > 0) {
                 DoLog(LogLevel.Info, 'Found container div.');
                 DoLog(LogLevel.Elements, containerDiv);
