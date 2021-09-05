@@ -1,7 +1,7 @@
 ﻿// ==UserScript==
 // @name                Pixiv Previewer
 // @namespace           https://github.com/Ocrosoft/PixivPreviewer
-// @version             0.0.0
+// @version             3.6.2
 // @description         Display preview images (support single image, multiple images, moving images); Download animation(.zip); Sorting the search page by favorite count(and display it). Updated for the latest search page.
 // @description:zh-CN   显示预览图（支持单图，多图，动图）；动图压缩包下载；搜索页按热门度（收藏数）排序并显示收藏数，适配11月更新。
 // @description:ja      プレビュー画像の表示（単一画像、複数画像、動画のサポート）; アニメーションのダウンロード（.zip）; お気に入りの数で検索ページをソートします（そして表示します）。 最新の検索ページ用に更新されました。
@@ -2965,7 +2965,7 @@ function PixivNS(callback) {
         picDiv.find('a:first').addClass('pns-link');
         picDiv.find('img:first').addClass('pns-img');
         // 右侧详情
-        let detailDiv = template.children().eq(0).children().eq(1);
+        let detailDiv = template.children().eq(0).children().eq(1).children().eq(0);
         let titleDiv = detailDiv.children().eq(0);
         if (titleDiv.children().length > 1) {
             titleDiv.children().eq(0).addClass('pns-series');
@@ -2996,11 +2996,11 @@ function PixivNS(callback) {
         } else {
             bookmarkDiv.find('span:last').addClass('pns-bookmark-count').parent().addClass('pns-bookmark-div');
         }
-        tagDiv.children().eq(1).empty().addClass('pns-tag-list');
-        let descDiv = detailDiv.children().eq(3);
+        detailDiv.children().eq(3).empty().addClass('pns-tag-list');
+        let descDiv = detailDiv.children().eq(4);
         descDiv.children().eq(0).addClass('pns-desc');
         // 右下角爱心
-        let likeDiv = template.children().eq(0).children().eq(2);
+        let likeDiv = template.children().eq(0).children().eq(1).children().eq(1);
         let svg = likeDiv.find('svg');
         svg.attr('class', svg.attr('class') + ' pns-like');
         likeDiv.find('path:first').css('color', 'rgb(31, 31, 31)');
