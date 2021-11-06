@@ -1983,34 +1983,24 @@ function PixivPreview() {
                     index = parseInt(index);
                 }
 
-                if (ev.ctrlKey) {
-                    // 按住 Ctrl 来回切换原图
-                    isOriginal = !isOriginal;
-                    ViewImages(regular, index, original, isOriginal, illustId);
+                if (regular.length == 1) {
+                    return;
                 }
-                else if (ev.shiftKey) {
-                    // 按住 Shift 点击图片新标签页打开原图
-                    window.open(original[index]);
+                // 如果是多图，点击切换下一张
+                if (ev.originalEvent.wheelDelta < 0) {
+                    if (++index >= regular.length) {
+                        index = 0;
+                    }
                 } else {
-                    if (regular.length == 1) {
-                        return;
+                    if (--index < 0) {
+                        index = regular.length - 1;
                     }
-                    // 如果是多图，点击切换下一张
-                    if (ev.originalEvent.wheelDelta < 0) {
-                        if (++index >= regular.length) {
-                            index = 0;
-                        }
-                    } else {
-                        if (--index < 0) {
-                            index = regular.length - 1;
-                        }
-                    }
-                    ViewImages(regular, index, original, isOriginal, illustId);
-                    // 预加载
-                    for (let i = index + 1; i < regular.length && i <= index + 3; i++) {
-                        let image = new Image();
-                        image.src = isOriginal ? original[i] : regular[i];;
-                    }
+                }
+                ViewImages(regular, index, original, isOriginal, illustId);
+                // 预加载
+                for (let i = index + 1; i < regular.length && i <= index + 3; i++) {
+                    let image = new Image();
+                    image.src = isOriginal ? original[i] : regular[i];;
                 }
             });
 
