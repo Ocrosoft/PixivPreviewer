@@ -179,6 +179,8 @@ Texts[Lang.zh_CN] = {
     // 小说排序
     nsort_getWorks: '正在获取第1%/2%页作品',
     nsort_sorting: '正在按收藏量排序',
+    nsort_hideFav: '排序时隐藏已收藏的作品',
+    nsort_hideFollowed: '排序时隐藏已关注作者作品'
 };
 // translate by google
 Texts[Lang.en_US] = {
@@ -214,6 +216,8 @@ Texts[Lang.en_US] = {
     sort_fullSizeThumb: 'Display not cropped images.',
     nsort_getWorks: 'Getting novels of page: 1% of 2%',
     nsort_sorting: 'Sorting by bookmark cound',
+    nsort_hideFav: 'Hide favorites when sorting',
+    nsort_hideFollowed: 'Hide artworks of followed authors when sorting'
 };
 // RU: перевод от  vanja-san
 Texts[Lang.ru_RU] = {
@@ -249,6 +253,8 @@ Texts[Lang.ru_RU] = {
     sort_fullSizeThumb: 'Показать неотредактированное изображение',
     nsort_getWorks: Texts[Lang.en_US].nsort_getWorks,
     nsort_sorting: Texts[Lang.en_US].nsort_sorting,
+    nsort_hideFav: Texts[Lang.en_US].nsort_hideFav,
+    nsort_hideFollowed: Texts[Lang.en_US].nsort_hideFollowed
 };
 
 let LogLevel = {
@@ -331,6 +337,8 @@ let g_defaultSettings = {
     'fullSizeThumb': 0,
     'enableNovelSort': 1,
     'novelPageCount': 3,
+    'novelHideFavorite': 0,
+    'novelHideFollowed': 0,
     'logLevel': 1,
     'version': g_version,
 };
