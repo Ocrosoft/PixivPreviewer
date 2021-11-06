@@ -1570,7 +1570,27 @@ function CheckUrlTest() {
         }
     }
 }
+/* ---------------------------------------- scroll_lock ---------------------------------------- */
+function preventDefault(e) {
+    e.preventDefault();
+}
+// modern Chrome requires { passive: false } when adding event
+var supportsPassive = false;
+try {
+    window.addEventListener("test", null, Object.defineProperty({}, 'passive', {
+        get: function () { supportsPassive = true; }
+    }));
+} catch (e) { }
 
+var wheelOpt = supportsPassive ? { passive: false } : false;
+var wheelEvent = 'onwheel' in document.createElement('div') ? 'wheel' : 'mousewheel';
+
+function disableScroll() {
+    window.addEventListener(wheelEvent, preventDefault, wheelOpt);
+}
+function enableScroll() {
+    window.removeEventListener(wheelEvent, preventDefault, wheelOpt);
+}
 /* ---------------------------------------- 预览 ---------------------------------------- */
 let autoLoadInterval = null;
 function PixivPreview() {
@@ -1950,6 +1970,56 @@ function PixivPreview() {
                         image.src = isOriginal ? original[i] : regular[i];;
                     }
                 }
+            });
+
+            // mousewheel event，和上面一樣
+            $('.pp-image').bind('mousewheel', function (ev) {
+                let _this = $(this);
+                let isOriginal = _this.hasClass('original');
+                let index = _this.attr('index');
+                if (index == null) {
+                    index = 0;
+                } else {
+                    index = parseInt(index);
+                }
+
+                if (ev.ctrlKey) {
+                    // 按住 Ctrl 来回切换原图
+                    isOriginal = !isOriginal;
+                    ViewImages(regular, index, original, isOriginal, illustId);
+                }
+                else if (ev.shiftKey) {
+                    // 按住 Shift 点击图片新标签页打开原图
+                    window.open(original[index]);
+                } else {
+                    if (regular.length == 1) {
+                        return;
+                    }
+                    // 如果是多图，点击切换下一张
+                    if (ev.originalEvent.wheelDelta < 0) {
+                        if (++index >= regular.length) {
+                            index = 0;
+                        }
+                    } else {
+                        if (--index < 0) {
+                            index = regular.length - 1;
+                        }
+                    }
+                    ViewImages(regular, index, original, isOriginal, illustId);
+                    // 预加载
+                    for (let i = index + 1; i < regular.length && i <= index + 3; i++) {
+                        let image = new Image();
+                        image.src = isOriginal ? original[i] : regular[i];;
+                    }
+                }
+            });
+
+            //  scrollLock
+            $(".pp-image").mouseenter(function () {
+                disableScroll()
+            });
+            $(".pp-image").mouseleave(function () {
+                enableScroll()
             });
 
             // 图片预加载完成
