@@ -1,7 +1,7 @@
 ﻿// ==UserScript==
 // @name                Pixiv Previewer
 // @namespace           https://github.com/Ocrosoft/PixivPreviewer
-// @version             3.6.2
+// @version             3.6.3
 // @description         Display preview images (support single image, multiple images, moving images); Download animation(.zip); Sorting the search page by favorite count(and display it). Updated for the latest search page.
 // @description:zh-CN   显示预览图（支持单图，多图，动图）；动图压缩包下载；搜索页按热门度（收藏数）排序并显示收藏数，适配11月更新。
 // @description:ja      プレビュー画像の表示（単一画像、複数画像、動画のサポート）; アニメーションのダウンロード（.zip）; お気に入りの数で検索ページをソートします（そして表示します）。 最新の検索ページ用に更新されました。
@@ -425,6 +425,59 @@ function convertThumbUrlToSmall(thumbUrl) {
     return thumbUrl.replace(/c\/.*\/custom-thumb/, replace1).replace('_custom', replace2)
         .replace(/c\/.*\/img-master/, replace1).replace('_square', replace2);
 }
+function processElementListCommon(lis) {
+    lis.each(function (i, e) {
+        let li = $(e);
+
+        // 只填充必须的几个，其他的目前用不着
+        let ctlAttrs = {
+            illustId: 0,
+            illustType: 0,
+            pageCount: 1,
+        };
+
+        let img = $(li.find('img').get(0));
+        let imageLink = img.parent().parent();
+        let additionDiv = img.parent().prev();
+        let animationSvg = img.parent().find('svg');
+        let pageCountSpan = additionDiv.find('span');
+
+        if (img == null || imageLink == null) {
+            DoLog(LogLevel.Warning, 'Can not found img or imageLink, skip this.');
+            return;
+        }
+
+        let link = imageLink.attr('href');
+        if (link == null) {
+            DoLog(LogLevel.Warning, 'Invalid href, skip this.');
+            return;
+        }
+        let linkMatched = link.match(/artworks\/(\d+)/);
+        let illustId = '';
+        if (linkMatched) {
+            ctlAttrs.illustId = linkMatched[1];
+        } else {
+            DoLog(LogLevel.Error, 'Get illustId failed, skip this list item!');
+            return;
+        }
+        if (animationSvg.length > 0) {
+            ctlAttrs.illustType = 2;
+        }
+        if (pageCountSpan.length > 0) {
+            ctlAttrs.pageCount = parseInt(pageCountSpan.text());
+        }
+
+        // 添加 attr
+        let control = li.children('div:first').children('div:first');
+        control.attr({
+            'illustId': ctlAttrs.illustId,
+            'illustType': ctlAttrs.illustType,
+            'pageCount': ctlAttrs.pageCount
+        });
+
+        control.addClass('pp-control');
+    });
+}
 
 Pages[PageType.Search] = {
     PageTypeString: 'SearchPage',
@@ -503,57 +556,7 @@ Pages[PageType.Search] = {
         }
 
         let lis = $(sections[sectionIndex]).find('ul').find('li');
-        lis.each(function (i, e) {
-            let li = $(e);
-
-            // 只填充必须的几个，其他的目前用不着
-            let ctlAttrs = {
-                illustId: 0,
-                illustType: 0,
-                pageCount: 1,
-            };
-
-            let img = $(li.find('img').get(0));
-            let imageLink = img.parent().parent();
-            let additionDiv = img.parent().prev();
-            let animationSvg = img.parent().find('svg');
-            let pageCountSpan = additionDiv.find('span');
-
-            if (img == null || imageLink == null) {
-                DoLog(LogLevel.Warning, 'Can not found img or imageLink, skip this.');
-                return;
-            }
-
-            let link = imageLink.attr('href');
-            if (link == null) {
-                DoLog(LogLevel.Warning, 'Invalid href, skip this.');
-                return;
-            }
-            let linkMatched = link.match(/artworks\/(\d+)/);
-            let illustId = '';
-            if (linkMatched) {
-                ctlAttrs.illustId = linkMatched[1];
-            } else {
-                DoLog(LogLevel.Error, 'Get illustId failed, skip this list item!');
-                return;
-            }
-            if (animationSvg.length > 0) {
-                ctlAttrs.illustType = 2;
-            }
-            if (pageCountSpan.length > 0) {
-                ctlAttrs.pageCount = parseInt(pageCountSpan.text());
-            }
-
-            // 添加 attr
-            let control = li.children('div:first').children('div:first');
-            control.attr({
-                'illustId': ctlAttrs.illustId,
-                'illustType': ctlAttrs.illustType,
-                'pageCount': ctlAttrs.pageCount
-            });
-
-            control.addClass('pp-control');
-        });
+        processElementListCommon(lis);
         returnMap.controlElements = $('.pp-control');
         this.private.pageSelector = $($(sections[sectionIndex]).find('ul').get(0)).next().get(0);
         returnMap.loadingComplete = true;
@@ -711,68 +714,14 @@ Pages[PageType.Discovery] = {
             return returnMap;
         }
 
-        containerDiv.children().each(function (i, e) {
-            let _this = $(e);
-
-            let figure = _this.find('figure');
-            if (figure.length === 0) {
-                DoLog(LogLevel.Warning, 'Can not found <fingure>, skip this element.');
-                return;
-            }
-
-            let link = figure.children('div:first').children('a:first');
-            if (link.length === 0) {
-                DoLog(LogLevel.Warning, 'Can not found <a>, skip this element.');
-                return;
-            }
-
-            let ctlAttrs = {
-                illustId: 0,
-                illustType: 0,
-                pageCount: 1,
-            };
-
-            let href = link.attr('href');
-            if (href == null || href === '') {
-                DoLog(LogLevel.Warning, 'No href found, skip.');
-                return;
-            } else {
-                let matched = href.match(/artworks\/(\d+)/);
-                if (matched) {
-                    ctlAttrs.illustId = matched[1];
-                } else {
-                    DoLog(LogLevel.Warning, 'Can not found illust id, skip.');
-                    return;
-                }
-            }
-
-            if (link.children().length > 1) {
-                if (link.children('div:first').find('span').length > 0) {
-                    let span = link.children('div:first').children('span:first');
-                    if (span.length === 0) {
-                        DoLog(LogLevel.Warning, 'Can not found <span>, skip this element.');
-                        return;
-                    }
-                    ctlAttrs.pageCount = span.text();
-                } else if (link.children('div:last').css('background-image').indexOf('.svg') != -1) {
-                    ctlAttrs.illustType = 2;
-                }
-            }
-
-            let control = figure.children('div:first');
-            control.attr({
-                'illustId': ctlAttrs.illustId,
-                'illustType': ctlAttrs.illustType,
-                'pageCount': ctlAttrs.pageCount
-            });
-
-            returnMap.controlElements.push(control.get(0));
-        });
+        let lis = containerDiv.find('ul').children('li');
+        processElementListCommon(lis);
+        returnMap.controlElements = $('.pp-control');
+        returnMap.loadingComplete = true;
 
         DoLog(LogLevel.Info, 'Process page elements complete.');
         DoLog(LogLevel.Elements, returnMap);
 
-        returnMap.loadingComplete = true;
         this.private.returnMap = returnMap;
         return returnMap;
     },
@@ -783,7 +732,7 @@ Pages[PageType.Discovery] = {
         return this.private.returnMap;
     },
     GetToolBar: function () {
-        return findToolbarOld();
+        return findToolbarCommon();
     },
     HasAutoLoad: true,
     private: {
@@ -806,61 +755,7 @@ Pages[PageType.Member] = {
         DoLog(LogLevel.Elements, sections);
 
         let lis = sections.find('ul').find('li');
-        lis.each(function (i, e) {
-            let li = $(e);
-
-            // 只填充必须的几个，其他的目前用不着
-            let ctlAttrs = {
-                illustId: 0,
-                illustType: 0,
-                pageCount: 1,
-            };
-
-            let img = $(li.find('img').get(0));
-            let imageLink = img.parent().parent();
-            let additionDiv = img.parent().prev();
-            let animationSvg = img.parent().find('svg');
-            let pageCountSpan = additionDiv.find('span');
-
-            if (!img || !imageLink) {
-                DoLog(LogLevel.Warning, 'Can not found img or imageLink, skip this.');
-                return;
-            }
-
-            let link = imageLink.attr('href');
-            if (link == null) {
-                DoLog(LogLevel.Warning, 'Can not found illust id, skip this.');
-                return;
-            }
-
-            let linkMatched = link.match(/artworks\/(\d+)/);
-            let illustId = '';
-            if (linkMatched) {
-                ctlAttrs.illustId = linkMatched[1];
-            } else {
-                DoLog(LogLevel.Error, 'Get illustId failed, skip this list item!');
-                return;
-            }
-            if (animationSvg.length > 0) {
-                ctlAttrs.illustType = 2;
-            }
-            if (pageCountSpan.length > 0) {
-                ctlAttrs.pageCount = parseInt(pageCountSpan.text());
-            }
-
-            // 添加 attr
-            let control = li.children('div:first').children('div:first');
-            if (control.length === 0) {
-                control = li.children('div:last').children('div:first');
-            }
-            control.attr({
-                'illustId': ctlAttrs.illustId,
-                'illustType': ctlAttrs.illustType,
-                'pageCount': ctlAttrs.pageCount
-            });
-
-            control.addClass('pp-control');
-        });
+        processElementListCommon(lis);
         returnMap.controlElements = $('.pp-control');
         returnMap.loadingComplete = true;
 
