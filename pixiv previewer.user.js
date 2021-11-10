@@ -954,7 +954,7 @@ Pages[PageType.Ranking] = {
     GetToolBar: function () {
         return findToolbarOld();
     },
-    HasAutoLoad: false,
+    HasAutoLoad: true,
     private: {
         returnMap: null,
     },
