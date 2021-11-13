@@ -1,5 +1,5 @@
 ﻿// ==UserScript==
-// @name                Pixiv Previewer
+// @name                Pixiv Previewer(Dev)
 // @namespace           https://github.com/Ocrosoft/PixivPreviewer
 // @version             3.6.5
 // @description         Display preview images (support single image, multiple images, moving images); Download animation(.zip); Sorting the search page by favorite count(and display it). Updated for the latest search page.
