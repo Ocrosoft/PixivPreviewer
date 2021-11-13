@@ -2059,7 +2059,7 @@ function PixivPreview() {
         let newReturnMap = Pages[g_pageType].ProcessPageElements();
 
         if (newReturnMap.loadingComplete) {
-            if (oldReturnMap.controlElements.length < newReturnMap.controlElements.length || newReturnMap.forceUpdate) {
+            if (oldReturnMap.controlElements.length != newReturnMap.controlElements.length || newReturnMap.forceUpdate) {
                 DoLog(LogLevel.Info, 'Page loaded ' + (newReturnMap.controlElements.length - oldReturnMap.controlElements.length) + ' new work(s).');
 
                 if (g_settings.linkBlank) {
