@@ -1,7 +1,7 @@
 ﻿// ==UserScript==
 // @name                Pixiv Previewer(Dev)
 // @namespace           https://github.com/Ocrosoft/PixivPreviewer
-// @version             3.6.5
+// @version             3.7.0
 // @description         Display preview images (support single image, multiple images, moving images); Download animation(.zip); Sorting the search page by favorite count(and display it). Updated for the latest search page.
 // @description:zh-CN   显示预览图（支持单图，多图，动图）；动图压缩包下载；搜索页按热门度（收藏数）排序并显示收藏数，适配11月更新。
 // @description:ja      プレビュー画像の表示（単一画像、複数画像、動画のサポート）; アニメーションのダウンロード（.zip）; お気に入りの数で検索ページをソートします（そして表示します）。 最新の検索ページ用に更新されました。
@@ -153,6 +153,8 @@ Texts[Lang.zh_CN] = {
     setting_anime: '动图下载（动图预览及详情页生效）',
     setting_origin: '预览时优先显示原图（慢）',
     setting_previewDelay: '延迟显示预览图（毫秒）',
+    setting_previewByKey: '使用按键控制预览图展示（Ctrl）',
+    setting_previewByKeyHelp: '开启后鼠标移动到图片上不再展示预览图，按下Ctrl键才展示，同时“延迟显示预览”设置项不生效。',
     setting_maxPage: '每次排序时统计的最大页数',
     setting_hideWork: '隐藏收藏数少于设定值的作品',
     setting_hideFav: '排序时隐藏已收藏的作品',
@@ -192,6 +194,8 @@ Texts[Lang.en_US] = {
     setting_anime: 'Animation download (Preview and Artwork page)',
     setting_origin: 'Display original image when preview (slow)',
     setting_previewDelay: 'Delay of display preview image(Million seconds)',
+    setting_previewByKey: 'Use keys to control the preview image display (Ctrl)',
+    setting_previewByKeyHelp: 'After enabling it, move the mouse to the picture and no longer display the preview image. Press the Ctrl key to display it, and the "Delayed Display Preview" setting item does not take effect.',
     setting_maxPage: 'Maximum number of pages counted per sort',
     setting_hideWork: 'Hide works with bookmark count less than set value',
     setting_hideFav: 'Hide favorites when sorting',
@@ -229,6 +233,8 @@ Texts[Lang.ru_RU] = {
     setting_anime: 'Анимация скачивания (Страницы предпросмотра и Artwork)',
     setting_origin: 'При предпросмотре, показывать изображения с оригинальным качеством (медленно)',
     setting_previewDelay: 'Задержка отображения предпросмотра изображения (Миллион секунд)',
+    setting_previewByKey: Texts[Lang.en_US].setting_previewByKey,
+    setting_previewByKeyHelp: Texts[Lang.en_US].setting_previewByKeyHelp,
     setting_maxPage: 'Максимальное количество страниц, подсчитанных за сортировку',
     setting_hideWork: 'Скрыть работы с количеством закладок меньше установленного значения',
     setting_hideFav: 'При сортировке, скрыть избранное',
@@ -328,6 +334,8 @@ let g_defaultSettings = {
     'enableAnimeDownload': 1,
     'original': 0,
     'previewDelay': 200,
+    'previewByKey': 0,
+    'previewKey': 17,
     'pageCount': 3,
     'favFilter': 0,
     'hideFavorite': 0,
@@ -1243,7 +1251,7 @@ Pages[PageType.Artwork] = {
             let containerDiv = $('.gtm-illust-recommend-zone');
             if (containerDiv.length == 0) {
                 let asides = $('#root').find('aside');
-                $.each(asides, function(i, e) {
+                $.each(asides, function (i, e) {
                     if ($(e).children('section').length == 1) {
                         containerDiv = $(e);
                         return false;
@@ -1524,7 +1532,7 @@ Pages[PageType.NovelSearch] = {
     GetToolBar: function () {
         return findToolbarCommon();
     },
-    GetPageSelector: function() {
+    GetPageSelector: function () {
         return $('section:first').find('nav:first');
     },
     HasAutoLoad: false,
@@ -1605,6 +1613,32 @@ function PixivPreview() {
             return;
         }
 
+        function showPreviewDiv() {
+            let div = $('.pp-main');
+            if (div.length == 0) {
+                return;
+            }
+            if (div.css('display') == 'none') {
+                iLog.i('Show main.');
+                AdjustDivPosition();
+                div.show();
+            } else {
+                iLog.i('Hide main.');
+                div.hide();
+                enableScroll();
+            }
+        }
+
+        if (g_settings.previewByKey) {
+            $(document).unbind('keydown');
+            $(document).keydown((e) => {
+                if (e.keyCode != g_settings.previewKey) {
+                    return;
+                }
+                showPreviewDiv();
+            });
+        }
+
         // 鼠标进入
         $(returnMap.controlElements).mouseenter(function (e) {
             // 按住 Ctrl键 不显示预览图
@@ -1649,13 +1683,15 @@ function PixivPreview() {
             $('.pp-main').remove();
             $('body').append(previewDiv);
 
-            let waitTime = delay - (new Date().getTime() - startTime);
-            if (waitTime > 0) {
-                setTimeout(function () {
+            if (!g_settings.previewByKey) {
+                let waitTime = delay - (new Date().getTime() - startTime);
+                if (waitTime > 0) {
+                    setTimeout(function () {
+                        previewDiv.show();
+                    }, waitTime);
+                } else {
                     previewDiv.show();
-                }, waitTime);
-            } else {
-                previewDiv.show();
+                }
             }
 
             // 加载中图片
@@ -1772,11 +1808,12 @@ function PixivPreview() {
             if (e.ctrlKey || e.buttons & 4) {
                 return;
             }
-            let screenWidth = document.documentElement.clientWidth;
-            let screenHeight = document.documentElement.clientHeight;
             g_mousePos.x = e.pageX; g_mousePos.y = e.pageY;
 
-            AdjustDivPosition();
+            // 启用按键开启关闭预览功能时，不跟随鼠标移动
+            if (!(g_settings.previewByKey && $('.pp-main').css('display') != 'none')) {
+                AdjustDivPosition();
+            }
         });
 
         // 这个页面有自动加载
@@ -2007,8 +2044,7 @@ function PixivPreview() {
             //  scrollLock
             $(".pp-image").mouseenter(function () {
                 disableScroll()
-            });
-            $(".pp-image").mouseleave(function () {
+            }).mouseleave(function () {
                 enableScroll()
             });
 
@@ -3023,7 +3059,7 @@ function PixivNS(callback) {
             like.find('path:first').css('color', 'rgb(255, 64, 96)');
             like.find('path:last').css('fill', 'rgb(255, 64, 96)');
         }
-        like.click(function() {
+        like.click(function () {
             if ($(this).attr('disable')) {
                 return;
             }
@@ -3202,7 +3238,7 @@ function PixivNS(callback) {
                 element.find('path:last').css('fill', 'rgb(255, 64, 96)');
                 element.removeAttr('disable');
             },
-            error: function() {
+            error: function () {
                 element.removeAttr('disable');
             }
         });
@@ -3233,7 +3269,7 @@ function PixivNS(callback) {
                 element.find('path:last').css('fill', 'rgb(255, 255, 255)');
                 element.removeAttr('disable');
             },
-            error: function() {
+            error: function () {
                 element.removeAttr('disable');
             }
         });
@@ -3361,8 +3397,8 @@ function ShowUpgradeMessage() {
 
     let body = '新功能：<br><dd>1.支持搜索页小说排序，可在设置中关闭。</dd>优化：<br><dd>1.减少jQuery引发的错误。<br>2.设置在小窗口下不会超出屏幕。</dd>修复：<br><dd>1.更新提示不会随窗口大小改变。</dd>';
     bg.get(0).innerHTML = '<img id="pps-close"src="https://pp-1252089172.cos.ap-chengdu.myqcloud.com/Close.png"style="position: absolute; right: 35px; top: 20px; width: 32px; height: 32px; cursor: pointer;"><div style="position: absolute;width: 40%;left: 30%;top: 25%;font-size: 25px; text-align: center; color: white;">'
-        + Texts[g_language].install_title + g_version 
-        + '</div><br><div style="position:absolute;left:50%;top:30%;font-size:20px;color:white;transform:translate(-50%,0);">' 
+        + Texts[g_language].install_title + g_version
+        + '</div><br><div style="position:absolute;left:50%;top:30%;font-size:20px;color:white;transform:translate(-50%,0);">'
         + body + '</div>';
     $('#pps-close').click(function () {
         $('#pp-bg').remove();
@@ -3371,7 +3407,7 @@ function ShowUpgradeMessage() {
 function FillNewSetting(st) {
     // 升级可能会有部分新加字段在cookie里读不到
     let changed = false;
-    $.each(g_defaultSettings, function(k, v) {
+    $.each(g_defaultSettings, function (k, v) {
         if (st[k] == undefined) {
             st[k] = g_defaultSettings[k];
             changed = true;
@@ -3452,6 +3488,8 @@ function ShowSetting() {
     addItem(getImageAction('pps-anime'), Texts[g_language].setting_anime);
     addItem(getImageAction('pps-original'), Texts[g_language].setting_origin);
     addItem(getInputAction('pps-previewDelay'), Texts[g_language].setting_previewDelay);
+    addItem(getImageAction('pps-previewByKey'), Texts[g_language].setting_previewByKey);
+    $('#pps-previewByKey').attr('title', Texts[g_language].setting_previewByKeyHelp);
     addItem('', '&nbsp');
     addItem(getInputAction('pps-maxPage'), Texts[g_language].setting_maxPage);
     addItem(getInputAction('pps-hideLess'), Texts[g_language].setting_hideWork);
@@ -3471,6 +3509,7 @@ function ShowSetting() {
     $('#pps-anime').attr('src', settings.enableAnimeDownload ? imgOn : imgOff).addClass(settings.enableAnimeDownload ? 'on' : 'off').css('cursor: pointer');
     $('#pps-original').attr('src', settings.original ? imgOn : imgOff).addClass(settings.original ? 'on' : 'off').css('cursor: pointer');
     $('#pps-previewDelay').val(settings.previewDelay);
+    $('#pps-previewByKey').attr('src', settings.previewByKey ? imgOn : imgOff).addClass(settings.original ? 'on' : 'off').css('cursor: pointer');
     $('#pps-maxPage').val(settings.pageCount);
     $('#pps-hideLess').val(settings.favFilter);
     $('#pps-hideBookmarked').attr('src', settings.hideFavorite ? imgOn : imgOff).addClass(settings.hideFavorite ? 'on' : 'off').css('cursor: pointer');
@@ -3518,6 +3557,7 @@ function ShowSetting() {
             'enableAnimeDownload': $('#pps-anime').hasClass('on') ? 1 : 0,
             'original': $('#pps-original').hasClass('on') ? 1 : 0,
             'previewDelay': parseInt($('#pps-previewDelay').val()),
+            'previewByKey': $('#pps-previewByKey').hasClass('on') ? 1 : 0,
             'pageCount': parseInt($('#pps-maxPage').val()),
             'favFilter': parseInt($('#pps-hideLess').val()),
             'hideFavorite': $('#pps-hideBookmarked').hasClass('on') ? 1 : 0,
