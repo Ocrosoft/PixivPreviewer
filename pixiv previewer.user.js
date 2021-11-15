@@ -1468,12 +1468,12 @@ Pages[PageType.Artwork] = {
                     $('html').addClass('pp-main');
 
                     // 调整 canvas 大小的函数
-                    window.ResizeCanvas = function (newWidth, newHeight) {
+                    unsafeWindow.ResizeCanvas = function (newWidth, newHeight) {
                         DoLog(LogLevel.Info, 'Resize canvas: ' + newWidth + 'x' + newHeight);
                         $('.pp-disableClick').css({ 'width': newWidth, 'height': newHeight });
                         $('.pp-presentationCanvas').css({ 'width': newWidth, 'height': newHeight });
                     };
-                    window.GetCanvasSize = function () {
+                    unsafeWindow.GetCanvasSize = function () {
                         return {
                             width: width,
                             height: height,
@@ -1483,7 +1483,17 @@ Pages[PageType.Artwork] = {
                     // 添加下载按钮
                     AddDownloadButton(divForStopClick.next(), 0);
 
-                    window.parent.PreviewCallback(width, height);
+                    let window = unsafeWindow.parent;
+                    for (let i = 0; i < 5; ++i) {
+                        if (!window){
+                            break;
+                        }
+                        if (window.PreviewCallback) {
+                            window.PreviewCallback(width, height);
+                            break;
+                        }
+                        window = window.parent;
+                    }
                 }, 500);
             }
             // 普通模式，只需要添加下载按钮到内嵌模式的 div 里
@@ -1823,9 +1833,9 @@ function PixivPreview() {
         }
 
         // 插一段回调函数
-        window.PreviewCallback = PreviewCallback;
+        unsafeWindow.PreviewCallback = PreviewCallback;
         DoLog(LogLevel.Info, 'Callback function was inserted.');
-        DoLog(LogLevel.Elements, window.PreviewCallback);
+        DoLog(LogLevel.Elements, unsafeWindow.PreviewCallback);
 
         DoLog(LogLevel.Info, 'Preview enable succeed!');
     }
