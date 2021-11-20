@@ -1526,7 +1526,7 @@ Pages[PageType.NovelSearch] = {
             loadingComplete: false,
             controlElements: [],
         };
-        let ul = $('section>div>ul');
+        let ul = $('section:first').find('ul:first');
         if (ul.length > 0) {
             returnMap.loadingComplete = true;
         }
@@ -2957,7 +2957,7 @@ function PixivSK(callback) {
 /* ---------------------------------------- 小说 ---------------------------------------- */
 function PixivNS(callback) {
     function findNovelSection() {
-        let ul = $('section>div>ul');
+        let ul = $('section:first').find('ul:first');
         if (ul.length == 0) {
             DoLog(LogLevel.Error, 'Can not found novel list.');
             return null;
@@ -2977,7 +2977,7 @@ function PixivNS(callback) {
             DoLog(LogLevel.Error, 'Empty list, can not create template.');
             return null;
         }
-        let template = ul.children().eq(0).clone(true)
+        let template = ul.children().eq(0).clone(true);
         // 左侧图片
         let picDiv = template.children().eq(0).children().eq(0);
         picDiv.find('a:first').addClass('pns-link');
@@ -3003,22 +3003,22 @@ function PixivNS(callback) {
             $('head').append('<style>.pns-series:visited{color:rgb(173,173,173)}</style>');
             titleDiv.prepend(series);
         }
-        titleDiv.children().eq(1).addClass('pns-title').addClass('pns-link');
-        let authorDiv = detailDiv.children().eq(1);
-        authorDiv.children().eq(0).addClass('pns-author');
-        let tagDiv = detailDiv.children().eq(2);
-        let bookmarkDiv = tagDiv.children().eq(0);
+        titleDiv.children().eq(1).children().eq(0).addClass('pns-title').addClass('pns-link');
+        detailDiv.find('.gtm-novel-searchpage-result-user:first').addClass('pns-author-img');
+        detailDiv.find('.gtm-novel-searchpage-result-user:last').addClass('pns-author');
+        let tagDiv = detailDiv.children().eq(2).children().eq(0);
+        let bookmarkDiv = tagDiv.children().eq(2);
         bookmarkDiv.children().eq(0).addClass('pns-text-count');
         if (bookmarkDiv.children().length < 2) {
             bookmarkDiv.find('.pns-text-count').after('<div class="pns-bookmark-div"><span style="display: inline-flex; vertical-align: top; height: 20px;"><svg viewBox="0 0 12 12" size="12" class="sc-14heosd-1 dcwYur"><path fill-rule="evenodd" clip-rule="evenodd" d="M9 0.75C10.6569 0.75 12 2.09315 12 3.75C12 7.71703 7.33709 10.7126   6.23256 11.3666C6.08717 11.4526 5.91283 11.4526 5.76744 11.3666C4.6629 10.7126 0 7.71703 0 3.75C0 2.09315 1.34315 0.75 3 0.75C4.1265 0.75 5.33911 1.60202 6 2.66823C6.66089 1.60202 7.8735 0.75 9 0.75Z"></path></svg></span><span class="pns-bookmark-count" style="padding-left: 4px;">0</span></div>')
         } else {
             bookmarkDiv.find('span:last').addClass('pns-bookmark-count').parent().addClass('pns-bookmark-div');
         }
-        detailDiv.children().eq(3).empty().addClass('pns-tag-list');
-        let descDiv = detailDiv.children().eq(4);
+        tagDiv.children().eq(0).empty().addClass('pns-tag-list');
+        let descDiv = tagDiv.children().eq(1);
         descDiv.children().eq(0).addClass('pns-desc');
         // 右下角爱心
-        let likeDiv = template.children().eq(0).children().eq(1).children().eq(1);
+        let likeDiv = detailDiv.children().eq(2).children().eq(1);
         let svg = likeDiv.find('svg');
         svg.attr('class', svg.attr('class') + ' pns-like');
         likeDiv.find('path:first').css('color', 'rgb(31, 31, 31)');
@@ -3041,8 +3041,10 @@ function PixivNS(callback) {
             template.find('.pns-series').hide();
         }
         template.find('.pns-title').text(novel.title).attr('title', novel.title);
+        template.find('.pns-title').parent().attr('title', novel.title);
         let authorLink = template.find('.pns-author').attr('href').replace(/\d+$/, novel.userId);
         template.find('.pns-author').text(novel.userName).attr('href', authorLink);
+        template.find('.pns-author-img').attr('href', authorLink).find('img').attr('src', novel.profileImageUrl);
         template.find('.pns-text-count').text(novel.textCount + '文字');
         if (novel.bookmarkCount == 0) {
             template.find('.pns-bookmark-div').hide();
@@ -3055,7 +3057,7 @@ function PixivNS(callback) {
             search = '?' + search;
         }
         $.each(novel.tags, function (i, tag) {
-            let tagItem = $('<span"><a style="color: rgb(61, 118, 153);" href="/tags/' + tag + '/novels' + search + '">' + tag + '</a></span>');
+            let tagItem = $('<span"><a style="color: rgb(61, 118, 153);" href="/tags/' + encodeURIComponent(tag) + '/novels' + search + '">' + tag + '</a></span>');
             if (tag == 'R-18' || tag == 'R-18G') {
                 tagItem.find('a').css({ 'color': 'rgb(255, 64, 96)', 'font-weight': 'bold' }).text(tag);
             }
