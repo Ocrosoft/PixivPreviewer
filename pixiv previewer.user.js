@@ -1,7 +1,7 @@
 ﻿// ==UserScript==
 // @name                Pixiv Previewer(Dev)
 // @namespace           https://github.com/Ocrosoft/PixivPreviewer
-// @version             3.7.1
+// @version             3.7.2
 // @description         Display preview images (support single image, multiple images, moving images); Download animation(.zip); Sorting the search page by favorite count(and display it). Updated for the latest search page.
 // @description:zh-CN   显示预览图（支持单图，多图，动图）；动图压缩包下载；搜索页按热门度（收藏数）排序并显示收藏数，适配11月更新。
 // @description:ja      プレビュー画像の表示（単一画像、複数画像、動画のサポート）; アニメーションのダウンロード（.zip）; お気に入りの数で検索ページをソートします（そして表示します）。 最新の検索ページ用に更新されました。
@@ -10,6 +10,7 @@
 // @match               *://www.pixiv.net/*
 // @grant               unsafeWindow
 // @compatible          Chrome
+// @license             GPLv3
 // ==/UserScript==
 
 // https://greasyfork.org/zh-CN/scripts/417761-ilog
@@ -177,7 +178,7 @@ Texts[Lang.zh_CN] = {
     sort_getPrivateFollowing: '获取私有关注画师',
     sort_filtering: '过滤%1收藏量低于%2的作品',
     sort_filteringHideFavorite: '已收藏和',
-    sort_fullSizeThumb: '排序后展示全尺寸图片',
+    sort_fullSizeThumb: '全尺寸缩略图（搜索页、用户页）',
     // 小说排序
     nsort_getWorks: '正在获取第1%/2%页作品',
     nsort_sorting: '正在按收藏量排序',
@@ -217,7 +218,7 @@ Texts[Lang.en_US] = {
     sort_getPrivateFollowing: 'Getting private following list',
     sort_filtering: 'Filtering%1works with bookmark count less than %2',
     sort_filteringHideFavorite: ' favorited works and ',
-    sort_fullSizeThumb: 'Display not cropped images.',
+    sort_fullSizeThumb: 'Display not cropped images.(Search page and User page only.)',
     nsort_getWorks: 'Getting novels of page: 1% of 2%',
     nsort_sorting: 'Sorting by bookmark cound',
     nsort_hideFav: 'Hide favorites when sorting',
@@ -256,7 +257,7 @@ Texts[Lang.ru_RU] = {
     sort_getPrivateFollowing: 'Получение приватного списка подписок',
     sort_filtering: 'Фильтрация %1 работ с количеством закладок меньше чем %2',
     sort_filteringHideFavorite: ' избранные работы и ',
-    sort_fullSizeThumb: 'Показать неотредактированное изображение',
+    sort_fullSizeThumb: 'Показать неотредактированное изображение (Страницы поиска и Artwork)',
     nsort_getWorks: Texts[Lang.en_US].nsort_getWorks,
     nsort_sorting: Texts[Lang.en_US].nsort_sorting,
     nsort_hideFav: Texts[Lang.en_US].nsort_hideFav,
@@ -779,6 +780,12 @@ Pages[PageType.Member] = {
         DoLog(LogLevel.Elements, returnMap);
 
         this.private.returnMap = returnMap;
+        
+        // 全尺寸缩略图
+        if (g_settings.fullSizeThumb) {
+            this.ReplaceToFullSizeThumb();
+        }
+
         return returnMap;
     },
     GetProcessedPageElements: function () {
@@ -789,6 +796,24 @@ Pages[PageType.Member] = {
     },
     GetToolBar: function () {
         return findToolbarCommon();
+    },
+    ReplaceToFullSizeThumb: function() {
+        if (!this.private.returnMap.loadingComplete) {
+            return;
+        }
+        $.each(this.private.returnMap.controlElements, (i, e) => {
+            e = $(e);
+            let img = e.find('img');
+            if (img.length == 0) {
+                iLog.w('No img in the control element.');
+                return true;
+            }
+            let src = img.attr('src');
+            let fullSizeSrc = convertThumbUrlToSmall(src);
+            if (src != fullSizeSrc) {
+                img.attr('src', fullSizeSrc).css('object-fit', 'contain');
+            }
+        });
     },
     // 跟搜索页一样的情况
     HasAutoLoad: true,
@@ -3497,21 +3522,22 @@ function ShowSetting() {
     }
     ul.empty();
     addItem(getSelectAction('pps-lang'), Texts[g_language].setting_language);
+    addItem(getImageAction('pps-fullSizeThumb'), Texts[g_language].sort_fullSizeThumb);
+    addItem('', '&nbsp');
     addItem(getImageAction('pps-preview'), Texts[g_language].setting_preview);
-    addItem(getImageAction('pps-sort'), Texts[g_language].setting_sort);
     addItem(getImageAction('pps-anime'), Texts[g_language].setting_anime);
     addItem(getImageAction('pps-original'), Texts[g_language].setting_origin);
     addItem(getInputAction('pps-previewDelay'), Texts[g_language].setting_previewDelay);
     addItem(getImageAction('pps-previewByKey'), Texts[g_language].setting_previewByKey);
     $('#pps-previewByKey').attr('title', Texts[g_language].setting_previewByKeyHelp);
     addItem('', '&nbsp');
+    addItem(getImageAction('pps-sort'), Texts[g_language].setting_sort);
     addItem(getInputAction('pps-maxPage'), Texts[g_language].setting_maxPage);
     addItem(getInputAction('pps-hideLess'), Texts[g_language].setting_hideWork);
     addItem(getImageAction('pps-hideBookmarked'), Texts[g_language].setting_hideFav);
     addItem(getImageAction('pps-hideFollowed'), Texts[g_language].setting_hideFollowed + '&nbsp<button id="pps-clearFollowingCache" style="cursor:pointer;background-color:gold;border-radius:12px;border:none;font-size:20px;padding:3px 10px;" title="' + Texts[g_language].setting_clearFollowingCacheHelp + '">' + Texts[g_language].setting_clearFollowingCache + '</button>');
     addItem(getImageAction('pps-newTab'), Texts[g_language].setting_blank);
     addItem(getImageAction('pps-pageKey'), Texts[g_language].setting_turnPage);
-    addItem(getImageAction('pps-fullSizeThumb'), Texts[g_language].sort_fullSizeThumb);
     addItem('', '&nbsp');
     addItem(getImageAction('pps-novelSort'), Texts[g_language].setting_novelSort);
     addItem(getInputAction('pps-novelMaxPage'), Texts[g_language].setting_novelMaxPage);
