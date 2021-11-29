@@ -1,7 +1,7 @@
 ﻿// ==UserScript==
 // @name                Pixiv Previewer(Dev)
 // @namespace           https://github.com/Ocrosoft/PixivPreviewer
-// @version             3.7.2
+// @version             3.7.3
 // @description         Display preview images (support single image, multiple images, moving images); Download animation(.zip); Sorting the search page by favorite count(and display it). Updated for the latest search page.
 // @description:zh-CN   显示预览图（支持单图，多图，动图）；动图压缩包下载；搜索页按热门度（收藏数）排序并显示收藏数，适配11月更新。
 // @description:ja      プレビュー画像の表示（単一画像、複数画像、動画のサポート）; アニメーションのダウンロード（.zip）; お気に入りの数で検索ページをソートします（そして表示します）。 最新の検索ページ用に更新されました。
@@ -495,6 +495,21 @@ function processElementListCommon(lis) {
         control.addClass('pp-control');
     });
 }
+function replaceThumbCommon(elements) {
+    $.each(elements, (i, e) => {
+        e = $(e);
+        let img = e.find('img');
+        if (img.length == 0) {
+            iLog.w('No img in the control element.');
+            return true;
+        }
+        let src = img.attr('src');
+        let fullSizeSrc = convertThumbUrlToSmall(src);
+        if (src != fullSizeSrc) {
+            img.attr('src', fullSizeSrc).css('object-fit', 'contain');
+        }
+    });
+}
 
 Pages[PageType.Search] = {
     PageTypeString: 'SearchPage',
@@ -623,78 +638,28 @@ Pages[PageType.BookMarkNew] = {
             controlElements: [],
         };
 
-        let containerDiv = $('#js-mount-point-latest-following').children('div:first');
-        if (containerDiv.length > 0) {
-            DoLog(LogLevel.Info, 'Found container div.');
-            DoLog(LogLevel.Elements, containerDiv);
-        } else {
-            DoLog(LogLevel.Error, 'Can not found container div.');
-            return returnMap;
-        }
+        let sections = $('section');
+        DoLog(LogLevel.Info, 'Page has ' + sections.length + ' <section>.');
+        DoLog(LogLevel.Elements, sections);
 
-        containerDiv.children().each(function (i, e) {
-            let _this = $(e);
-
-            let figure = _this.find('figure');
-            if (figure.length === 0) {
-                DoLog(LogLevel.Warning, 'Can not found <fingure>, skip this element.');
-                return;
-            }
-
-            let link = figure.children('div:first').children('a:first');
-            if (link.length === 0) {
-                DoLog(LogLevel.Warning, 'Can not found <a>, skip this element.');
-                return;
-            }
-
-            let ctlAttrs = {
-                illustId: 0,
-                illustType: 0,
-                pageCount: 1,
-            };
-
-            let href = link.attr('href');
-            if (href == null || href === '') {
-                DoLog(LogLevel.Warning, 'No href found, skip.');
-                return;
-            } else {
-                let matched = href.match(/artworks\/(\d+)/);
-                if (matched) {
-                    ctlAttrs.illustId = matched[1];
-                } else {
-                    DoLog(LogLevel.Warning, 'Can not found illust id, skip.');
-                    return;
-                }
-            }
-
-            if (link.children().length > 1) {
-                if (link.children('div:first').find('span').length > 0) {
-                    let span = link.children('div:first').children('span:first');
-                    if (span.length === 0) {
-                        DoLog(LogLevel.Warning, 'Can not found <span>, skip this element.');
-                        return;
-                    }
-                    ctlAttrs.pageCount = span.text();
-                } else {
-                    ctlAttrs.illustType = 2;
-                }
-            }
-
-            let control = figure.children('div:first');
-            control.attr({
-                'illustId': ctlAttrs.illustId,
-                'illustType': ctlAttrs.illustType,
-                'pageCount': ctlAttrs.pageCount
-            });
-
-            returnMap.controlElements.push(control.get(0));
-        });
+        let lis = sections.find('ul').find('li');
+        processElementListCommon(lis);
+        returnMap.controlElements = $('.pp-control');
+        returnMap.loadingComplete = true;
 
         DoLog(LogLevel.Info, 'Process page elements complete.');
         DoLog(LogLevel.Elements, returnMap);
 
-        returnMap.loadingComplete = true;
         this.private.returnMap = returnMap;
+
+        // 全尺寸缩略图
+        if (g_settings.fullSizeThumb) {
+            if (!this.private.returnMap.loadingComplete) {
+                return;
+            }
+            replaceThumbCommon(this.private.returnMap.controlElements);
+        }
+
         return returnMap;
     },
     GetProcessedPageElements: function () {
@@ -704,9 +669,9 @@ Pages[PageType.BookMarkNew] = {
         return this.private.returnMap;
     },
     GetToolBar: function () {
-        return findToolbarOld();
+        return findToolbarCommon();
     },
-    HasAutoLoad: false,
+    HasAutoLoad: true,
     private: {
         returnMap: null,
     },
@@ -780,10 +745,13 @@ Pages[PageType.Member] = {
         DoLog(LogLevel.Elements, returnMap);
 
         this.private.returnMap = returnMap;
-        
+
         // 全尺寸缩略图
         if (g_settings.fullSizeThumb) {
-            this.ReplaceToFullSizeThumb();
+            if (!this.private.returnMap.loadingComplete) {
+                return;
+            }
+            replaceThumbCommon(this.private.returnMap.controlElements);
         }
 
         return returnMap;
@@ -797,24 +765,6 @@ Pages[PageType.Member] = {
     GetToolBar: function () {
         return findToolbarCommon();
     },
-    ReplaceToFullSizeThumb: function() {
-        if (!this.private.returnMap.loadingComplete) {
-            return;
-        }
-        $.each(this.private.returnMap.controlElements, (i, e) => {
-            e = $(e);
-            let img = e.find('img');
-            if (img.length == 0) {
-                iLog.w('No img in the control element.');
-                return true;
-            }
-            let src = img.attr('src');
-            let fullSizeSrc = convertThumbUrlToSmall(src);
-            if (src != fullSizeSrc) {
-                img.attr('src', fullSizeSrc).css('object-fit', 'contain');
-            }
-        });
-    },
     // 跟搜索页一样的情况
     HasAutoLoad: true,
     private: {
@@ -825,7 +775,7 @@ Pages[PageType.Home] = {
     PageTypeString: 'HomePage',
     CheckUrl: function (url) {
         return /https?:\/\/www.pixiv.net\/?$/.test(url) ||
-            /https?:\/\/www.pixiv.net\/en\/?$/.test(url) || 
+            /https?:\/\/www.pixiv.net\/en\/?$/.test(url) ||
             /https?:\/\/www.pixiv.net\/cate_r18\.php$/.test(url) ||
             /https?:\/\/www.pixiv.net\/en\/cate_r18\.php$/.test(url);
     },
@@ -1512,7 +1462,7 @@ Pages[PageType.Artwork] = {
 
                     let window = unsafeWindow.parent;
                     for (let i = 0; i < 5; ++i) {
-                        if (!window){
+                        if (!window) {
                             break;
                         }
                         if (window.PreviewCallback) {
