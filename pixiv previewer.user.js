@@ -306,7 +306,7 @@ function DoLog(level, msgOrElement) {
 // 语言
 let g_language = Lang.zh_CN;
 // 版本号，第三位不需要跟脚本的版本号对上，第三位更新只有需要弹更新提示的时候才需要更新这里
-let g_version = '3.6.0';
+let g_version = '3.7.3';
 // 添加收藏需要这个
 let g_csrfToken = '';
 // 打的日志数量，超过一定数值清空控制台
@@ -3384,7 +3384,11 @@ function ShowUpgradeMessage() {
     });
     $('body').append(bg);
 
-    let body = '新功能：<br><dd>1.支持搜索页小说排序，可在设置中关闭。</dd>优化：<br><dd>1.减少jQuery引发的错误。<br>2.设置在小窗口下不会超出屏幕。</dd>修复：<br><dd>1.更新提示不会随窗口大小改变。</dd>';
+    let body = '新功能<br><ul><li>新增不自动显示预览图选项。</li></ul>优化<br><ul><li>全尺寸缩略图功能支持部分搜索页外的页面。</li></ul>修复<br><ul><li>支持最新的关注页面。</li></ul>';
+    let lang = $('html').attr('lang');
+    if (lang && lang.indexOf('zh') == -1) {
+        body = 'Feature<br><ul><li>Added the option not to automatically display the preview.</li></ul>Improve<br><ul><li>The full-size thumbnail function supports some pages outside the search page.</li></ul>Fix<br><ul><li>Support the latest following page.</li></ul>';
+    }
     bg.get(0).innerHTML = '<img id="pps-close"src="https://pp-1252089172.cos.ap-chengdu.myqcloud.com/Close.png"style="position: absolute; right: 35px; top: 20px; width: 32px; height: 32px; cursor: pointer;"><div style="position: absolute;width: 40%;left: 30%;top: 25%;font-size: 25px; text-align: center; color: white;">'
         + Texts[g_language].install_title + g_version
         + '</div><br><div style="position:absolute;left:50%;top:30%;font-size:20px;color:white;transform:translate(-50%,0);">'
