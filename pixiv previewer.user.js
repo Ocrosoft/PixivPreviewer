@@ -2661,21 +2661,17 @@ function PixivSK(callback) {
                 // others
                 let bookmarkDiv = imageLink.next();
                 let bookmarkSvg = bookmarkDiv.find('svg');
-                let additionTagDiv = imageDiv.prev();
+                let additionTagDiv = imageDiv.next();
                 let animationTag = imageDiv.find('svg');
 
                 let bookmarkCountDiv = additionTagDiv.clone();
-                bookmarkCountDiv.css({ 'top': 'auto', 'bottom': '0px', 'width': '50%' });
+                bookmarkCountDiv.css({ 'top': 'auto', 'bottom': '0px', 'width': '65%' });
                 additionTagDiv.parent().append(bookmarkCountDiv);
 
                 // 添加 class，方便后面修改内容
                 img.addClass('ppImg');
                 imageLink.addClass('ppImageLink');
-                //if (titleLink.get(0).tagName == 'A') {
                 titleLink.addClass('ppTitleLink');
-                //} else {
-                //    titleLink.append('<a class="ppTitleLink"></a>');
-                //}
                 authorLinkProfileImage.addClass('ppAuthorLinkProfileImage');
                 authorLink.addClass('ppAuthorLink');
                 authorName.addClass('ppAuthorName');
