@@ -822,11 +822,11 @@ Pages[PageType.Home] = {
             } else {
                 ctlAttrs.illustId = illustId[0];
             }
-            let pageCount = a.children('div:first').find('span');
+            let pageCount = a.find('span:first').next();
             if (pageCount.length > 0) {
                 ctlAttrs.pageCount = parseInt($(pageCount.get(pageCount.length - 1)).text());
             }
-            if ($(a.children('div').get(1)).find('svg').length > 0) {
+            if ($(a.children('div').get(0)).children('svg').length > 0) {
                 ctlAttrs.illustType = 2;
             }
 
@@ -1275,14 +1275,11 @@ Pages[PageType.Artwork] = {
                     }
 
                     if (link.children().length > 1) {
-                        if (link.children('div:first').find('span').length > 0) {
-                            let span = link.children('div:first').find('span:first');
-                            if (span.length === 0) {
-                                DoLog(LogLevel.Warning, 'Can not found <span>, skip this element.');
-                                return;
-                            }
-                            ctlAttrs.pageCount = span.next().text();
-                        } else if (link.children('div:last').find('svg').length > 0) {
+                        let pageCount = link.find('span:first').next();
+                        if (pageCount.length > 0) {
+                            ctlAttrs.pageCount = parseInt($(pageCount.get(pageCount.length - 1)).text());
+                        }
+                        if ($(link.children('div').get(0)).children('svg').length > 0) {
                             ctlAttrs.illustType = 2;
                         }
                     }
