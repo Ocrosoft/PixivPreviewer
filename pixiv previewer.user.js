@@ -3593,8 +3593,8 @@ function SetTargetBlank(returnMap) {
 
         $.each(target, function (i, e) {
             $(e).attr({ 'target': '_blank', 'rel': 'external' });
-            // 主页这里用的是js监听跳转，特殊处理
-            if (g_pageType == PageType.Home || g_pageType == PageType.Member || g_pageType == PageType.Artwork) {
+            // js监听跳转，特殊处理
+            if (g_pageType == PageType.Home || g_pageType == PageType.Member || g_pageType == PageType.Artwork || g_pageType == PageType.BookMarkNew) {
                 e.addEventListener("click", function (ev) {
                     ev.stopPropagation();
                 })
