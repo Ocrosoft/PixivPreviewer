@@ -11,6 +11,8 @@
 // @grant               unsafeWindow
 // @compatible          Chrome
 // @license             GPLv3
+// @icon                https://www.google.com/s2/favicons?domain=pixiv.com&sz=32
+// @icon64              https://www.google.com/s2/favicons?domain=pixiv.com&sz=64
 // ==/UserScript==
 
 // https://greasyfork.org/zh-CN/scripts/417761-ilog
