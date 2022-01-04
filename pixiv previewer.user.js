@@ -445,7 +445,7 @@ function convertThumbUrlToSmall(thumbUrl) {
         .replace(/c\/.*\/img-master/, replace1).replace('_square', replace2);
 }
 function processElementListCommon(lis) {
-    lis.each(function (i, e) {
+    $.each(lis, function (i, e) {
         let li = $(e);
 
         // 只填充必须的几个，其他的目前用不着
@@ -529,72 +529,49 @@ Pages[PageType.Search] = {
         let sections = $('section');
         DoLog(LogLevel.Info, 'Page has ' + sections.length + ' <section>.');
         DoLog(LogLevel.Elements, sections);
-        // 先对 section 进行评分
-        let sectionIndex = -1;
-        let bestScore = -99;
-        sections.each(function (i, e) {
-            let section = $(e);
-            let score = 0;
-            if (section.find('ul').length > 0) {
-                let childrenCount = section.children().length;
-                if (childrenCount != 2) {
-                    DoLog(LogLevel.Warning, '<ul> was found in this <section>, but it has ' + childrenCount + ' children!');
-                    score--;
-                }
-                let ul = section.find('ul');
-                if (ul.length > 1) {
-                    DoLog(LogLevel.Warning, 'This section has more than one <ul>?');
-                    score--;
-                }
-                if ($(ul.parent().get(0)).css('display') == 'none' || $(ul.get(0)).css('display') == 'none') {
-                    DoLog(LogLevel.Info, '<ul> or it\'s parentNode is not visible now, continue waiting.');
-                    sectionIndex = -1;
-                    bestScore = 999;
-                    return false;
-                }
-                if ($(ul.get(0)).next().length === 0) {
-                    DoLog(LogLevel.Info, 'Page selector not exists, continue waiting.');
-                    sectionIndex = -1;
-                    bestScore = 999;
-                    return false;
-                }
-                let lis = ul.find('li');
-                if (lis.length === 0) {
-                    DoLog(LogLevel.Info, 'This <ul> has 0 children, will be skipped.');
-                    return false;
-                }
-                if ($(lis.get(0)).find('figure').length > 0) {
-                    DoLog(LogLevel.Warning, '<figure> was found in the first <li>, continue waiting.');
-                    sectionIndex = -1;
-                    bestScore = 999;
-                    return false;
-                }
-                if (lis.length > 4) {
-                    score += 5;
-                }
-                // 正确的会在后面
-                if (score >= bestScore) {
-                    bestScore = score;
-                    sectionIndex = i;
-                }
-            } else {
-                DoLog(LogLevel.Info, 'This section(' + i + ' is not has <ul>, will be skipped.');
-            }
-        });
 
-        if (sectionIndex == -1) {
-            if (bestScore < 100) {
-                DoLog(LogLevel.Error, 'No suitable <section>!');
-            }
+        let premiumSectionIndex = -1;
+        let resultSectionIndex = 0;
+        if (sections.length == 0) {
+            iLog.e('No suitable <section>!');
             return returnMap;
         }
 
-        let lis = $(sections[sectionIndex]).find('ul').find('li');
+        $.each(sections, (i, e) => {
+            if ($(e).find('aside').length > 0) {
+                premiumSectionIndex = i;
+            } else {
+                resultSectionIndex = i;
+            }
+        });
+
+        iLog.v('premium: ' + premiumSectionIndex);
+        iLog.v('result: ' + resultSectionIndex);
+
+        let ul = $(sections[resultSectionIndex]).find('ul');
+        let lis = ul.find('li').toArray();
+        if (premiumSectionIndex != -1) {
+            let lis2 = $(sections[premiumSectionIndex]).find('ul').find('li');
+            lis = lis.concat(lis2.toArray());
+        }
+
+        if (premiumSectionIndex != -1) {
+            let aside = $(sections[premiumSectionIndex]).find('aside');
+            $.each(aside.children(), (i, e) => {
+                if (e.tagName.toLowerCase() != 'ul') {
+                    e.remove();
+                } else {
+                    $(e).css('-webkit-mask', '0');
+                }
+            });
+            aside.next().remove();
+        }
+
         processElementListCommon(lis);
         returnMap.controlElements = $('.pp-control');
-        this.private.pageSelector = $($(sections[sectionIndex]).find('ul').get(0)).next().get(0);
+        this.private.pageSelector = ul.next().get(0);
         returnMap.loadingComplete = true;
-        this.private.imageListConrainer = $(sections[sectionIndex]).find('ul').get(0);
+        this.private.imageListConrainer = ul.get(0);
 
         DoLog(LogLevel.Info, 'Process page elements complete.');
         DoLog(LogLevel.Elements, returnMap);
