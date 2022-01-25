@@ -11,8 +11,8 @@
 // @grant               unsafeWindow
 // @compatible          Chrome
 // @license             GPLv3
-// @icon                https://www.google.com/s2/favicons?domain=pixiv.com&sz=32
-// @icon64              https://www.google.com/s2/favicons?domain=pixiv.com&sz=64
+// @icon                https://t0.gstatic.com/faviconV2?client=SOCIAL&type=FAVICON&fallback_opts=TYPE,SIZE,URL&size=32&url=https://www.pixiv.net
+// @icon64              https://t0.gstatic.com/faviconV2?client=SOCIAL&type=FAVICON&fallback_opts=TYPE,SIZE,URL&size=64&url=https://www.pixiv.net
 // ==/UserScript==
 
 // https://greasyfork.org/zh-CN/scripts/417761-ilog
