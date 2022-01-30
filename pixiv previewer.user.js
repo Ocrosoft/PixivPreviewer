@@ -3125,6 +3125,7 @@ function PixivNS(callback) {
         });
         ul.empty();
         $.each(newList, function (i, e) {
+            $(e).css('display', 'block');
             ul.append(e);
         });
         hideLoading();
