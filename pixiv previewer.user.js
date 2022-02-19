@@ -1,7 +1,7 @@
 ﻿// ==UserScript==
 // @name                Pixiv Previewer(Dev)
 // @namespace           https://github.com/Ocrosoft/PixivPreviewer
-// @version             3.7.5
+// @version             3.7.6
 // @description         Display preview images (support single image, multiple images, moving images); Download animation(.zip); Sorting the search page by favorite count(and display it). Updated for the latest search page.
 // @description:zh-CN   显示预览图（支持单图，多图，动图）；动图压缩包下载；搜索页按热门度（收藏数）排序并显示收藏数，适配11月更新。
 // @description:ja      プレビュー画像の表示（単一画像、複数画像、動画のサポート）; アニメーションのダウンロード（.zip）; お気に入りの数で検索ページをソートします（そして表示します）。 最新の検索ページ用に更新されました。
@@ -149,6 +149,7 @@ Texts[Lang.zh_CN] = {
     // 安装或更新后弹出的提示
     install_title: '欢迎使用 PixivPreviewer v',
     install_body: '<div style="position: absolute;left: 50%;top: 30%;font-size: 20px; color: white;transform:translate(-50%,0);"><p style="text-indent: 2em;">欢迎反馈问题和提出建议！><a style="color: green;" href="https://greasyfork.org/zh-CN/scripts/30766-pixiv-previewer/feedback" target="_blank">反馈页面</a><</p><br><p style="text-indent: 2em;">如果您是第一次使用，推荐到<a style="color: green;" href="https://greasyfork.org/zh-CN/scripts/30766-pixiv-previewer" target="_blank"> 详情页 </a>查看脚本介绍。</p></div>',
+    upgrade_body: '新功能<br><ul><li>小说排序时可以按收藏数筛选。</li><li>小说排序时可以隐藏已收藏的作品。</li></ul>修复<br><ul><li>修复重置后显示的提示语言可能不正确的问题。</li></ul>',
     // 设置项
     setting_language: '语言',
     setting_preview: '预览',
@@ -193,6 +194,7 @@ Texts[Lang.zh_CN] = {
 Texts[Lang.en_US] = {
     install_title: 'Welcome to PixivPreviewer v',
     install_body: '<div style="position: absolute;left: 50%;top: 30%;font-size: 20px; color: white;transform:translate(-50%,0);"><p style="text-indent: 2em;">Feedback questions and suggestions are welcome! ><a style="color: green;" href="https://greasyfork.org/zh-CN/scripts/30766-pixiv-previewer/feedback" target="_blank">Feedback Page</a><</p><br><p style="text-indent: 2em;">If you are using it for the first time, it is recommended to go to the<a style="color: green;" href="https://greasyfork.org/zh-CN/scripts/30766-pixiv-previewer" target="_blank"> Details Page </a>to see the script introduction.</p></div>',
+    upgrade_body: 'Feature<br><ul><li>Add bookmark count filter for novel sorting.</li><li>Add bookmarked filter for novel sorting.</li></ul>Fix<br><ul><li>Fix the problem which that the guide page may display in wrong language after reset the script.</li></ul>',
     setting_language: 'Language',
     setting_preview: 'Preview',
     setting_sort: 'Sorting (Search page)',
@@ -234,6 +236,7 @@ Texts[Lang.en_US] = {
 Texts[Lang.ru_RU] = {
     install_title: 'Добро пожаловать в PixivPreviewer v',
     install_body: '<div style="position: absolute;left: 50%;top: 30%;font-size: 20px; color: white;transform:translate(-50%,0);"><p style="text-indent: 2em;">Вопросы и предложения приветствуются! ><a style="color: green;" href="https://greasyfork.org/zh-CN/scripts/30766-pixiv-previewer/feedback" target="_blank">Страница обратной связи</a><</p><br><p style="text-indent: 2em;">Если вы используете это впервые, рекомендуется перейти к<a style="color: green;" href="https://greasyfork.org/zh-CN/scripts/30766-pixiv-previewer" target="_blank"> Странице подробностей </a>, чтобы посмотреть введение в скрипт.</p></div>',
+    upgrade_body: Texts[Lang.en_US].upgrade_body,
     setting_language: 'Язык',
     setting_preview: 'Предпросмотр',
     setting_sort: 'Сортировка (Страница поиска)',
@@ -314,7 +317,7 @@ function DoLog(level, msgOrElement) {
 // 语言
 let g_language = Lang.zh_CN;
 // 版本号，第三位不需要跟脚本的版本号对上，第三位更新只有需要弹更新提示的时候才需要更新这里
-let g_version = '3.7.3';
+let g_version = '3.7.6';
 // 添加收藏需要这个
 let g_csrfToken = '';
 // 打的日志数量，超过一定数值清空控制台
@@ -3381,11 +3384,7 @@ function ShowUpgradeMessage() {
     });
     $('body').append(bg);
 
-    let body = '新功能<br><ul><li>新增不自动显示预览图选项。</li></ul>优化<br><ul><li>全尺寸缩略图功能支持部分搜索页外的页面。</li></ul>修复<br><ul><li>支持最新的关注页面。</li></ul>';
-    let lang = $('html').attr('lang');
-    if (lang && lang.indexOf('zh') == -1) {
-        body = 'Feature<br><ul><li>Added the option not to automatically display the preview.</li></ul>Improve<br><ul><li>The full-size thumbnail function supports some pages outside the search page.</li></ul>Fix<br><ul><li>Support the latest following page.</li></ul>';
-    }
+    let body = Texts[g_language].upgrade_body;
     bg.get(0).innerHTML = '<img id="pps-close"src="https://pp-1252089172.cos.ap-chengdu.myqcloud.com/Close.png"style="position: absolute; right: 35px; top: 20px; width: 32px; height: 32px; cursor: pointer;"><div style="position: absolute;width: 40%;left: 30%;top: 25%;font-size: 25px; text-align: center; color: white;">'
         + Texts[g_language].install_title + g_version
         + '</div><br><div style="position:absolute;left:50%;top:30%;font-size:20px;color:white;transform:translate(-50%,0);">'
@@ -3611,6 +3610,22 @@ function SetTargetBlank(returnMap) {
 /* --------------------------------------- 主函数 --------------------------------------- */
 let loadInterval = null;
 let itv = null;
+function AutoDetectLanguage() {
+    g_language = Lang.auto;
+    if (g_settings && g_settings.lang) {
+        g_language = g_settings.lang;
+    }
+    if (g_language == Lang.auto) {
+        let lang = $('html').attr('lang');
+        if (lang && lang.indexOf('zh') != -1) {
+            // 简体中文和繁体中文都用简体中文
+            g_language = Lang.zh_CN;
+        } else {
+            // 其他的统一用英语，其他语言也不知道谷歌翻译得对不对
+            g_language = Lang.en_US;
+        }
+    }
+}
 function Load() {
     // 匹配当前页面
     for (let i = 0; i < PageType.PageTypeCount; i++) {
@@ -3655,21 +3670,14 @@ function Load() {
         });
     }
 
+    // GetSettings 内部需要 g_language，先使用自动探测的语言
+    AutoDetectLanguage();
+
     // 读取设置
     g_settings = GetSettings();
 
     // 自动检测语言
-    g_language = g_settings.lang == undefined ? Lang.auto : g_settings.lang;
-    if (g_language == Lang.auto) {
-        let lang = $('html').attr('lang');
-        if (lang && lang.indexOf('zh') != -1) {
-            // 简体中文和繁体中文都用简体中文
-            g_language = Lang.zh_CN;
-        } else {
-            // 其他的统一用英语，其他语言也不知道谷歌翻译得对不对
-            g_language = Lang.en_US;
-        }
-    }
+    AutoDetectLanguage();
 
     // g_csrfToken
     if (g_pageType == PageType.Search || g_pageType == PageType.NovelSearch) {
