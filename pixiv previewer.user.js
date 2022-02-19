@@ -172,6 +172,7 @@ Texts[Lang.zh_CN] = {
     setting_resetHint: '这会删除所有设置，相当于重新安装脚本，确定要重置吗？',
     setting_novelSort: '小说排序',
     setting_novelMaxPage: '小说排序时统计的最大页数',
+    setting_novelHideWork: '隐藏收藏数少于设定值的作品',
     // 搜索时过滤值太高
     sort_noWork: '没有可以显示的作品',
     sort_getWorks: '正在获取第%1/%2页作品',
@@ -213,6 +214,7 @@ Texts[Lang.en_US] = {
     setting_resetHint: 'This will delete all settings and set it to default. Are you sure?',
     setting_novelSort: 'Sorting (Novel)',
     setting_novelMaxPage: 'Maximum number of pages counted for novel sorting',
+    setting_novelHideWork: 'Hide works with bookmark count less than set value',
     sort_noWork: 'No works to display',
     sort_getWorks: 'Getting artworks of page: %1 of %2',
     sort_getBookmarkCount: 'Getting bookmark count of artworks：%1 of %2',
@@ -252,6 +254,7 @@ Texts[Lang.ru_RU] = {
     setting_resetHint: 'Это удалит все настройки и установит их по умолчанию. Продолжить?',
     setting_novelSort: Texts[Lang.en_US].setting_novelSort,
     setting_novelMaxPage: Texts[Lang.en_US].setting_novelMaxPage,
+    setting_novelHideWork: 'Скрыть работы с количеством закладок меньше установленного значения',
     sort_noWork: 'Нет работ для отображения',
     sort_getWorks: 'Получение иллюстраций страницы: %1 из %2',
     sort_getBookmarkCount: 'Получение количества закладок artworks：%1 из %2',
@@ -348,6 +351,7 @@ let g_defaultSettings = {
     'fullSizeThumb': 0,
     'enableNovelSort': 1,
     'novelPageCount': 3,
+    'novelFavFilter': 0,
     'novelHideFavorite': 0,
     'novelHideFollowed': 0,
     'logLevel': 1,
@@ -3104,7 +3108,17 @@ function PixivNS(callback) {
             }
             return 0;
         });
-        return list;
+        let filteredList = [];
+        $.each(list, function (i, e) {
+            let bookmark = e.bookmarkCount;
+            if (!bookmark) {
+                bookmark = 0;
+            }
+            if (bookmark >= g_settings.novelFavFilter) {
+                filteredList.push(e);
+            }
+        });
+        return filteredList;
     }
 
     function rearrangeNovel(list) {
@@ -3468,6 +3482,7 @@ function ShowSetting() {
     addItem('', '&nbsp');
     addItem(getImageAction('pps-novelSort'), Texts[g_language].setting_novelSort);
     addItem(getInputAction('pps-novelMaxPage'), Texts[g_language].setting_novelMaxPage);
+    addItem(getInputAction('pps-novelHideWork'), Texts[g_language].setting_novelHideWork);
 
     let imgOn = 'https://pp-1252089172.cos.ap-chengdu.myqcloud.com/On.png';
     let imgOff = 'https://pp-1252089172.cos.ap-chengdu.myqcloud.com/Off.png'
@@ -3486,6 +3501,7 @@ function ShowSetting() {
     $('#pps-fullSizeThumb').attr('src', settings.fullSizeThumb ? imgOn : imgOff).addClass(settings.fullSizeThumb ? 'on' : 'off').css('cursor: pointer');
     $('#pps-novelSort').attr('src', settings.enableNovelSort ? imgOn : imgOff).addClass(settings.enableNovelSort ? 'on' : 'off').css('cursor: pointer');
     $('#pps-novelMaxPage').val(settings.novelPageCount);
+    $('#pps-novelHideWork').val(settings.novelFavFilter);
 
     $('#pps-lang')
         .append('<option value="-1">Auto</option>')
@@ -3534,6 +3550,7 @@ function ShowSetting() {
             'fullSizeThumb': $('#pps-fullSizeThumb').hasClass('on') ? 1 : 0,
             'enableNovelSort': $('#pps-novelSort').hasClass('on') ? 1 : 0,
             'novelPageCount': parseInt($('#pps-novelMaxPage').val()),
+            'novelFavFilter': parseInt($('#pps-novelHideWork').val()),
             'version': g_version,
         }
 
