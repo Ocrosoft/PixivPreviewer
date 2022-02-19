@@ -173,6 +173,7 @@ Texts[Lang.zh_CN] = {
     setting_novelSort: '小说排序',
     setting_novelMaxPage: '小说排序时统计的最大页数',
     setting_novelHideWork: '隐藏收藏数少于设定值的作品',
+    setting_novelHideFav: '排序时隐藏已收藏的作品',
     // 搜索时过滤值太高
     sort_noWork: '没有可以显示的作品',
     sort_getWorks: '正在获取第%1/%2页作品',
@@ -215,6 +216,7 @@ Texts[Lang.en_US] = {
     setting_novelSort: 'Sorting (Novel)',
     setting_novelMaxPage: 'Maximum number of pages counted for novel sorting',
     setting_novelHideWork: 'Hide works with bookmark count less than set value',
+    setting_novelHideFav: 'Hide favorites when sorting',
     sort_noWork: 'No works to display',
     sort_getWorks: 'Getting artworks of page: %1 of %2',
     sort_getBookmarkCount: 'Getting bookmark count of artworks：%1 of %2',
@@ -255,6 +257,7 @@ Texts[Lang.ru_RU] = {
     setting_novelSort: Texts[Lang.en_US].setting_novelSort,
     setting_novelMaxPage: Texts[Lang.en_US].setting_novelMaxPage,
     setting_novelHideWork: 'Скрыть работы с количеством закладок меньше установленного значения',
+    setting_novelHideFav: 'При сортировке, скрыть избранное',
     sort_noWork: 'Нет работ для отображения',
     sort_getWorks: 'Получение иллюстраций страницы: %1 из %2',
     sort_getBookmarkCount: 'Получение количества закладок artworks：%1 из %2',
@@ -3108,15 +3111,22 @@ function PixivNS(callback) {
             }
             return 0;
         });
+        // 筛选
         let filteredList = [];
         $.each(list, function (i, e) {
+            // 收藏量筛选
             let bookmark = e.bookmarkCount;
             if (!bookmark) {
                 bookmark = 0;
             }
-            if (bookmark >= g_settings.novelFavFilter) {
-                filteredList.push(e);
+            if (bookmark < g_settings.novelFavFilter) {
+                return true;
             }
+            // 已收藏筛选
+            if (g_settings.novelHideFavorite && e.bookmarkData) {
+                return true;
+            }
+            filteredList.push(e);
         });
         return filteredList;
     }
@@ -3483,6 +3493,7 @@ function ShowSetting() {
     addItem(getImageAction('pps-novelSort'), Texts[g_language].setting_novelSort);
     addItem(getInputAction('pps-novelMaxPage'), Texts[g_language].setting_novelMaxPage);
     addItem(getInputAction('pps-novelHideWork'), Texts[g_language].setting_novelHideWork);
+    addItem(getImageAction('pps-novelHideBookmarked'), Texts[g_language].setting_novelHideFav);
 
     let imgOn = 'https://pp-1252089172.cos.ap-chengdu.myqcloud.com/On.png';
     let imgOff = 'https://pp-1252089172.cos.ap-chengdu.myqcloud.com/Off.png'
@@ -3502,6 +3513,7 @@ function ShowSetting() {
     $('#pps-novelSort').attr('src', settings.enableNovelSort ? imgOn : imgOff).addClass(settings.enableNovelSort ? 'on' : 'off').css('cursor: pointer');
     $('#pps-novelMaxPage').val(settings.novelPageCount);
     $('#pps-novelHideWork').val(settings.novelFavFilter);
+    $('#pps-novelHideBookmarked').attr('src', settings.novelHideFavorite ? imgOn : imgOff).addClass(settings.novelHideFavorite ? 'on' : 'off').css('cursor: pointer');
 
     $('#pps-lang')
         .append('<option value="-1">Auto</option>')
@@ -3551,6 +3563,7 @@ function ShowSetting() {
             'enableNovelSort': $('#pps-novelSort').hasClass('on') ? 1 : 0,
             'novelPageCount': parseInt($('#pps-novelMaxPage').val()),
             'novelFavFilter': parseInt($('#pps-novelHideWork').val()),
+            'novelHideFavorite': $('#pps-novelHideBookmarked').hasClass('on') ? 1 : 0,
             'version': g_version,
         }
 
