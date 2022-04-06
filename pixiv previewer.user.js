@@ -176,7 +176,7 @@ Texts[Lang.zh_CN] = {
     setting_novelHideWork: '隐藏收藏数少于设定值的作品',
     setting_novelHideFav: '排序时隐藏已收藏的作品',
     // 搜索时过滤值太高
-    sort_noWork: '没有可以显示的作品',
+    sort_noWork: '没有可以显示的作品（隐藏了 %1 个作品）',
     sort_getWorks: '正在获取第%1/%2页作品',
     sort_getBookmarkCount: '获取收藏数：%1/%2',
     sort_getPublicFollowing: '获取公开关注画师',
@@ -219,7 +219,7 @@ Texts[Lang.en_US] = {
     setting_novelMaxPage: 'Maximum number of pages counted for novel sorting',
     setting_novelHideWork: 'Hide works with bookmark count less than set value',
     setting_novelHideFav: 'Hide favorites when sorting',
-    sort_noWork: 'No works to display',
+    sort_noWork: 'No works to display (%1 works hideen)',
     sort_getWorks: 'Getting artworks of page: %1 of %2',
     sort_getBookmarkCount: 'Getting bookmark count of artworks：%1 of %2',
     sort_getPublicFollowing: 'Getting public following list',
@@ -261,7 +261,7 @@ Texts[Lang.ru_RU] = {
     setting_novelMaxPage: Texts[Lang.en_US].setting_novelMaxPage,
     setting_novelHideWork: 'Скрыть работы с количеством закладок меньше установленного значения',
     setting_novelHideFav: 'При сортировке, скрыть избранное',
-    sort_noWork: 'Нет работ для отображения',
+    sort_noWork: 'Нет работ для отображения (%1 works hidden)',
     sort_getWorks: 'Получение иллюстраций страницы: %1 из %2',
     sort_getBookmarkCount: 'Получение количества закладок artworks：%1 из %2',
     sort_getPublicFollowing: 'Получение публичного списка подписок',
@@ -2111,6 +2111,8 @@ function PixivSK(callback) {
     let currentPage = 0;
     // 获取到的作品
     let works = [];
+    // 作品数量
+    let worksCount = 0;
 
     // 仅搜索页启用
     if (g_pageType != PageType.Search) {
@@ -2452,6 +2454,7 @@ function PixivSK(callback) {
                     }
                 }
                 works = tempWorks;
+                worksCount = works.length;
                 DoLog(LogLevel.Info, 'Clear ad container complete.');
                 DoLog(LogLevel.Elements, works);
 
@@ -2878,7 +2881,8 @@ function PixivSK(callback) {
             });
 
             if (works.length === 0) {
-                $(container).show().get(0).outerHTML = '<div class=""style="display: flex;align-items: center;justify-content: center; height: 408px;flex-flow: column;"><div class=""style="margin-bottom: 12px;color: rgba(0, 0, 0, 0.16);"><svg viewBox="0 0 16 16"size="72"style="fill: currentcolor;height: 72px;vertical-align: middle;"><path d="M8.25739 9.1716C7.46696 9.69512 6.51908 10 5.5 10C2.73858 10 0.5 7.76142 0.5 5C0.5			2.23858 2.73858 0 5.5 0C8.26142 0 10.5 2.23858 10.5 5C10.5 6.01908 10.1951 6.96696 9.67161			7.75739L11.7071 9.79288C12.0976 10.1834 12.0976 10.8166 11.7071 11.2071C11.3166 11.5976 10.6834			11.5976 10.2929 11.2071L8.25739 9.1716ZM8.5 5C8.5 6.65685 7.15685 8 5.5 8C3.84315 8 2.5 6.65685			2.5 5C2.5 3.34315 3.84315 2 5.5 2C7.15685 2 8.5 3.34315 8.5 5Z"transform="translate(2.25 2.25)"fill-rule="evenodd"clip-rule="evenodd"></path></svg></div><span class="sc-LzMCO fLDUzU">' + Texts[g_language].sort_noWork + '</span></div>';
+                $(container).show().get(0).outerHTML = '<div class=""style="display: flex;align-items: center;justify-content: center; height: 408px;flex-flow: column;"><div class=""style="margin-bottom: 12px;color: rgba(0, 0, 0, 0.16);"><svg viewBox="0 0 16 16"size="72"style="fill: currentcolor;height: 72px;vertical-align: middle;"><path d="M8.25739 9.1716C7.46696 9.69512 6.51908 10 5.5 10C2.73858 10 0.5 7.76142 0.5 5C0.5 2.23858 2.73858 0 5.5 0C8.26142 0 10.5 2.23858 10.5 5C10.5 6.01908 10.1951 6.96696 9.67161 7.75739L11.7071 9.79288C12.0976 10.1834 12.0976 10.8166 11.7071 11.2071C11.3166 11.5976 10.6834 11.5976 10.2929 11.2071L8.25739 9.1716ZM8.5 5C8.5 6.65685 7.15685 8 5.5 8C3.84315 8 2.5 6.65685 2.5 5C2.5 3.34315 3.84315 2 5.5 2C7.15685 2 8.5 3.34315 8.5 5Z"transform="translate(2.25 2.25)"fill-rule="evenodd"clip-rule="evenodd"></path></svg></div><span class="sc-LzMCO fLDUzU">'
+                    + Texts[g_language].sort_noWork.replace('%1', worksCount) + '</span></div>';
             }
 
             // 恢复显示
