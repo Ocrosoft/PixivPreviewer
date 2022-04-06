@@ -1,7 +1,7 @@
 ﻿// ==UserScript==
 // @name                Pixiv Previewer(Dev)
 // @namespace           https://github.com/Ocrosoft/PixivPreviewer
-// @version             3.7.6
+// @version             3.7.7
 // @description         Display preview images (support single image, multiple images, moving images); Download animation(.zip); Sorting the search page by favorite count(and display it). Updated for the latest search page.
 // @description:zh-CN   显示预览图（支持单图，多图，动图）；动图压缩包下载；搜索页按热门度（收藏数）排序并显示收藏数，适配11月更新。
 // @description:ja      プレビュー画像の表示（単一画像、複数画像、動画のサポート）; アニメーションのダウンロード（.zip）; お気に入りの数で検索ページをソートします（そして表示します）。 最新の検索ページ用に更新されました。
@@ -2431,7 +2431,7 @@ function PixivSK(callback) {
 
             // 后面已经没有作品了
             if (no_artworks_found) {
-                DoLog(LogLevel.Warning, 'No artworks found, ignore ' + (g_settings.pageCount - currentGettingPageCount) + ' pages.');
+                iLog.w(LogLevel.Warning, 'No artworks found, ignore ' + (g_settings.pageCount - currentGettingPageCount) + ' pages.');
                 currentPage += g_settings.pageCount - currentGettingPageCount;
                 currentGettingPageCount = g_settings.pageCount;
             }
@@ -2447,6 +2447,8 @@ function PixivSK(callback) {
                     if (works[i].id && !workIdsSet.has(works[i].id)) {
                         tempWorks.push(works[i]);
                         workIdsSet.add(works[i].id);
+                    } else {
+                        iLog.w('ignore work: ' + works[i].id);
                     }
                 }
                 works = tempWorks;
@@ -2967,9 +2969,11 @@ function PixivNS(callback) {
         detailDiv.find('.gtm-novel-searchpage-result-user:last').addClass('pns-author');
         let tagDiv = detailDiv.children().eq(2).children().eq(0);
         let bookmarkDiv = tagDiv.children().eq(2);
-        bookmarkDiv.children().eq(0).addClass('pns-text-count');
-        if (bookmarkDiv.children().length < 2) {
-            bookmarkDiv.find('.pns-text-count').after('<div class="pns-bookmark-div"><span style="display: inline-flex; vertical-align: top; height: 20px;"><svg viewBox="0 0 12 12" size="12" class="sc-14heosd-1 dcwYur"><path fill-rule="evenodd" clip-rule="evenodd" d="M9 0.75C10.6569 0.75 12 2.09315 12 3.75C12 7.71703 7.33709 10.7126   6.23256 11.3666C6.08717 11.4526 5.91283 11.4526 5.76744 11.3666C4.6629 10.7126 0 7.71703 0 3.75C0 2.09315 1.34315 0.75 3 0.75C4.1265 0.75 5.33911 1.60202 6 2.66823C6.66089 1.60202 7.8735 0.75 9 0.75Z"></path></svg></span><span class="pns-bookmark-count" style="padding-left: 4px;">0</span></div>')
+        bookmarkDiv.find('span:first').addClass('pns-text-count');
+        if (bookmarkDiv.find('span').length < 2) {
+            let textSpan = bookmarkDiv.find('.pns-text-count');
+            textSpan.append('<span class="pns-bookmark-count"><span><div class="sc-eoqmwo-1 grSeZG"><span class="sc-14heosd-0 gbNjEj"><svg viewBox="0 0 12 12" size="12" class="sc-14heosd-1 YtZop"><path fill-rule="evenodd" clip-rule="evenodd" d="M9 0.75C10.6569 0.75 12 2.09315 12 3.75C12 7.71703 7.33709 10.7126 6.23256 11.3666C6.08717 11.4526 5.91283 11.4526 5.76744 11.3666C4.6629 10.7126 0 7.71703 0 3.75C0 2.09315 1.34315 0.75 3 0.75C4.1265 0.75 5.33911 1.60202 6 2.66823C6.66089 1.60202 7.8735 0.75 9 0.75Z"></path></svg></span><span class="sc-eoqmwo-2 dfUmJJ">2,441</span></div></span></span>');
+            bookmarkDiv.find('.pns-bookmark-count').addClass(textSpan.get(0).className);
         } else {
             bookmarkDiv.find('span:last').addClass('pns-bookmark-count').parent().addClass('pns-bookmark-div');
         }
@@ -3330,6 +3334,15 @@ function PixivNS(callback) {
             return;
         }
         let currentPage = getCurrentPage();
+
+        if ($('.gtm-novel-searchpage-gs-toggle-button').attr('data-gtm-label') == 'off') {
+            showLoading();
+            $('.gtm-novel-searchpage-gs-toggle-button').parent().next().text();
+            // 不常见，不要多语言了
+            $('#loading').find('#progress').text('由于启用了 "' + $('.gtm-novel-searchpage-gs-toggle-button').parent().next().text() + '"，无法进行排序。');
+            setTimeout(() => hideLoading(), 3000);
+            return;
+        }
 
         showLoading();
         changePageSelector();
