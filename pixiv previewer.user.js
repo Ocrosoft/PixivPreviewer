@@ -1,7 +1,7 @@
 ﻿// ==UserScript==
 // @name                Pixiv Previewer(Dev)
 // @namespace           https://github.com/Ocrosoft/PixivPreviewer
-// @version             3.7.9
+// @version             3.7.11
 // @description         Display preview images (support single image, multiple images, moving images); Download animation(.zip); Sorting the search page by favorite count(and display it). Updated for the latest search page.
 // @description:zh-CN   显示预览图（支持单图，多图，动图）；动图压缩包下载；搜索页按热门度（收藏数）排序并显示收藏数，适配11月更新。
 // @description:ja      プレビュー画像の表示（単一画像、複数画像、動画のサポート）; アニメーションのダウンロード（.zip）; お気に入りの数で検索ページをソートします（そして表示します）。 最新の検索ページ用に更新されました。
@@ -157,10 +157,11 @@ Texts[Lang.zh_CN] = {
     // 安装或更新后弹出的提示
     install_title: '欢迎使用 PixivPreviewer v',
     install_body: '<div style="position: absolute;left: 50%;top: 30%;font-size: 20px; color: white;transform:translate(-50%,0);"><p style="text-indent: 2em;">欢迎反馈问题和提出建议！><a style="color: green;" href="https://greasyfork.org/zh-CN/scripts/30766-pixiv-previewer/feedback" target="_blank">反馈页面</a><</p><br><p style="text-indent: 2em;">如果您是第一次使用，推荐到<a style="color: green;" href="https://greasyfork.org/zh-CN/scripts/30766-pixiv-previewer" target="_blank"> 详情页 </a>查看脚本介绍。</p></div>',
-    upgrade_body: '新功能<br><ul><li>小说排序时可以按收藏数筛选。</li><li>小说排序时可以隐藏已收藏的作品。</li></ul>修复<br><ul><li>修复重置后显示的提示语言可能不正确的问题。</li></ul>',
+    upgrade_body: '<h3>（重要）关于排序功能</h3>&nbsp&nbsp首先感谢各位的使用，由于最近比较忙，抱歉现在才做出回应。如果各位最近使用过排序功能，可能或多或少都遇到过搜索结果为 0 的问题，下面简单说一下原因和后续的应对方案。<br>&nbsp&nbsp脚本的原理是获取指定页面内所有作品的收藏量，再进行排序。Pixiv 最近对短时间内获取作品信息进行了次数限制，表现为所有请求返回错误，导致显示 0 个作品。以排序三页为例，由于没有批量接口，脚本会向 Pixiv 请求多达 180 个作品的收藏量数据，这对一般限制每分钟访问 30~60 次的请求限制来说非常多了，所以也希望大家能够理解 Pixiv 的做法，同时不要将页数设置得太大。<br>&nbsp&nbsp至于应对方案，目前有以下几种：<ul><li>1.遵循接口限制，可能排序一页要花费一分钟。</li><li>2.使用第三方服务，目前看来也没有服务能够提供批量，或者能顶得住这么多请求的。</li><li>3.用服务器提供收藏量的短时间缓存，并遵循接口限制，成本和风险很高。</li><li>禁用脚本的排序功能。</li></ul>&nbsp&nbsp最后再次感谢大家的使用，如果对上述问题有好的建议，欢迎在 GreasyFork/Github 上提出。最后的最后，这个版本目前可以正常使用排序功能，如果后面突然无法正常使用或者关闭了排序功能，也希望各位能够理解。',
     // 设置项
     setting_language: '语言',
     setting_preview: '预览',
+    setting_animePreview: '动图预览',
     setting_sort: '排序（仅搜索页生效）',
     setting_anime: '动图下载（动图预览及详情页生效）',
     setting_origin: '预览时优先显示原图（慢）',
@@ -202,9 +203,10 @@ Texts[Lang.zh_CN] = {
 Texts[Lang.en_US] = {
     install_title: 'Welcome to PixivPreviewer v',
     install_body: '<div style="position: absolute;left: 50%;top: 30%;font-size: 20px; color: white;transform:translate(-50%,0);"><p style="text-indent: 2em;">Feedback questions and suggestions are welcome! ><a style="color: green;" href="https://greasyfork.org/zh-CN/scripts/30766-pixiv-previewer/feedback" target="_blank">Feedback Page</a><</p><br><p style="text-indent: 2em;">If you are using it for the first time, it is recommended to go to the<a style="color: green;" href="https://greasyfork.org/zh-CN/scripts/30766-pixiv-previewer" target="_blank"> Details Page </a>to see the script introduction.</p></div>',
-    upgrade_body: 'Feature<br><ul><li>Add bookmark count filter for novel sorting.</li><li>Add bookmarked filter for novel sorting.</li></ul>Fix<br><ul><li>Fix the problem which that the guide page may display in wrong language after reset the script.</li></ul>',
+    upgrade_body: '<h3>(Important) About the sorting function</h3>&nbsp&nbspFirst of all, thank you for using it. I\'m very busy recently, so I\'m sorry to respond now. If you have used the sorting function recently, you may have encountered the problem that the search result is 0 more or less. Let me briefly explain the reasons and follow-up solutions. <br>&nbsp&nbsp The principle of the script is to obtain the collections of all works in the specified page, and then sort them. Pixiv recently limited the number of times to obtain work information in a short period of time, which showed that all requests returned errors, resulting in the display of 0 works. Taking sorting three pages as an example, since there is no batch interface, the script will request the collection data of up to 180 works from Pixiv, which is very much for the general limit of 30~60 visits per minute, so I hope You can understand Pixiv\'s approach, and don\'t make the page count too large. <br>&nbsp&nbsp As for the solutions, there are currently the following: <ul><li>1. Following the interface restrictions, it may take a minute to sort a page. </li><li>2. Using third-party services, it seems that there is no service that can provide batches, or can withstand so many requests. </li><li>3. It is costly and risky to use the server to provide a short-term cache of collections and follow interface restrictions. </li><li>Disable sorting of scripts. </li></ul>&nbsp&nbsp Finally, thank you again for your use. If you have good suggestions for the above problems, you are welcome to put forward them on GreasyFork/Github. Finally, the sorting function can be used normally in this version. If the sorting function suddenly cannot be used normally or the sorting function is turned off, I hope you can understand.',
     setting_language: 'Language',
     setting_preview: 'Preview',
+    setting_animePreview: 'Animation preview',
     setting_sort: 'Sorting (Search page)',
     setting_anime: 'Animation download (Preview and Artwork page)',
     setting_origin: 'Display original image when preview (slow)',
@@ -247,6 +249,7 @@ Texts[Lang.ru_RU] = {
     upgrade_body: Texts[Lang.en_US].upgrade_body,
     setting_language: 'Язык',
     setting_preview: 'Предпросмотр',
+    setting_animePreview: Texts[Lang.en_US].setting_animePreview,
     setting_sort: 'Сортировка (Страница поиска)',
     setting_anime: 'Анимация скачивания (Страницы предпросмотра и Artwork)',
     setting_origin: 'При предпросмотре, показывать изображения с оригинальным качеством (медленно)',
@@ -325,7 +328,7 @@ function DoLog(level, msgOrElement) {
 // 语言
 let g_language = Lang.zh_CN;
 // 版本号，第三位不需要跟脚本的版本号对上，第三位更新只有需要弹更新提示的时候才需要更新这里
-let g_version = '3.7.6';
+let g_version = '3.7.10';
 // 添加收藏需要这个
 let g_csrfToken = '';
 // 打的日志数量，超过一定数值清空控制台
@@ -350,6 +353,7 @@ let initialUrl = location.href;
 let g_defaultSettings = {
     'lang': -1,
     'enablePreview': 1,
+    'enableAnimePreview': 1,
     'enableSort': 1,
     'enableAnimeDownload': 1,
     'original': 0,
@@ -1648,6 +1652,11 @@ function PixivPreview() {
             }
             previewTargetIllustId = illustId;
 
+            if (illustType == 2 && !g_settings.enableAnimePreview) {
+                iLog.i('Anime preview disabled.');
+                return;
+            }
+
             // 鼠标位置
             g_mousePos = { x: e.pageX, y: e.pageY };
             // 预览 Div
@@ -2937,7 +2946,6 @@ function PixivSK(callback) {
         });
     }
 };
-
 /* ---------------------------------------- 小说 ---------------------------------------- */
 function PixivNS(callback) {
     function findNovelSection() {
@@ -3423,7 +3431,7 @@ function ShowUpgradeMessage() {
     let body = Texts[g_language].upgrade_body;
     bg.get(0).innerHTML = '<img id="pps-close"src="https://pp-1252089172.cos.ap-chengdu.myqcloud.com/Close.png"style="position: absolute; right: 35px; top: 20px; width: 32px; height: 32px; cursor: pointer;"><div style="position: absolute;width: 40%;left: 30%;top: 25%;font-size: 25px; text-align: center; color: white;">'
         + Texts[g_language].install_title + g_version
-        + '</div><br><div style="position:absolute;left:50%;top:30%;font-size:20px;color:white;transform:translate(-50%,0);">'
+        + '</div><br><div style="position:absolute;left:50%;top:30%;font-size:20px;color:white;transform:translate(-50%,0);height:50%;overflow:auto;">'
         + body + '</div>';
     $('#pps-close').click(function () {
         $('#pp-bg').remove();
@@ -3451,7 +3459,8 @@ function GetSettings() {
         // 新安装
         settings = g_defaultSettings;
         SetCookie('PixivPreview', settings);
-        ShowInstallMessage();
+        //ShowInstallMessage();
+        ShowUpgradeMessage();
     } else {
         settings = JSON.parse(cookie);
         let mp = FillNewSetting(settings);
@@ -3511,6 +3520,7 @@ function ShowSetting() {
     addItem(getImageAction('pps-fullSizeThumb'), Texts[g_language].sort_fullSizeThumb);
     addItem('', '&nbsp');
     addItem(getImageAction('pps-preview'), Texts[g_language].setting_preview);
+    addItem(getImageAction('pps-animePreview'), Texts[g_language].setting_animePreview);
     addItem(getImageAction('pps-anime'), Texts[g_language].setting_anime);
     addItem(getImageAction('pps-original'), Texts[g_language].setting_origin);
     addItem(getInputAction('pps-previewDelay'), Texts[g_language].setting_previewDelay);
@@ -3533,6 +3543,7 @@ function ShowSetting() {
     let imgOn = 'https://pp-1252089172.cos.ap-chengdu.myqcloud.com/On.png';
     let imgOff = 'https://pp-1252089172.cos.ap-chengdu.myqcloud.com/Off.png'
     $('#pps-preview').attr('src', settings.enablePreview ? imgOn : imgOff).addClass(settings.enablePreview ? 'on' : 'off').css('cursor: pointer');
+    $('#pps-animePreview').attr('src', settings.enableAnimePreview ? imgOn : imgOff).addClass(settings.enableAnimePreview ? 'on' : 'off').css('cursor: pointer');
     $('#pps-sort').attr('src', settings.enableSort ? imgOn : imgOff).addClass(settings.enableSort ? 'on' : 'off').css('cursor: pointer');
     $('#pps-anime').attr('src', settings.enableAnimeDownload ? imgOn : imgOff).addClass(settings.enableAnimeDownload ? 'on' : 'off').css('cursor: pointer');
     $('#pps-original').attr('src', settings.original ? imgOn : imgOff).addClass(settings.original ? 'on' : 'off').css('cursor: pointer');
@@ -3583,6 +3594,7 @@ function ShowSetting() {
         let settings = {
             'lang': $('#pps-lang').val(),
             'enablePreview': $('#pps-preview').hasClass('on') ? 1 : 0,
+            'enableAnimePreview': $('#pps-animePreview').hasClass('on') ? 1 : 0,
             'enableSort': $('#pps-sort').hasClass('on') ? 1 : 0,
             'enableAnimeDownload': $('#pps-anime').hasClass('on') ? 1 : 0,
             'original': $('#pps-original').hasClass('on') ? 1 : 0,
