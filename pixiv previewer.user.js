@@ -9,7 +9,8 @@
 // @author              Ocrosoft
 // @match               *://www.pixiv.net/*
 // @grant               unsafeWindow
-// @compatible          Chrome
+// @grant               GM.xmlHttpRequest
+// @grant               GM_xmlhttpRequest
 // @license             GPLv3
 // @icon                https://t0.gstatic.com/faviconV2?client=SOCIAL&type=FAVICON&fallback_opts=TYPE,SIZE,URL&size=32&url=https://www.pixiv.net
 // @icon64              https://t0.gstatic.com/faviconV2?client=SOCIAL&type=FAVICON&fallback_opts=TYPE,SIZE,URL&size=64&url=https://www.pixiv.net
@@ -61,9 +62,16 @@ function ILog() {
         Error: 3,
     };
 
-    let level = this.LogLevel.Verbose;
+    let level = this.LogLevel.Warning;
 }
 var iLog = new ILog();
+
+var GM__xmlHttpRequest;
+if ("undefined" != typeof (GM_xmlhttpRequest)) {
+    GM__xmlHttpRequest = GM_xmlhttpRequest;
+} else {
+    GM__xmlHttpRequest = GM.xmlHttpRequest;
+}
 
 // https://greasyfork.org/zh-CN/scripts/417760-checkjquery
 var checkJQuery = function () {
@@ -2119,6 +2127,7 @@ function PixivSK(callback) {
     }
 
     // 获取第 currentPage 页的作品
+    // 这个方法还是用带 cookie 的请求，防止未登录拉不到数据
     let getWorks = function (onloadCallback) {
         $('#progress').text(Texts[g_language].sort_getWorks.replace('%1', currentGettingPageCount + 1).replace('%2', g_settings.pageCount));
 
@@ -2473,7 +2482,7 @@ function PixivSK(callback) {
         let onloadFunc = function (event) {
             let json = null;
             try {
-                json = JSON.parse(event.currentTarget.responseText);
+                json = JSON.parse(event.responseText);
             } catch (e) {
                 DoLog(LogLevel.Error, 'Parse json failed!');
                 DoLog(LogLevel.Element, e);
@@ -2482,11 +2491,11 @@ function PixivSK(callback) {
 
             if (json) {
                 let illustId = '';
-                let illustIdMatched = event.currentTarget.responseURL.match(/illust_id=(\d+)/);
+                let illustIdMatched = event.finalUrl.match(/illust_id=(\d+)/);
                 if (illustIdMatched) {
                     illustId = illustIdMatched[1];
                 } else {
-                    DoLog(LogLevel.Error, 'Can not get illust id from url: ' + event.currentTarget.responseURL);
+                    DoLog(LogLevel.Error, 'Can not get illust id from url: ' + event.finalUrl);
                     return;
                 }
                 let indexOfThisRequest = -1;
@@ -2530,11 +2539,11 @@ function PixivSK(callback) {
         };
         let onerrorFunc = function (event) {
             let illustId = '';
-            let illustIdMatched = event.currentTarget.__sentry_xhr__.url.match(/artworks\/(\d+)/);
+            let illustIdMatched = event.finalUrl.match(/illust_id=(\d+)/);
             if (illustIdMatched) {
                 illustId = illustIdMatched[1];
             } else {
-                DoLog(LogLevel.Error, 'Can not get illust id from url: ' + event.currentTarget.__sentry_xhr__.url);
+                DoLog(LogLevel.Error, 'Can not get illust id from url: ' + event.finalUrl);
                 return;
             }
 
@@ -2551,6 +2560,7 @@ function PixivSK(callback) {
                 DoLog('This url not match any request!');
                 return;
             }
+            works[currentRequestGroupMinimumIndex + indexOfThisRequest].bookmarkCount = 0;
             xhrs[indexOfThisRequest].complete = true;
 
             let completeCount = 0;
@@ -2565,17 +2575,19 @@ function PixivSK(callback) {
             }
             $('#loading').find('#progress').text(Texts[g_language].sort_getBookmarkCount.replace('%1', currentRequestGroupMinimumIndex + completeReally).replace('%2', works.length));
             if (completeCount == g_maxXhr) {
+                currentRequestGroupMinimumIndex += g_maxXhr;
                 GetBookmarkCount(currentRequestGroupMinimumIndex + g_maxXhr);
             }
         };
         for (let i = 0; i < g_maxXhr; i++) {
             xhrs.push({
-                xhr: new XMLHttpRequest(),
                 illustId: '',
                 complete: false,
+                onabort: onerrorFunc,
+                onerror: onerrorFunc,
+                onload: onloadFunc,
+                ontimeout: onerrorFunc,
             });
-            xhrs[i].xhr.onload = onloadFunc;
-            xhrs[i].xhr.onerror = onerrorFunc;
         }
     }
 
@@ -2600,8 +2612,15 @@ function PixivSK(callback) {
             let url = 'https://www.pixiv.net/touch/ajax/illust/details?illust_id=' + illustId;
             xhrs[i].illustId = illustId;
             xhrs[i].complete = false;
-            xhrs[i].xhr.open('GET', url, true);
-            xhrs[i].xhr.send(null);
+            GM__xmlHttpRequest({
+                method: 'GET',
+                url: url,
+                anonymous: true,
+                onabort: xhrs[i].onerror,
+                onerror: xhrs[i].onerror,
+                onload: xhrs[i].onload,
+                ontimeout: xhrs[i].onerror,
+            });
         }
     };
 
