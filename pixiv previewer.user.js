@@ -1,7 +1,7 @@
 ﻿// ==UserScript==
 // @name                Pixiv Previewer(Dev)
 // @namespace           https://github.com/Ocrosoft/PixivPreviewer
-// @version             3.7.10
+// @version             3.7.11
 // @description         Display preview images (support single image, multiple images, moving images); Download animation(.zip); Sorting the search page by favorite count(and display it). Updated for the latest search page.
 // @description:zh-CN   显示预览图（支持单图，多图，动图）；动图压缩包下载；搜索页按热门度（收藏数）排序并显示收藏数，适配11月更新。
 // @description:ja      プレビュー画像の表示（単一画像、複数画像、動画のサポート）; アニメーションのダウンロード（.zip）; お気に入りの数で検索ページをソートします（そして表示します）。 最新の検索ページ用に更新されました。
@@ -161,6 +161,7 @@ Texts[Lang.zh_CN] = {
     // 设置项
     setting_language: '语言',
     setting_preview: '预览',
+    setting_animePreview: '动图预览',
     setting_sort: '排序（仅搜索页生效）',
     setting_anime: '动图下载（动图预览及详情页生效）',
     setting_origin: '预览时优先显示原图（慢）',
@@ -205,6 +206,7 @@ Texts[Lang.en_US] = {
     upgrade_body: '<h3>(Important) About the sorting function</h3>&nbsp&nbspFirst of all, thank you for using it. I\'m very busy recently, so I\'m sorry to respond now. If you have used the sorting function recently, you may have encountered the problem that the search result is 0 more or less. Let me briefly explain the reasons and follow-up solutions. <br>&nbsp&nbsp The principle of the script is to obtain the collections of all works in the specified page, and then sort them. Pixiv recently limited the number of times to obtain work information in a short period of time, which showed that all requests returned errors, resulting in the display of 0 works. Taking sorting three pages as an example, since there is no batch interface, the script will request the collection data of up to 180 works from Pixiv, which is very much for the general limit of 30~60 visits per minute, so I hope You can understand Pixiv\'s approach, and don\'t make the page count too large. <br>&nbsp&nbsp As for the solutions, there are currently the following: <ul><li>1. Following the interface restrictions, it may take a minute to sort a page. </li><li>2. Using third-party services, it seems that there is no service that can provide batches, or can withstand so many requests. </li><li>3. It is costly and risky to use the server to provide a short-term cache of collections and follow interface restrictions. </li><li>Disable sorting of scripts. </li></ul>&nbsp&nbsp Finally, thank you again for your use. If you have good suggestions for the above problems, you are welcome to put forward them on GreasyFork/Github. Finally, the sorting function can be used normally in this version. If the sorting function suddenly cannot be used normally or the sorting function is turned off, I hope you can understand.',
     setting_language: 'Language',
     setting_preview: 'Preview',
+    setting_animePreview: 'Animation preview',
     setting_sort: 'Sorting (Search page)',
     setting_anime: 'Animation download (Preview and Artwork page)',
     setting_origin: 'Display original image when preview (slow)',
@@ -247,6 +249,7 @@ Texts[Lang.ru_RU] = {
     upgrade_body: Texts[Lang.en_US].upgrade_body,
     setting_language: 'Язык',
     setting_preview: 'Предпросмотр',
+    setting_animePreview: Texts[Lang.en_US].setting_animePreview,
     setting_sort: 'Сортировка (Страница поиска)',
     setting_anime: 'Анимация скачивания (Страницы предпросмотра и Artwork)',
     setting_origin: 'При предпросмотре, показывать изображения с оригинальным качеством (медленно)',
@@ -350,6 +353,7 @@ let initialUrl = location.href;
 let g_defaultSettings = {
     'lang': -1,
     'enablePreview': 1,
+    'enableAnimePreview': 1,
     'enableSort': 1,
     'enableAnimeDownload': 1,
     'original': 0,
@@ -1648,6 +1652,11 @@ function PixivPreview() {
             }
             previewTargetIllustId = illustId;
 
+            if (illustType == 2 && !g_settings.enableAnimePreview) {
+                iLog.i('Anime preview disabled.');
+                return;
+            }
+
             // 鼠标位置
             g_mousePos = { x: e.pageX, y: e.pageY };
             // 预览 Div
@@ -2937,7 +2946,6 @@ function PixivSK(callback) {
         });
     }
 };
-
 /* ---------------------------------------- 小说 ---------------------------------------- */
 function PixivNS(callback) {
     function findNovelSection() {
@@ -3512,6 +3520,7 @@ function ShowSetting() {
     addItem(getImageAction('pps-fullSizeThumb'), Texts[g_language].sort_fullSizeThumb);
     addItem('', '&nbsp');
     addItem(getImageAction('pps-preview'), Texts[g_language].setting_preview);
+    addItem(getImageAction('pps-animePreview'), Texts[g_language].setting_animePreview);
     addItem(getImageAction('pps-anime'), Texts[g_language].setting_anime);
     addItem(getImageAction('pps-original'), Texts[g_language].setting_origin);
     addItem(getInputAction('pps-previewDelay'), Texts[g_language].setting_previewDelay);
@@ -3534,6 +3543,7 @@ function ShowSetting() {
     let imgOn = 'https://pp-1252089172.cos.ap-chengdu.myqcloud.com/On.png';
     let imgOff = 'https://pp-1252089172.cos.ap-chengdu.myqcloud.com/Off.png'
     $('#pps-preview').attr('src', settings.enablePreview ? imgOn : imgOff).addClass(settings.enablePreview ? 'on' : 'off').css('cursor: pointer');
+    $('#pps-animePreview').attr('src', settings.enableAnimePreview ? imgOn : imgOff).addClass(settings.enableAnimePreview ? 'on' : 'off').css('cursor: pointer');
     $('#pps-sort').attr('src', settings.enableSort ? imgOn : imgOff).addClass(settings.enableSort ? 'on' : 'off').css('cursor: pointer');
     $('#pps-anime').attr('src', settings.enableAnimeDownload ? imgOn : imgOff).addClass(settings.enableAnimeDownload ? 'on' : 'off').css('cursor: pointer');
     $('#pps-original').attr('src', settings.original ? imgOn : imgOff).addClass(settings.original ? 'on' : 'off').css('cursor: pointer');
@@ -3584,6 +3594,7 @@ function ShowSetting() {
         let settings = {
             'lang': $('#pps-lang').val(),
             'enablePreview': $('#pps-preview').hasClass('on') ? 1 : 0,
+            'enableAnimePreview': $('#pps-animePreview').hasClass('on') ? 1 : 0,
             'enableSort': $('#pps-sort').hasClass('on') ? 1 : 0,
             'enableAnimeDownload': $('#pps-anime').hasClass('on') ? 1 : 0,
             'original': $('#pps-original').hasClass('on') ? 1 : 0,
