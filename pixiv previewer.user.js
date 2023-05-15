@@ -1,5 +1,5 @@
-﻿// ==UserScript==
-// @name                Pixiv Previewer(Dev)
+// ==UserScript==
+// @name                Pixiv Previewer
 // @namespace           https://github.com/Ocrosoft/PixivPreviewer
 // @version             3.7.11
 // @description         Display preview images (support single image, multiple images, moving images); Download animation(.zip); Sorting the search page by favorite count(and display it). Updated for the latest search page.
@@ -151,6 +151,8 @@ let Lang = {
     en_US: 1,
     // 俄语-俄罗斯
     ru_RU: 2,
+    // 日本語-日本
+    ja_JP: 3,
 };
 let Texts = {};
 Texts[Lang.zh_CN] = {
@@ -170,6 +172,7 @@ Texts[Lang.zh_CN] = {
     setting_previewByKeyHelp: '开启后鼠标移动到图片上不再展示预览图，按下Ctrl键才展示，同时“延迟显示预览”设置项不生效。',
     setting_maxPage: '每次排序时统计的最大页数',
     setting_hideWork: '隐藏收藏数少于设定值的作品',
+    setting_hideAiWork: 'Hide AI works',
     setting_hideFav: '排序时隐藏已收藏的作品',
     setting_hideFollowed: '排序时隐藏已关注画师作品',
     setting_clearFollowingCache: '清除缓存',
@@ -215,6 +218,7 @@ Texts[Lang.en_US] = {
     setting_previewByKeyHelp: 'After enabling it, move the mouse to the picture and no longer display the preview image. Press the Ctrl key to display it, and the "Delayed Display Preview" setting item does not take effect.',
     setting_maxPage: 'Maximum number of pages counted per sort',
     setting_hideWork: 'Hide works with bookmark count less than set value',
+    setting_hideAiWork: 'Hide AI works',
     setting_hideFav: 'Hide favorites when sorting',
     setting_hideFollowed: 'Hide artworks of followed artists when sorting',
     setting_clearFollowingCache: 'Cache',
@@ -258,6 +262,7 @@ Texts[Lang.ru_RU] = {
     setting_previewByKeyHelp: Texts[Lang.en_US].setting_previewByKeyHelp,
     setting_maxPage: 'Максимальное количество страниц, подсчитанных за сортировку',
     setting_hideWork: 'Скрыть работы с количеством закладок меньше установленного значения',
+    setting_hideAiWork: 'Hide AI works',
     setting_hideFav: 'При сортировке, скрыть избранное',
     setting_hideFollowed: 'При сортировке, скрыть работы художников на которых подписаны',
     setting_clearFollowingCache: 'Кэш',
@@ -284,6 +289,49 @@ Texts[Lang.ru_RU] = {
     nsort_sorting: Texts[Lang.en_US].nsort_sorting,
     nsort_hideFav: Texts[Lang.en_US].nsort_hideFav,
     nsort_hideFollowed: Texts[Lang.en_US].nsort_hideFollowed
+};
+Texts[Lang.ja_JP] = {
+    install_title: 'Welcome to PixivPreviewer v',
+    install_body: '<div style="position: absolute;left: 50%;top: 30%;font-size: 20px; color: white;transform:translate(-50%,0);"><p style="text-indent: 2em;"ご意見や提案は大歓迎です! ><a style="color: green;" href="https://greasyfork.org/ja/scripts/30766-pixiv-previewer/feedback" target="_blank">フィードバックページ</a><</p><br><p style="text-indent: 2em;">初めて使う場合は、<a style="color: green;" href="https://greasyfork.org/ja/scripts/30766-pixiv-previewer" target="_blank"> 詳細ページ </a>でスクリプトの紹介を見ることをお勧めします。</p></div>',
+    upgrade_body: '<h3>(注意！) 並べ替え機能について</h3>&nbsp&nbspご利用いただきありがとうございます。最近はとても忙しく、返信が遅れてしまい申し訳ありません。最近並べ替え機能を使っている場合、検索結果が0になることがあるかもしれません。その理由と対策を簡単に説明させていただきます。 <br>&nbsp&nbsp このスクリプトは、指定されたページ内のすべての作品のコレクションを取得し、それらを並べ替えるのものです。最近、Pixivは短時間に作品情報を取得する回数を制限し、すべてのリクエストがエラーを返すことがあり、検索結果が0件と表示されることがあります。例えば、3ページを並べ替える場合、スクリプトは最大180件の作品のコレクションデータをPixivからリクエストすることになりますが、一般的には30〜60回/分の制限があるため、Pixivの仕様を理解していただき、これを回避するため一気にソートするページの値をを大きくしないでください。  <br>&nbsp&nbsp 解決策として、現在以下のような方法を考えています：<ul><li>1. インターフェイスの制限に従って、1ページのソートに1分ほどかかることがあります。</li><li>2. サードパーティのサービスを利用するものの、バッチ処理ができるサービスがないようですし、それだけのリクエストに耐えられるものもなさそうです。</li><li>3. サーバーを使ってコレクションの短期キャッシュを提供し、インターフェイスの制限に従うことは、コストがかかる上にリスクも伴います。</li><li>スクリプトのソート機能を無効にする。</li></ul>&nbsp&nbsp 最後に、改めてご利用いただきありがとうございます。上記の問題について良い提案があれば、GreasyFork/Githubでお気軽に提案してください。最後に、このバージョンではソート機能が正常に使用できます。ただし、ソート機能が突然正常に使用できなくなったり、ソート機能がオフになった場合は、ご理解いただけると幸いです。',
+    setting_language: '言語',
+    setting_preview: 'プレビュー機能',
+    setting_animePreview: 'うごイラプレビュー',
+    setting_sort: 'ソート',
+    setting_anime: 'うごイラダウンロード',
+    setting_origin: '最大サイズの画像を表示する(遅くなる可能性がある)',
+    setting_previewDelay: 'カーソルを重ねてからプレビューするまでの遅延(ミリ秒)',
+    setting_previewByKey: 'キーでプレビュー画像の表示を制御する (Ctrl)',
+    setting_previewByKeyHelp: 'これを有効にすると、画像にマウスを移動してもプレビュー画像が表示されなくなります。Ctrlキーを押すと表示され、 \"遅延表示プレビュー\" の設定項目は無効になります。',
+    setting_maxPage: 'ソートするときに取得する最大ページ数',
+    setting_hideWork: '一定以下のブクマーク数の作品を非表示にする',
+    setting_hideAiWork: 'AIの作品を非表示にする',
+    setting_hideFav: 'ブックマーク数をソート時に非表示にする',
+    setting_hideFollowed: 'ソート時にフォローしているアーティストの作品を非表示',
+    setting_clearFollowingCache: 'キャッシュ',
+    setting_clearFollowingCacheHelp: 'フォローしているアーティストの情報がローカルに1日保存されます。すぐに更新したい場合は、このキャッシュをクリアしてください。',
+    setting_followingCacheCleared: '成功しました。ページを更新してください。',
+    setting_blank: '作品の詳細ページを新しいタブで開く',
+    setting_turnPage: '← → を使用してページをめくる（検索ページ）',
+    setting_save: 'Save',
+    setting_reset: 'Reset',
+    setting_resetHint: 'これにより、すべての設定が削除され、デフォルトに設定されます。よろしいですか？',
+    setting_novelSort: 'ソート（小説）',
+    setting_novelMaxPage: '小説のソートのページ数の最大値',
+    setting_novelHideWork: '設定値未満のブックマーク数の作品を非表示',
+    setting_novelHideFav: 'ソート時にお気に入りを非表示',
+    sort_noWork: '表示する作品がありません（%1 作品が非表示）',
+    sort_getWorks: 'ページの作品を取得中：%1 / %2',
+    sort_getBookmarkCount: '作品のブックマーク数を取得中：%1 / %2',
+    sort_getPublicFollowing: '公開フォロー一覧を取得中',
+    sort_getPrivateFollowing: '非公開フォロー一覧を取得中',
+    sort_filtering: 'ブックマーク数が%2未満の作品%1件をフィルタリング',
+    sort_filteringHideFavorite: ' お気に入り登録済みの作品および  ',
+    sort_fullSizeThumb: 'トリミングされていない画像を表示（検索ページおよびユーザーページのみ）。',
+    nsort_getWorks: '小説のページを取得中：1% / 2%',
+    nsort_sorting: 'ブックマーク数で並べ替え',
+    nsort_hideFav: 'ソート時にお気に入りを非表示',
+    nsort_hideFollowed: 'ソート時にフォロー済み作者の作品を非表示'
 };
 
 let LogLevel = {
@@ -362,6 +410,7 @@ let g_defaultSettings = {
     'previewKey': 17,
     'pageCount': 3,
     'favFilter': 0,
+    'AiFilter': 0,
     'hideFavorite': 0,
     'hideFollowed': 0,
     'linkBlank': 1,
@@ -2287,7 +2336,7 @@ function PixivSK(callback) {
             let tmp = [];
             $(works).each(function (i, work) {
                 let bookmarkCount = work.bookmarkCount ? work.bookmarkCount : 0;
-                if (bookmarkCount >= g_settings.favFilter && !(g_settings.hideFavorite && work.bookmarkData)) {
+                if (bookmarkCount >= g_settings.favFilter && !(g_settings.hideFavorite && work.bookmarkData) && !(g_settings.AiFilter == 1 && work.aiType == 2)) {
                     tmp.push(work);
                 }
             });
@@ -3530,6 +3579,7 @@ function ShowSetting() {
     addItem(getImageAction('pps-sort'), Texts[g_language].setting_sort);
     addItem(getInputAction('pps-maxPage'), Texts[g_language].setting_maxPage);
     addItem(getInputAction('pps-hideLess'), Texts[g_language].setting_hideWork);
+    addItem(getImageAction('pps-hideAi'), Texts[g_language].setting_hideAiWork);
     addItem(getImageAction('pps-hideBookmarked'), Texts[g_language].setting_hideFav);
     addItem(getImageAction('pps-hideFollowed'), Texts[g_language].setting_hideFollowed + '&nbsp<button id="pps-clearFollowingCache" style="cursor:pointer;background-color:gold;border-radius:12px;border:none;font-size:20px;padding:3px 10px;" title="' + Texts[g_language].setting_clearFollowingCacheHelp + '">' + Texts[g_language].setting_clearFollowingCache + '</button>');
     addItem(getImageAction('pps-newTab'), Texts[g_language].setting_blank);
@@ -3551,6 +3601,7 @@ function ShowSetting() {
     $('#pps-previewByKey').attr('src', settings.previewByKey ? imgOn : imgOff).addClass(settings.original ? 'on' : 'off').css('cursor: pointer');
     $('#pps-maxPage').val(settings.pageCount);
     $('#pps-hideLess').val(settings.favFilter);
+    $('#pps-hideAi').attr('src', settings.AiFilter ? imgOn : imgOff).addClass(settings.AiFilter ? 'on' : 'off').css('cursor: pointer');
     $('#pps-hideBookmarked').attr('src', settings.hideFavorite ? imgOn : imgOff).addClass(settings.hideFavorite ? 'on' : 'off').css('cursor: pointer');
     $('#pps-hideFollowed').attr('src', settings.hideFollowed ? imgOn : imgOff).addClass(settings.hideFollowed ? 'on' : 'off').css('cursor: pointer');
     $('#pps-newTab').attr('src', settings.linkBlank ? imgOn : imgOff).addClass(settings.linkBlank ? 'on' : 'off').css('cursor: pointer');
@@ -3566,6 +3617,7 @@ function ShowSetting() {
         .append('<option value="' + Lang.zh_CN + '">简体中文</option>')
         .append('<option value="' + Lang.en_US + '">English</option>')
         .append('<option value="' + Lang.ru_RU + '">Русский язык</option>')
+        .append('<option value="' + Lang.ja_JP + '">日本語</option>')
         .val(g_settings.lang == undefined ? Lang.auto : g_settings.lang);
 
     $('#pps-ul').find('img').click(function () {
@@ -3602,6 +3654,7 @@ function ShowSetting() {
             'previewByKey': $('#pps-previewByKey').hasClass('on') ? 1 : 0,
             'pageCount': parseInt($('#pps-maxPage').val()),
             'favFilter': parseInt($('#pps-hideLess').val()),
+            'AiFilter': $('#pps-hideAi').hasClass('on') ? 1 : 0,
             'hideFavorite': $('#pps-hideBookmarked').hasClass('on') ? 1 : 0,
             'hideFollowed': $('#pps-hideFollowed').hasClass('on') ? 1 : 0,
             'linkBlank': $('#pps-newTab').hasClass('on') ? 1 : 0,
