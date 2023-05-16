@@ -1,5 +1,5 @@
 // ==UserScript==
-// @name                Pixiv Previewer
+// @name                Pixiv Previewer(Dev)
 // @namespace           https://github.com/Ocrosoft/PixivPreviewer
 // @version             3.7.11
 // @description         Display preview images (support single image, multiple images, moving images); Download animation(.zip); Sorting the search page by favorite count(and display it). Updated for the latest search page.
@@ -410,7 +410,7 @@ let g_defaultSettings = {
     'previewKey': 17,
     'pageCount': 3,
     'favFilter': 0,
-    'AiFilter': 0,
+    'aiFilter': 0,
     'hideFavorite': 0,
     'hideFollowed': 0,
     'linkBlank': 1,
@@ -2336,7 +2336,7 @@ function PixivSK(callback) {
             let tmp = [];
             $(works).each(function (i, work) {
                 let bookmarkCount = work.bookmarkCount ? work.bookmarkCount : 0;
-                if (bookmarkCount >= g_settings.favFilter && !(g_settings.hideFavorite && work.bookmarkData) && !(g_settings.AiFilter == 1 && work.aiType == 2)) {
+                if (bookmarkCount >= g_settings.favFilter && !(g_settings.hideFavorite && work.bookmarkData) && !(g_settings.aiFilter == 1 && work.aiType == 2)) {
                     tmp.push(work);
                 }
             });
@@ -3601,7 +3601,7 @@ function ShowSetting() {
     $('#pps-previewByKey').attr('src', settings.previewByKey ? imgOn : imgOff).addClass(settings.original ? 'on' : 'off').css('cursor: pointer');
     $('#pps-maxPage').val(settings.pageCount);
     $('#pps-hideLess').val(settings.favFilter);
-    $('#pps-hideAi').attr('src', settings.AiFilter ? imgOn : imgOff).addClass(settings.AiFilter ? 'on' : 'off').css('cursor: pointer');
+    $('#pps-hideAi').attr('src', settings.aiFilter ? imgOn : imgOff).addClass(settings.aiFilter ? 'on' : 'off').css('cursor: pointer');
     $('#pps-hideBookmarked').attr('src', settings.hideFavorite ? imgOn : imgOff).addClass(settings.hideFavorite ? 'on' : 'off').css('cursor: pointer');
     $('#pps-hideFollowed').attr('src', settings.hideFollowed ? imgOn : imgOff).addClass(settings.hideFollowed ? 'on' : 'off').css('cursor: pointer');
     $('#pps-newTab').attr('src', settings.linkBlank ? imgOn : imgOff).addClass(settings.linkBlank ? 'on' : 'off').css('cursor: pointer');
@@ -3654,7 +3654,7 @@ function ShowSetting() {
             'previewByKey': $('#pps-previewByKey').hasClass('on') ? 1 : 0,
             'pageCount': parseInt($('#pps-maxPage').val()),
             'favFilter': parseInt($('#pps-hideLess').val()),
-            'AiFilter': $('#pps-hideAi').hasClass('on') ? 1 : 0,
+            'aiFilter': $('#pps-hideAi').hasClass('on') ? 1 : 0,
             'hideFavorite': $('#pps-hideBookmarked').hasClass('on') ? 1 : 0,
             'hideFollowed': $('#pps-hideFollowed').hasClass('on') ? 1 : 0,
             'linkBlank': $('#pps-newTab').hasClass('on') ? 1 : 0,
