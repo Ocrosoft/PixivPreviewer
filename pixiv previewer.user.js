@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name                Pixiv Previewer(Dev)
 // @namespace           https://github.com/Ocrosoft/PixivPreviewer
-// @version             3.7.13
+// @version             3.7.14
 // @description         Display preview images (support single image, multiple images, moving images); Download animation(.zip); Sorting the search page by favorite count(and display it). Updated for the latest search page.
 // @description:zh-CN   显示预览图（支持单图，多图，动图）；动图压缩包下载；搜索页按热门度（收藏数）排序并显示收藏数，适配11月更新。
 // @description:ja      プレビュー画像の表示（単一画像、複数画像、動画のサポート）; アニメーションのダウンロード（.zip）; お気に入りの数で検索ページをソートします（そして表示します）。 最新の検索ページ用に更新されました。
@@ -777,7 +777,7 @@ Pages[PageType.Discovery] = {
 Pages[PageType.Member] = {
     PageTypeString: 'MemberPage/MemberIllustPage/MemberBookMark',
     CheckUrl: function (url) {
-        return /^https?:\/\/www.pixiv.net\/users\/\d+/.test(url);
+        return /^https?:\/\/www.pixiv.net\/(en\/)?users\/\d+/.test(url)
     },
     ProcessPageElements: function () {
         let returnMap = {
@@ -1261,7 +1261,7 @@ Pages[PageType.Artwork] = {
     PageTypeString: 'ArtworkPage',
     CheckUrl: function (url) {
         return /^https:\/\/www.pixiv.net\/artworks\/.*/.test(url) ||
-            /^https:\/\/www.pixiv.net\/en\/artworks\/.*/.test(url);
+            /^https:\/\/www.pixiv.net\/en\/artworks\/.*/.test(url)
     },
     ProcessPageElements: function () {
         let returnMap = {
