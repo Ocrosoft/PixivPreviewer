@@ -3798,8 +3798,11 @@ function Load() {
         toolBar.appendChild(newListItem);
 
         $(newButton).click(function() {
-            runPixivPreview(true);
             this.disabled = true;
+            runPixivPreview(true);
+            setTimeout(() => {
+                this.disabled = false;
+            }, 7000);
         });
     }
 
