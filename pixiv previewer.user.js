@@ -3850,7 +3850,7 @@ function Load() {
         try {
             if (g_pageType == PageType.Artwork) {
                 Pages[g_pageType].Work();
-                if (g_settings.enablePreview || eventFromButton) {
+                if (g_settings.enablePreview) {
                     PixivPreview();
                 }
             }
@@ -3859,18 +3859,18 @@ function Load() {
                     g_sortComplete = false;
                     PixivSK(function () {
                         g_sortComplete = true;
-                        if (g_settings.enablePreview || eventFromButton) {
+                        if (g_settings.enablePreview) {
                             PixivPreview();
                         }
                     });
-                } else if (g_settings.enablePreview || eventFromButton) {
+                } else if (g_settings.enablePreview) {
                     PixivPreview();
                 }
             } else if (g_pageType == PageType.NovelSearch) {
                 if (g_settings.enableNovelSort || eventFromButton) {
                     PixivNS();
                 }
-            } else if (g_settings.enablePreview || eventFromButton) {
+            } else if (g_settings.enablePreview) {
                 PixivPreview();
             }
         }
