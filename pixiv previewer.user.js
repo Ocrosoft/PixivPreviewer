@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name                Pixiv Previewer(Dev)
 // @namespace           https://github.com/Ocrosoft/PixivPreviewer
-// @version             3.7.14
+// @version             3.7.15
 // @description         Display preview images (support single image, multiple images, moving images); Download animation(.zip); Sorting the search page by favorite count(and display it). Updated for the latest search page.
 // @description:zh-CN   显示预览图（支持单图，多图，动图）；动图压缩包下载；搜索页按热门度（收藏数）排序并显示收藏数，适配11月更新。
 // @description:ja      プレビュー画像の表示（単一画像、複数画像、動画のサポート）; アニメーションのダウンロード（.zip）; お気に入りの数で検索ページをソートします（そして表示します）。 最新の検索ページ用に更新されました。
@@ -200,7 +200,8 @@ Texts[Lang.zh_CN] = {
     nsort_getWorks: '正在获取第1%/2%页作品',
     nsort_sorting: '正在按收藏量排序',
     nsort_hideFav: '排序时隐藏已收藏的作品',
-    nsort_hideFollowed: '排序时隐藏已关注作者作品'
+    nsort_hideFollowed: '排序时隐藏已关注作者作品',
+    text_sort: '排序'
 };
 // translate by google
 Texts[Lang.en_US] = {
@@ -244,7 +245,8 @@ Texts[Lang.en_US] = {
     nsort_getWorks: 'Getting novels of page: 1% of 2%',
     nsort_sorting: 'Sorting by bookmark cound',
     nsort_hideFav: 'Hide favorites when sorting',
-    nsort_hideFollowed: 'Hide artworks of followed authors when sorting'
+    nsort_hideFollowed: 'Hide artworks of followed authors when sorting',
+    text_sort: 'sort'
 };
 // RU: перевод от  vanja-san
 Texts[Lang.ru_RU] = {
@@ -288,7 +290,8 @@ Texts[Lang.ru_RU] = {
     nsort_getWorks: Texts[Lang.en_US].nsort_getWorks,
     nsort_sorting: Texts[Lang.en_US].nsort_sorting,
     nsort_hideFav: Texts[Lang.en_US].nsort_hideFav,
-    nsort_hideFollowed: Texts[Lang.en_US].nsort_hideFollowed
+    nsort_hideFollowed: Texts[Lang.en_US].nsort_hideFollowed,
+    text_sort: Texts[Lang.en_US].text_sort
 };
 Texts[Lang.ja_JP] = {
     install_title: 'Welcome to PixivPreviewer v',
@@ -331,7 +334,8 @@ Texts[Lang.ja_JP] = {
     nsort_getWorks: '小説のページを取得中：1% / 2%',
     nsort_sorting: 'ブックマーク数で並べ替え',
     nsort_hideFav: 'ソート時にお気に入りを非表示',
-    nsort_hideFollowed: 'ソート時にフォロー済み作者の作品を非表示'
+    nsort_hideFollowed: 'ソート時にフォロー済み作者の作品を非表示',
+    text_sort: 'ソート'
 };
 
 let LogLevel = {
@@ -2277,7 +2281,7 @@ function PixivSK(callback) {
             $('#progress').text(Texts[g_language].sort_getPublicFollowing);
 
             // 首先从Cookie读取
-            let following = GetCookie('followingOfUid-' + user_id);
+            let following = GetLocalStorage('followingOfUid-' + user_id) || GetCookie('followingOfUid-' + user_id);
             if (following != null) {
                 resolve(following);
                 return;
@@ -2287,7 +2291,7 @@ function PixivSK(callback) {
                 $('#progress').text(Texts[g_language].sort_getPrivateFollowing);
                 getFollowingOfType(user_id, 'hide').then(function (members2) {
                     let following = members.concat(members2);
-                    SetCookie('followingOfUid-' + user_id, following, 1);
+                    SetLocalStorage('followingOfUid-' + user_id, following);
                     resolve(following);
                 });
             });
@@ -3439,6 +3443,14 @@ function PixivNS(callback) {
     main();
 }
 /* ---------------------------------------- 设置 ---------------------------------------- */
+function SetLocalStorage(name, value) {
+    localStorage.setItem(name, JSON.stringify(value));
+}
+function GetLocalStorage(name) {
+    const value = localStorage.getItem(name);
+    if (!value) return null;
+    return value;
+}
 function SetCookie(name, value, days) {
     let Days = 180;
     if (days) {
@@ -3507,25 +3519,25 @@ function FillNewSetting(st) {
 function GetSettings() {
     let settings;
 
-    let cookie = GetCookie('PixivPreview');
-    if (cookie == null || cookie == 'null') {
+    let settingsData = GetLocalStorage('PixivPreview') || GetCookie('PixivPreview');
+    if (settingsData == null || settingsData == 'null') {
         // 新安装
         settings = g_defaultSettings;
-        SetCookie('PixivPreview', settings);
+        SetLocalStorage('PixivPreview', settings);
         //ShowInstallMessage();
         ShowUpgradeMessage();
     } else {
-        settings = JSON.parse(cookie);
+        settings = JSON.parse(settingsData);
         let mp = FillNewSetting(settings);
         if (mp.change) {
             settings = mp.st;
-            SetCookie('PixivPreview', settings);
+            SetLocalStorage('PixivPreview', settings);
         }
         // 升级
         if (settings.version != g_version) {
             ShowUpgradeMessage();
             settings.version = g_version;
-            SetCookie('PixivPreview', settings);
+            SetLocalStorage('PixivPreview', settings);
         }
     }
 
@@ -3635,7 +3647,7 @@ function ShowSetting() {
     });
     $('#pps-clearFollowingCache').click(function () {
         let user_id = dataLayer[0].user_id;
-        SetCookie('followingOfUid-' + user_id, null, -1);
+        SetLocalStorage('followingOfUid-' + user_id, null, -1);
         alert(Texts[g_language].setting_followingCacheCleared);
     });
 
@@ -3671,7 +3683,7 @@ function ShowSetting() {
             'version': g_version,
         }
 
-        SetCookie('PixivPreview', settings);
+        SetLocalStorage('PixivPreview', settings);
 
         location.href = location.href;
     });
@@ -3679,7 +3691,7 @@ function ShowSetting() {
     $('#pps-reset').click(function () {
         let comfirmText = Texts[g_language].setting_resetHint;
         if (confirm(comfirmText)) {
-            SetCookie('PixivPreview', null);
+            SetLocalStorage('PixivPreview', null);
             location.href = location.href;
         }
     });
@@ -3767,16 +3779,6 @@ function Load() {
         }
     };
 
-    if ($('#pp-settings').length == 0) {
-        toolBar.appendChild(toolBar.firstChild.cloneNode(true));
-        toolBar.lastChild.outerHTML = '<button id="pp-settings" style="background-color: rgb(0, 0, 0);margin-top: 5px;opacity: 0.8;cursor: pointer;border: none;padding: 12px;border-radius: 24px;width: 48px;height: 48px;"><svg version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" x="0px" y="0px" viewBox="0 0 1000 1000" enable-background="new 0 0 1000 1000" xml:space="preserve" style="fill: white;"><metadata> Svg Vector Icons : http://www.sfont.cn </metadata><g><path d="M377.5,500c0,67.7,54.8,122.5,122.5,122.5S622.5,567.7,622.5,500S567.7,377.5,500,377.5S377.5,432.3,377.5,500z"></path><path d="M990,546v-94.8L856.2,411c-8.9-35.8-23-69.4-41.6-100.2L879,186L812,119L689,185.2c-30.8-18.5-64.4-32.6-100.2-41.5L545.9,10h-94.8L411,143.8c-35.8,8.9-69.5,23-100.2,41.5L186.1,121l-67,66.9L185.2,311c-18.6,30.8-32.6,64.4-41.5,100.3L10,454v94.8L143.8,589c8.9,35.8,23,69.4,41.6,100.2L121,814l67,67l123-66.2c30.8,18.6,64.5,32.6,100.3,41.5L454,990h94.8L589,856.2c35.8-8.9,69.4-23,100.2-41.6L814,879l67-67l-66.2-123.1c18.6-30.7,32.6-64.4,41.5-100.2L990,546z M500,745c-135.3,0-245-109.7-245-245c0-135.3,109.7-245,245-245s245,109.7,245,245C745,635.3,635.3,745,500,745z"></path></g></svg></button>';
-        $(toolBar.lastChild).css('margin-top', '10px');
-        $(toolBar.lastChild).css('opacity', '0.8');
-        $(toolBar.lastChild).click(function () {
-            ShowSetting();
-        });
-    }
-
     // GetSettings 内部需要 g_language，先使用自动探测的语言
     AutoDetectLanguage();
 
@@ -3785,6 +3787,36 @@ function Load() {
 
     // 自动检测语言
     AutoDetectLanguage();
+    if ($('#pp-sort').length === 0 && !(g_settings?.enableSort)) {
+        const newListItem = toolBar.firstChild.cloneNode(true);
+        newListItem.innerHTML = '';
+        const newButton = document.createElement('button');
+        newButton.id = 'pp-sort';
+        newButton.style.cssText = 'background-color: rgb(0, 0, 0); margin-top: 5px; opacity: 0.8; cursor: pointer; border: none; padding: 0px; border-radius: 24px; width: 48px; height: 48px;';
+        newButton.innerHTML = `<span style="color: white;vertical-align: text-top;">${Texts[g_language].text_sort}</span>`;
+        newListItem.appendChild(newButton);
+        toolBar.appendChild(newListItem);
+
+        $(newButton).click(function() {
+            runPixivPreview(true);
+            this.disabled = true;
+        });
+    }
+
+    if ($('#pp-settings').length === 0) {
+        const newListItem = toolBar.firstChild.cloneNode(true);
+        newListItem.innerHTML = '';
+        const newButton = document.createElement('button');
+        newButton.id = 'pp-settings';
+        newButton.style.cssText = 'background-color: rgb(0, 0, 0); margin-top: 5px; opacity: 0.8; cursor: pointer; border: none; padding: 12px; border-radius: 24px; width: 48px; height: 48px;';
+        newButton.innerHTML = '<svg version="1.1" xmlns="http://www.w3.org/2000/svg" xmlns:xlink="http://www.w3.org/1999/xlink" x="0px" y="0px" viewBox="0 0 1000 1000" enable-background="new 0 0 1000 1000" xml:space="preserve" style="fill: white;"><metadata> Svg Vector Icons : http://www.sfont.cn </metadata><g><path d="M377.5,500c0,67.7,54.8,122.5,122.5,122.5S622.5,567.7,622.5,500S567.7,377.5,500,377.5S377.5,432.3,377.5,500z"></path><path d="M990,546v-94.8L856.2,411c-8.9-35.8-23-69.4-41.6-100.2L879,186L812,119L689,185.2c-30.8-18.5-64.4-32.6-100.2-41.5L545.9,10h-94.8L411,143.8c-35.8,8.9-69.5,23-100.2,41.5L186.1,121l-67,66.9L185.2,311c-18.6,30.8-32.6,64.4-41.5,100.3L10,454v94.8L143.8,589c8.9,35.8,23,69.4,41.6,100.2L121,814l67,67l123-66.2c30.8,18.6,64.5,32.6,100.3,41.5L454,990h94.8L589,856.2c35.8-8.9,69.4-23,100.2-41.6L814,879l67-67l-66.2-123.1c18.6-30.7,32.6-64.4,41.5-100.2L990,546z M500,745c-135.3,0-245-109.7-245-245c0-135.3,109.7-245,245-245s245,109.7,245,245C745,635.3,635.3,745,500,745z"></path></g></svg>';
+        newListItem.appendChild(newButton);
+        toolBar.appendChild(newListItem);
+
+        $(newButton).click(function() {
+            ShowSetting();
+        });
+    }
 
     // g_csrfToken
     if (g_pageType == PageType.Search || g_pageType == PageType.NovelSearch) {
@@ -3812,38 +3844,40 @@ function Load() {
         clearInterval(itv);
 
         SetTargetBlank(returnMap);
-
+        runPixivPreview();
+    }, 500);
+    function runPixivPreview(eventFromButton = false){
         try {
             if (g_pageType == PageType.Artwork) {
                 Pages[g_pageType].Work();
-                if (g_settings.enablePreview) {
+                if (g_settings.enablePreview || eventFromButton) {
                     PixivPreview();
                 }
             }
             else if (g_pageType == PageType.Search) {
-                if (g_settings.enableSort) {
+                if (g_settings.enableSort || eventFromButton) {
                     g_sortComplete = false;
                     PixivSK(function () {
                         g_sortComplete = true;
-                        if (g_settings.enablePreview) {
+                        if (g_settings.enablePreview || eventFromButton) {
                             PixivPreview();
                         }
                     });
-                } else if (g_settings.enablePreview) {
+                } else if (g_settings.enablePreview || eventFromButton) {
                     PixivPreview();
                 }
             } else if (g_pageType == PageType.NovelSearch) {
-                if (g_settings.enableNovelSort) {
+                if (g_settings.enableNovelSort || eventFromButton) {
                     PixivNS();
                 }
-            } else if (g_settings.enablePreview) {
+            } else if (g_settings.enablePreview || eventFromButton) {
                 PixivPreview();
             }
         }
         catch (e) {
             DoLog(LogLevel.Error, 'Unknown error: ' + e);
         }
-    }, 500);
+    }
 }
 function startLoad() {
     loadInterval = setInterval(Load, 1000);
