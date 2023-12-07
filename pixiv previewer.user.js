@@ -1623,16 +1623,9 @@ function CheckUrlTest() {
 function preventDefault(e) {
     e.preventDefault();
 }
-// modern Chrome requires { passive: false } when adding event
-var supportsPassive = false;
-try {
-    window.addEventListener("test", null, Object.defineProperty({}, 'passive', {
-        get: function () { supportsPassive = true; }
-    }));
-} catch (e) { }
 
-var wheelOpt = supportsPassive ? { passive: false } : false;
-var wheelEvent = 'onwheel' in document.createElement('div') ? 'wheel' : 'mousewheel';
+const wheelOpt = { passive: false };
+const wheelEvent = 'onwheel' in document.createElement('div') ? 'wheel' : 'mousewheel';
 
 function disableScroll() {
     window.addEventListener(wheelEvent, preventDefault, wheelOpt);
