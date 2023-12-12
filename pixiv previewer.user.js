@@ -2275,7 +2275,7 @@ function PixivSK(callback) {
 
             // 首先从Cookie读取
             let following = GetLocalStorage('followingOfUid-' + user_id) || GetCookie('followingOfUid-' + user_id);
-            if (following != null) {
+            if (following != null && following != 'null') {
                 resolve(following);
                 return;
             }
