@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name                Pixiv Previewer(Dev)
 // @namespace           https://github.com/Ocrosoft/PixivPreviewer
-// @version             3.7.18
+// @version             3.7.19
 // @description         Display preview images (support single image, multiple images, moving images); Download animation(.zip); Sorting the search page by favorite count(and display it). Updated for the latest search page.
 // @description:zh-CN   显示预览图（支持单图，多图，动图）；动图压缩包下载；搜索页按热门度（收藏数）排序并显示收藏数，适配11月更新。
 // @description:ja      プレビュー画像の表示（単一画像、複数画像、動画のサポート）; アニメーションのダウンロード（.zip）; お気に入りの数で検索ページをソートします（そして表示します）。 最新の検索ページ用に更新されました。
@@ -2111,6 +2111,7 @@ function PixivPreview() {
                 iLog.i('Show main.');
                 AdjustDivPosition();
                 div.show();
+                disableScroll();
             } else {
                 iLog.i('Hide main.');
                 div.hide();
@@ -2171,7 +2172,7 @@ function PixivPreview() {
                 'border-style': 'solid', 'border-color': '#6495ed', 'border-width': '2px', 'border-radius': '20px',
                 'width': '48px', 'height': '48px',
                 'background-image': 'url(https://pp-1252089172.cos.ap-chengdu.myqcloud.com/transparent.png)',
-                'display': 'none'
+                'display': 'none', 'text-align': 'center'
             });
             // 添加到 body
             $('.pp-main').remove();
@@ -2186,6 +2187,15 @@ function PixivPreview() {
                 } else {
                     previewDiv.show();
                 }
+            } else {
+                // previewByKey 时使用全屏预览
+                previewDiv.css({'background': '#ffffff80', 'position': 'fixed'});
+                previewDiv.click((e) => {
+                    if ($(e.target).hasClass('pp-image')) {
+                        return;
+                    }
+                    showPreviewDiv();
+                });
             }
 
             // 加载中图片
@@ -2215,6 +2225,9 @@ function PixivPreview() {
             previewDiv.append(pageCountDiv);
 
             $('.pp-main').mouseleave(function (e) {
+                if (g_settings.previewByKey) {
+                    return;
+                }
                 $(this).remove();
             });
 
@@ -2282,6 +2295,10 @@ function PixivPreview() {
 
         // 鼠标移出图片
         $(returnMap.controlElements).mouseleave(function (e) {
+            if (g_settings.previewByKey) {
+                return;
+            }
+
             let _this = $(this);
             let illustId = _this.attr('illustId');
             let illustType = _this.attr('illustType');
@@ -2385,9 +2402,27 @@ function PixivPreview() {
             height = $('.pp-image').get(0) == null ? 0 : $('.pp-image').get(0).height;
         }
 
-        let isShowOnLeft = g_mousePos.x > screenWidth / 2;
-
         let newWidth = 48, newHeight = 48;
+        if (g_settings.previewByKey) {
+            newWidth = screenWidth;
+            newHeight = height / width * newWidth;
+            if (newHeight > screenHeight) {
+                newHeight = screenHeight;
+                newWidth = newHeight / height * width;
+            }
+            newHeight -= 5;
+            newWidth -= 5;
+            $('.pp-image').css({ 'height': newHeight + 'px', 'width': newWidth + 'px' });
+            $('.pp-main').css({ 'left': '0px', 'top': '0px', 'width': screenWidth - 5, 'height': screenHeight - 5 });
+
+            // 返回新的宽高
+            return {
+                width: newWidth,
+                height: newHeight,
+            };
+        }
+
+        let isShowOnLeft = g_mousePos.x > screenWidth / 2;
         if (width > 0 && height > 0) {
             newWidth = isShowOnLeft ? g_mousePos.x - fromMouseToDiv : screenWidth - g_mousePos.x - fromMouseToDiv;
             newHeight = height / width * newWidth;
@@ -2534,11 +2569,13 @@ function PixivPreview() {
             });
 
             //  scrollLock
-            $(".pp-image").mouseenter(function () {
-                disableScroll()
-            }).mouseleave(function () {
-                enableScroll()
-            });
+            if (!g_settings.previewByKey) {
+                $(".pp-image").mouseenter(function () {
+                    disableScroll()
+                }).mouseleave(function () {
+                    enableScroll()
+                });
+            }
 
             // 图片预加载完成
             $('.pp-image').on('load', function () {
@@ -2584,11 +2621,12 @@ function PixivPreview() {
 
         g_settings.original = isShowOriginal ? 1 : 0;
 
-        $('.pp-pageCount').hide();
-        if (isShowOriginal) {
-            $('.pp-original').show();
-        } else {
-            $('.pp-original').hide();
+        if (!g_settings.previewByKey) {
+            $(".pp-image").mouseenter(function () {
+                disableScroll()
+            }).mouseleave(function () {
+                enableScroll()
+            });
         }
 
         var p = createPlayer({
