@@ -2103,7 +2103,7 @@ function PixivPreview() {
             return;
         }
 
-        function showPreviewDiv() {
+        function togglePreviewDiv() {
             let div = $('.pp-main');
             if (div.length == 0) {
                 return;
@@ -2121,6 +2121,20 @@ function PixivPreview() {
                 enableScroll();
             }
         }
+        function showPreviewDiv() {
+            let div = $('.pp-main');
+            if (div.length == 0) {
+                return;
+            }
+            if (div.css('display') == 'none') {
+                iLog.i('Show main.');
+                AdjustDivPosition();
+                div.show();
+                if (g_settings.previewFullScreen) {
+                    disableScroll();
+                }
+            }
+        }
 
         if (g_settings.previewByKey) {
             $(document).unbind('keydown');
@@ -2128,7 +2142,7 @@ function PixivPreview() {
                 if (e.keyCode != g_settings.previewKey) {
                     return;
                 }
-                showPreviewDiv();
+                togglePreviewDiv();
             });
         }
 
@@ -2187,7 +2201,7 @@ function PixivPreview() {
                     if ($(e.target).hasClass('pp-image')) {
                         return;
                     }
-                    showPreviewDiv();
+                    togglePreviewDiv();
                 });
             }
 
@@ -2615,6 +2629,7 @@ function PixivPreview() {
         $('.pp-image').attr('src', isShowOriginal ? original[index] : regular[index]).attr('index', index);
     }
     // 显示动图
+    var g_ugoriaPlayer;
     function ViewUgoira(regular, original, mime, frames, isShowOriginal, illustId) {
         displayTargetIllustId = illustId;
         if (isShowOriginal == null) {
@@ -2631,7 +2646,10 @@ function PixivPreview() {
             });
         }
 
-        var p = createPlayer({
+        if (g_ugoriaPlayer) {
+            g_ugoriaPlayer.stop();
+        }
+        g_ugoriaPlayer = createPlayer({
             source: regular,
             metadata: {
                 mime_type: mime,
@@ -2639,19 +2657,22 @@ function PixivPreview() {
             },
         });
         // scrollLock
-        $(p.canvas).mouseenter(function () {
+        $(g_ugoriaPlayer.canvas).mouseenter(function () {
             disableScroll();
         }).mouseleave(function () {
             enableScroll();
         });
-        $(p).on("frameLoaded", function(ev, frame) {
+        $(g_ugoriaPlayer).on("frameLoaded", function(ev, frame) {
+            if (displayTargetIllustId != previewTargetIllustId) {
+                return;
+            }
             if (frame != 0) {
                 return;
             }
             let img = $('.pp-image');
-            img.after(p.canvas);
+            img.after(g_ugoriaPlayer.canvas);
             img.remove();
-            let canvas = $(p.canvas);
+            let canvas = $(g_ugoriaPlayer.canvas);
             canvas.addClass('pp-image');
             $('.pp-loading').css('display', 'none');
             let w = ev.currentTarget._frameImages[0].width;
