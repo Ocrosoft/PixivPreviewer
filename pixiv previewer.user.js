@@ -932,6 +932,7 @@ let g_defaultSettings = {
     'previewDelay': 200,
     'previewByKey': 0,
     'previewKey': 17,
+    'previewFullScreen': 0,
     'pageCount': 3,
     'favFilter': 0,
     'aiFilter': 0,
@@ -2111,7 +2112,9 @@ function PixivPreview() {
                 iLog.i('Show main.');
                 AdjustDivPosition();
                 div.show();
-                disableScroll();
+                if (g_settings.previewFullScreen) {
+                    disableScroll();
+                }
             } else {
                 iLog.i('Hide main.');
                 div.hide();
@@ -2178,17 +2181,7 @@ function PixivPreview() {
             $('.pp-main').remove();
             $('body').append(previewDiv);
 
-            if (!g_settings.previewByKey) {
-                let waitTime = delay - (new Date().getTime() - startTime);
-                if (waitTime > 0) {
-                    setTimeout(function () {
-                        previewDiv.show();
-                    }, waitTime);
-                } else {
-                    previewDiv.show();
-                }
-            } else {
-                // previewByKey 时使用全屏预览
+            if (g_settings.previewFullScreen) {
                 previewDiv.css({'background': '#ffffff80', 'position': 'fixed'});
                 previewDiv.click((e) => {
                     if ($(e.target).hasClass('pp-image')) {
@@ -2196,6 +2189,15 @@ function PixivPreview() {
                     }
                     showPreviewDiv();
                 });
+            }
+
+            if (!g_settings.previewByKey) {
+                let waitTime = delay - (new Date().getTime() - startTime);
+                if (waitTime > 0) {
+                    setTimeout(showPreviewDiv, waitTime);
+                } else {
+                    showPreviewDiv();
+                }
             }
 
             // 加载中图片
@@ -2225,7 +2227,7 @@ function PixivPreview() {
             previewDiv.append(pageCountDiv);
 
             $('.pp-main').mouseleave(function (e) {
-                if (g_settings.previewByKey) {
+                if (g_settings.previewFullScreen) {
                     return;
                 }
                 $(this).remove();
@@ -2403,7 +2405,7 @@ function PixivPreview() {
         }
 
         let newWidth = 48, newHeight = 48;
-        if (g_settings.previewByKey) {
+        if (g_settings.previewFullScreen) {
             newWidth = screenWidth;
             newHeight = height / width * newWidth;
             if (newHeight > screenHeight) {
@@ -2569,7 +2571,7 @@ function PixivPreview() {
             });
 
             //  scrollLock
-            if (!g_settings.previewByKey) {
+            if (!g_settings.previewFullScreen) {
                 $(".pp-image").mouseenter(function () {
                     disableScroll()
                 }).mouseleave(function () {
@@ -2621,7 +2623,7 @@ function PixivPreview() {
 
         g_settings.original = isShowOriginal ? 1 : 0;
 
-        if (!g_settings.previewByKey) {
+        if (!g_settings.previewFullScreen) {
             $(".pp-image").mouseenter(function () {
                 disableScroll()
             }).mouseleave(function () {
