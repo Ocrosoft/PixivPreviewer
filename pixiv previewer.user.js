@@ -172,7 +172,7 @@ Texts[Lang.zh_CN] = {
     setting_previewByKeyHelp: '开启后鼠标移动到图片上不再展示预览图，按下Ctrl键才展示，同时“延迟显示预览”设置项不生效。',
     setting_maxPage: '每次排序时统计的最大页数',
     setting_hideWork: '隐藏收藏数少于设定值的作品',
-    setting_hideAiWork: 'Hide AI works',
+    setting_hideAiWork: '隐藏 AI 生成作品',
     setting_hideFav: '排序时隐藏已收藏的作品',
     setting_hideFollowed: '排序时隐藏已关注画师作品',
     setting_clearFollowingCache: '清除缓存',
@@ -262,7 +262,7 @@ Texts[Lang.ru_RU] = {
     setting_previewByKeyHelp: Texts[Lang.en_US].setting_previewByKeyHelp,
     setting_maxPage: 'Максимальное количество страниц, подсчитанных за сортировку',
     setting_hideWork: 'Скрыть работы с количеством закладок меньше установленного значения',
-    setting_hideAiWork: 'Hide AI works',
+    setting_hideAiWork: Texts[Lang.en_US].setting_hideAiWork,
     setting_hideFav: 'При сортировке, скрыть избранное',
     setting_hideFollowed: 'При сортировке, скрыть работы художников на которых подписаны',
     setting_clearFollowingCache: 'Кэш',
@@ -3721,6 +3721,8 @@ function AutoDetectLanguage() {
         if (lang && lang.indexOf('zh') != -1) {
             // 简体中文和繁体中文都用简体中文
             g_language = Lang.zh_CN;
+        } else if (lang && lang.indexOf('ja') != -1) {
+            g_language = Lang.ja_JP;
         } else {
             // 其他的统一用英语，其他语言也不知道谷歌翻译得对不对
             g_language = Lang.en_US;
