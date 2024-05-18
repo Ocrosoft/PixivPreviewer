@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name                Pixiv Previewer(Dev)
 // @namespace           https://github.com/Ocrosoft/PixivPreviewer
-// @version             3.7.20
+// @version             3.7.21
 // @description         Display preview images (support single image, multiple images, moving images); Download animation(.zip); Sorting the search page by favorite count(and display it). Updated for the latest search page.
 // @description:zh-CN   显示预览图（支持单图，多图，动图）；动图压缩包下载；搜索页按热门度（收藏数）排序并显示收藏数，适配11月更新。
 // @description:ja      プレビュー画像の表示（単一画像、複数画像、動画のサポート）; アニメーションのダウンロード（.zip）; お気に入りの数で検索ページをソートします（そして表示します）。 最新の検索ページ用に更新されました。
@@ -1082,7 +1082,14 @@ function processElementListCommon(lis) {
         }
 
         // 添加 attr
-        let control = li.children('div:first').children('div:first');
+        let control = li.children('div:first');
+        if (control.children().length == 0) {
+            if (li.children('div').length > 1) {
+                control = $(li.children('div').get(1));
+            }
+        } else {
+            control = control.children('div:first');
+        }
         control.attr({
             'illustId': ctlAttrs.illustId,
             'illustType': ctlAttrs.illustType,
@@ -1106,6 +1113,25 @@ function replaceThumbCommon(elements) {
             img.attr('src', fullSizeSrc).css('object-fit', 'contain');
         }
     });
+}
+function findLiByImgTag() {
+    let lis = [];
+    $.each($('img'), (i, e) => {
+        let el = $(e);
+        if (el.parent().parent().attr('data-gtm-value') != '') {
+            for (let i = 0; i < 10; ++i) {
+                el = el.parent();
+                if (el.length == 0) {
+                    break;
+                }
+                if (el.get(0).tagName == 'LI') {
+                    lis.push(el);
+                    break;
+                }
+            }
+        }
+    });
+    return lis;
 }
 
 Pages[PageType.Search] = {
@@ -1310,11 +1336,13 @@ Pages[PageType.Member] = {
             controlElements: [],
         };
 
+        let lis = findLiByImgTag();
+        DoLog(LogLevel.Elements, lis);
+
         let sections = $('section');
         DoLog(LogLevel.Info, 'Page has ' + sections.length + ' <section>.');
         DoLog(LogLevel.Elements, sections);
 
-        let lis = sections.find('ul').find('li');
         processElementListCommon(lis);
         returnMap.controlElements = $('.pp-control');
         returnMap.loadingComplete = true;
@@ -1533,61 +1561,25 @@ Pages[PageType.NewIllust] = {
             controlElements: [],
         };
 
-        let ul = $('#root').find('ul:first');
-        if (ul.length === 0) {
-            DoLog(LogLevel.Error, 'Can not found <ul>!');
-            return returnMap;
-        }
+        let lis = findLiByImgTag();
 
-        ul.find('li').each(function (i, e) {
-            let _this = $(e);
-
-            let link = _this.find('a:first');
-            let href = link.attr('href');
-            if (href == null || href === '') {
-                DoLog(LogLevel.Error, 'Can not found illust id, skip this.');
-                return;
-            }
-
-            let ctlAttrs = {
-                illustId: 0,
-                illustType: 0,
-                pageCount: 1,
-            };
-
-            let matched = href.match(/artworks\/(\d+)/);
-            if (matched) {
-                ctlAttrs.illustId = matched[1];
-            } else {
-                DoLog(LogLevel.Warning, 'Can not found illust id, skip this.');
-                return;
-            }
-
-            if (link.children().length > 1) {
-                let span = link.find('svg').parent().parent().next();
-                if (span.length > 0 && span.get(0).tagName == 'SPAN') {
-                    ctlAttrs.pageCount = span.text();
-                } else if (link.find('svg').length > 0) {
-                    ctlAttrs.illustType = 2;
-                }
-            }
-
-            let control = _this.children('div:first').children('div:first');
-            control.attr({
-                'illustId': ctlAttrs.illustId,
-                'illustType': ctlAttrs.illustType,
-                'pageCount': ctlAttrs.pageCount
-            });
-
-            returnMap.controlElements.push(control.get(0));
-        });
-
+        processElementListCommon(lis);
+        returnMap.controlElements = $('.pp-control');
         returnMap.loadingComplete = true;
 
         DoLog(LogLevel.Info, 'Process page elements complete.');
         DoLog(LogLevel.Elements, returnMap);
 
         this.private.returnMap = returnMap;
+
+        // 全尺寸缩略图
+        if (g_settings.fullSizeThumb) {
+            if (!this.private.returnMap.loadingComplete) {
+                return;
+            }
+            replaceThumbCommon(this.private.returnMap.controlElements);
+        }
+
         return returnMap;
     },
     GetProcessedPageElements: function () {
