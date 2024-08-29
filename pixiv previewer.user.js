@@ -695,6 +695,8 @@ Texts[Lang.zh_CN] = {
     setting_hideAiWork: '隐藏 AI 生成作品',
     setting_hideFav: '排序时隐藏已收藏的作品',
     setting_hideFollowed: '排序时隐藏已关注画师作品',
+    setting_hideByTag: '排序时隐藏指定标签的作品',
+    setting_hideByTagPlaceholder: '输入标签名，多个标签用\',\'分隔',
     setting_clearFollowingCache: '清除缓存',
     setting_clearFollowingCacheHelp: '关注画师信息会在本地保存一天，如果希望立即更新，请点击清除缓存',
     setting_followingCacheCleared: '已清除缓存，请刷新页面。',
@@ -742,6 +744,8 @@ Texts[Lang.en_US] = {
     setting_hideAiWork: 'Hide AI works',
     setting_hideFav: 'Hide favorites when sorting',
     setting_hideFollowed: 'Hide artworks of followed artists when sorting',
+    setting_hideByTag: 'Hide artworks by tag',
+    setting_hideByTagPlaceholder: 'Input tag name, multiple tags separated by \',\'',
     setting_clearFollowingCache: 'Cache',
     setting_clearFollowingCacheHelp: 'The folloing artists info. will be saved locally for one day, if you want to update immediately, please click this to clear cache',
     setting_followingCacheCleared: 'Success, please refresh the page.',
@@ -787,6 +791,8 @@ Texts[Lang.ru_RU] = {
     setting_hideAiWork: Texts[Lang.en_US].setting_hideAiWork,
     setting_hideFav: 'При сортировке, скрыть избранное',
     setting_hideFollowed: 'При сортировке, скрыть работы художников на которых подписаны',
+    setting_hideByTag: Texts[Lang.en_US].setting_hideByTag,
+    setting_hideByTagPlaceholder: Texts[Lang.en_US].setting_hideByTagPlaceholder,
     setting_clearFollowingCache: 'Кэш',
     setting_clearFollowingCacheHelp: 'Следующая информация о художниках будет сохранена локально в течение одного дня, если вы хотите обновить её немедленно, нажмите на эту кнопку, чтобы очистить кэш',
     setting_followingCacheCleared: 'Готово, обновите страницу.',
@@ -831,6 +837,8 @@ Texts[Lang.ja_JP] = {
     setting_hideAiWork: 'AIの作品を非表示にする',
     setting_hideFav: 'ブックマーク数をソート時に非表示にする',
     setting_hideFollowed: 'ソート時にフォローしているアーティストの作品を非表示',
+    setting_hideByTag: Texts[Lang.en_US].setting_hideByTag,
+    setting_hideByTagPlaceholder: Texts[Lang.en_US].setting_hideByTagPlaceholder,
     setting_clearFollowingCache: 'キャッシュ',
     setting_clearFollowingCacheHelp: 'フォローしているアーティストの情報がローカルに1日保存されます。すぐに更新したい場合は、このキャッシュをクリアしてください。',
     setting_followingCacheCleared: '成功しました。ページを更新してください。',
@@ -938,6 +946,8 @@ let g_defaultSettings = {
     'aiFilter': 0,
     'hideFavorite': 0,
     'hideFollowed': 0,
+    'hideByTag': 0,
+    'hideByTagList': '',
     'linkBlank': 1,
     'pageByKey': 0,
     'fullSizeThumb': 0,
@@ -2887,11 +2897,14 @@ function PixivSK(callback) {
             text = text.replace('%1', (g_settings.hideFavorite ? Texts[g_language].sort_filteringHideFavorite : ''));
             $('#progress').text(text); // 实际上这个太快完全看不到
             let tmp = [];
+            let tagsToHide = new Set(g_settings.hideByTagList.replace('，', ',').split(','));
             $(works).each(function (i, work) {
                 let bookmarkCount = work.bookmarkCount ? work.bookmarkCount : 0;
-                if (bookmarkCount >= g_settings.favFilter && !(g_settings.hideFavorite && work.bookmarkData) && !(g_settings.aiFilter == 1 && work.aiType == 2)) {
-                    tmp.push(work);
-                }
+                if (bookmarkCount < g_settings.favFilter) return true;
+                if (g_settings.hideFavorite && work.bookmarkData) return true;
+                if (g_settings.aiFilter == 1 && work.aiType == 2) return true;
+                if (g_settings.hideByTag && work.tags.some(tag => tagsToHide.has(tag))) return true;
+                tmp.push(work);
             });
             works = tmp;
 
@@ -4143,6 +4156,8 @@ function ShowSetting() {
     addItem(getImageAction('pps-hideAi'), Texts[g_language].setting_hideAiWork);
     addItem(getImageAction('pps-hideBookmarked'), Texts[g_language].setting_hideFav);
     addItem(getImageAction('pps-hideFollowed'), Texts[g_language].setting_hideFollowed + '&nbsp<button id="pps-clearFollowingCache" style="cursor:pointer;background-color:gold;border-radius:12px;border:none;font-size:20px;padding:3px 10px;" title="' + Texts[g_language].setting_clearFollowingCacheHelp + '">' + Texts[g_language].setting_clearFollowingCache + '</button>');
+    addItem(getImageAction('pps-hideByTag'), Texts[g_language].setting_hideByTag);
+    addItem('<input id="pps-hideByTagList" style="font-size: 18px;padding: 0;border-width: 0px;text-align: center;width: 95%;" placeholder="' + Texts[g_language].setting_hideByTagPlaceholder + '">', '');
     addItem(getImageAction('pps-newTab'), Texts[g_language].setting_blank);
     addItem(getImageAction('pps-pageKey'), Texts[g_language].setting_turnPage);
     addItem('', '&nbsp');
@@ -4165,6 +4180,8 @@ function ShowSetting() {
     $('#pps-hideAi').attr('src', settings.aiFilter ? imgOn : imgOff).addClass(settings.aiFilter ? 'on' : 'off').css('cursor: pointer');
     $('#pps-hideBookmarked').attr('src', settings.hideFavorite ? imgOn : imgOff).addClass(settings.hideFavorite ? 'on' : 'off').css('cursor: pointer');
     $('#pps-hideFollowed').attr('src', settings.hideFollowed ? imgOn : imgOff).addClass(settings.hideFollowed ? 'on' : 'off').css('cursor: pointer');
+    $('#pps-hideByTag').attr('src', settings.hideByTag ? imgOn : imgOff).addClass(settings.hideFollowed ? 'on' : 'off').css('cursor: pointer');
+    $('#pps-hideByTagList').val(settings.hideByTagList);
     $('#pps-newTab').attr('src', settings.linkBlank ? imgOn : imgOff).addClass(settings.linkBlank ? 'on' : 'off').css('cursor: pointer');
     $('#pps-pageKey').attr('src', settings.pageByKey ? imgOn : imgOff).addClass(settings.pageByKey ? 'on' : 'off').css('cursor: pointer');
     $('#pps-fullSizeThumb').attr('src', settings.fullSizeThumb ? imgOn : imgOff).addClass(settings.fullSizeThumb ? 'on' : 'off').css('cursor: pointer');
@@ -4218,6 +4235,8 @@ function ShowSetting() {
             'aiFilter': $('#pps-hideAi').hasClass('on') ? 1 : 0,
             'hideFavorite': $('#pps-hideBookmarked').hasClass('on') ? 1 : 0,
             'hideFollowed': $('#pps-hideFollowed').hasClass('on') ? 1 : 0,
+            'hideByTag': $('#pps-hideByTag').hasClass('on') ? 1 : 0,
+            'hideByTagList': $('#pps-hideByTagList').val(),
             'linkBlank': $('#pps-newTab').hasClass('on') ? 1 : 0,
             'pageByKey': $('#pps-pageKey').hasClass('on') ? 1 : 0,
             'fullSizeThumb': $('#pps-fullSizeThumb').hasClass('on') ? 1 : 0,
