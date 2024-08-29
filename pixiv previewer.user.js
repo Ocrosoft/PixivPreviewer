@@ -994,9 +994,11 @@ let PageType = {
     Artwork: 10,
     // 小说页
     NovelSearch: 11,
+    // 搜索顶部 tab
+    SearchTop: 12,
 
     // 总数
-    PageTypeCount: 12,
+    PageTypeCount: 13,
 };
 let Pages = {};
 /* Pages 必须实现的函数
@@ -2020,6 +2022,104 @@ Pages[PageType.NovelSearch] = {
         returnMap: null,
     },
 }
+Pages[PageType.SearchTop] = {
+    PageTypeString: 'SearchTopPage',
+    CheckUrl: function (url) {
+        return /^https?:\/\/www.pixiv.net(\/en)?\/tags\/[^/*]/.test(url);
+    },
+    ProcessPageElements: function () {
+        let returnMap = {
+            loadingComplete: false,
+            controlElements: [],
+        };
+
+        let sections = $('section');
+        DoLog(LogLevel.Info, 'Page has ' + sections.length + ' <section>.');
+        DoLog(LogLevel.Elements, sections);
+
+        let premiumSectionIndex = -1;
+        let resultSectionIndex = 0;
+        if (sections.length == 0) {
+            iLog.e('No suitable <section>!');
+            return returnMap;
+        }
+
+        $.each(sections, (i, e) => {
+            if ($(e).find('aside').length > 0) {
+                premiumSectionIndex = i;
+            } else {
+                // 排除小说部分
+                if ($(e).find('ul:first').find('li:first').find('a:first').attr('href').indexOf('novel/show.php') != -1) {
+                    return true;
+                }
+                resultSectionIndex = i;
+            }
+        });
+
+        iLog.v('premium: ' + premiumSectionIndex);
+        iLog.v('result: ' + resultSectionIndex);
+
+        let ul = $(sections[resultSectionIndex]).find('ul');
+        let lis = ul.find('li').toArray();
+        if (premiumSectionIndex != -1) {
+            let lis2 = $(sections[premiumSectionIndex]).find('ul').find('li');
+            lis = lis.concat(lis2.toArray());
+        }
+
+        if (premiumSectionIndex != -1) {
+            let aside = $(sections[premiumSectionIndex]).find('aside');
+            $.each(aside.children(), (i, e) => {
+                if (e.tagName.toLowerCase() != 'ul') {
+                    e.remove();
+                } else {
+                    $(e).css('-webkit-mask', '0');
+                }
+            });
+            aside.next().remove();
+        }
+
+        processElementListCommon(lis);
+        returnMap.controlElements = $('.pp-control');
+        this.private.pageSelector = ul.next().get(0);
+        // fix: 除了“顶部”，“插画”、“漫画”的页选择器挪到了外面，兼容这种情况
+        if (this.private.pageSelector == null) {
+            this.private.pageSelector = ul.parent().next().get(0);
+        }
+        returnMap.loadingComplete = true;
+        this.private.imageListConrainer = ul.get(0);
+
+        DoLog(LogLevel.Info, 'Process page elements complete.');
+        DoLog(LogLevel.Elements, returnMap);
+
+        this.private.returnMap = returnMap;
+        return returnMap;
+    },
+    GetProcessedPageElements: function () {
+        if (this.private.returnMap == null) {
+            return this.ProcessPageElements();
+        }
+        return this.private.returnMap;
+    },
+    GetToolBar: function () {
+        return findToolbarCommon();
+    },
+    // 搜索页有 lazyload，不开排序的情况下，最后几张图片可能会无法预览。这里把它当做自动加载处理
+    HasAutoLoad: false,
+    GetImageListContainer: function () {
+        return this.private.imageListConrainer;
+    },
+    GetFirstImageElement: function () {
+        return $(this.private.imageListConrainer).find('li').get(0);
+    },
+    GetPageSelector: function () {
+        return this.private.pageSelector;
+    },
+    private: {
+        imageListContainer: null,
+        pageSelector: null,
+        returnMap: null,
+    },
+};
 
 function CheckUrlTest() {
     let urls = [
