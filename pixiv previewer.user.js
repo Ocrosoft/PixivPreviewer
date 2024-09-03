@@ -1062,13 +1062,11 @@ function processElementListCommon(lis) {
             pageCount: 1,
         };
 
-        let img = $(li.find('img').get(0));
-        let imageLink = img.parent().parent();
-        let additionDiv = img.parent().prev();
-        let animationSvg = img.parent().find('svg');
-        let pageCountSpan = additionDiv.find('span');
+        let imageLink = li.find('a:first');
+        let animationSvg = imageLink.children('div:first').find('svg:first');
+        let pageCountSpan = imageLink.children('div:last').find('span:last');
 
-        if (img == null || imageLink == null) {
+        if (imageLink == null) {
             DoLog(LogLevel.Warning, 'Can not found img or imageLink, skip this.');
             return;
         }
@@ -3370,14 +3368,20 @@ function PixivSK(callback) {
             $(firstImageElement).find('[data-mouseover]').removeAttr('data-mouseover');
             if (imageElementTemplate == null) {
                 imageElementTemplate = firstImageElement.cloneNode(true);
+                //imageElementTemplate = firstImageElement;
 
                 // 清理模板
                 // image
-                let img = $($(imageElementTemplate).find('img').get(0));
+                let control = $(imageElementTemplate).find('.pp-control');
+                if (control == null) {
+                    iLog.w('Cannot found some elements!');
+                    return;
+                }
+                let imageLink = control.find('a:first');
+                let img = imageLink.find('img:first');
                 let imageDiv = img.parent();
-                let imageLink = imageDiv.parent();
                 let imageLinkDiv = imageLink.parent();
-                let titleLinkParent = imageLinkDiv.parent().next();
+                let titleLinkParent = control.next();
                 if (img == null || imageDiv == null || imageLink == null || imageLinkDiv == null || titleLinkParent == null) {
                     DoLog(LogLevel.Error, 'Can not found some elements!');
                 }
@@ -3398,8 +3402,7 @@ function PixivSK(callback) {
                 // others
                 let bookmarkDiv = imageLink.next();
                 let bookmarkSvg = bookmarkDiv.find('svg');
-                let additionTagDiv = imageDiv.next();
-                let animationTag = imageDiv.find('svg');
+                let additionTagDiv = imageLink.children('div:last');
 
                 let bookmarkCountDiv = additionTagDiv.clone();
                 bookmarkCountDiv.css({ 'top': 'auto', 'bottom': '0px', 'width': '65%' });
@@ -3420,7 +3423,6 @@ function PixivSK(callback) {
                 img.attr('src', '');
                 additionTagDiv.empty();
                 bookmarkCountDiv.empty();
-                animationTag.remove();
                 bookmarkSvg.find('path:first').css('fill', 'rgb(31, 31, 31)');
                 bookmarkSvg.find('path:last').css('fill', 'rgb(255, 255, 255)');
 
@@ -3445,6 +3447,7 @@ function PixivSK(callback) {
                 li.find('.ppTitleLink').attr('href', '/artworks/' + works[i].id).text(works[i].title);
                 li.find('.ppAuthorLink, .ppAuthorLinkProfileImage').attr('href', '/member.php?id=' + works[i].userId).attr({ 'userId': works[i].userId, 'profileImageUrl': works[i].profileImageUrl, 'userName': works[i].userName });
                 li.find('.ppAuthorName').text(works[i].userName);
+                li.find('.ppAuthorImage').parent().attr('titile', works[i].userName);
                 li.find('.ppAuthorImage').attr('src', works[i].profileImageUrl);
                 li.find('.ppBookmarkSvg').attr('illustId', works[i].id);
                 if (works[i].bookmarkData) {
