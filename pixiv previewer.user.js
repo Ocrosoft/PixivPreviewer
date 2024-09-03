@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name                Pixiv Previewer(Dev)
 // @namespace           https://github.com/Ocrosoft/PixivPreviewer
-// @version             3.7.21
+// @version             3.7.23
 // @description         Display preview images (support single image, multiple images, moving images); Download animation(.zip); Sorting the search page by favorite count(and display it). Updated for the latest search page.
 // @description:zh-CN   显示预览图（支持单图，多图，动图）；动图压缩包下载；搜索页按热门度（收藏数）排序并显示收藏数，适配11月更新。
 // @description:ja      プレビュー画像の表示（単一画像、複数画像、動画のサポート）; アニメーションのダウンロード（.zip）; お気に入りの数で検索ページをソートします（そして表示します）。 最新の検索ページ用に更新されました。
@@ -1128,13 +1128,14 @@ function findLiByImgTag() {
     let lis = [];
     $.each($('img'), (i, e) => {
         let el = $(e);
-        if (el.parent().parent().attr('data-gtm-value') != '') {
+        let p = el.parent().parent().parent();
+        if (p.attr('data-gtm-value') != '' && p.attr('href') && p.attr('href').indexOf('/artwork') != -1) {
             for (let i = 0; i < 10; ++i) {
                 el = el.parent();
                 if (el.length == 0) {
                     break;
                 }
-                if (el.get(0).tagName == 'LI') {
+                if (el.get(0).tagName == 'LI' || el.parent().get(0).tagName == 'UL') {
                     lis.push(el);
                     break;
                 }
@@ -1399,71 +1400,27 @@ Pages[PageType.Home] = {
         let returnMap = {
             loadingComplete: false,
             controlElements: [],
-            forceUpdate: false,
         };
 
-        let illust_div = $('div[type="illust"]');
+        let lis = findLiByImgTag();
 
-        DoLog(LogLevel.Info, 'This page has ' + illust_div.length + ' illust <div>.');
-        if (illust_div.length < 1) {
-            DoLog(LogLevel.Warning, 'Less than one <div>, continue waiting.');
-            return returnMap;
-        }
-
-        // 实际里面还套了一个 div，处理一下，方便一点
-        let illust_div_c = [];
-        illust_div.each(function (i, e) {
-            illust_div_c.push($(e).children('div:first'));
-        });
-        illust_div = illust_div_c;
-        $.each(illust_div, function (i, e) {
-            let _this = $(e);
-
-            let a = _this.children('a:first');
-            if (a.length == 0 || a.attr('href').indexOf('artworks') == -1) {
-                DoLog(LogLevel.Warning, 'No href or an invalid href was found, skip this.');
-                return;
-            }
-
-            let ctlAttrs = {
-                illustId: 0,
-                illustType: 0,
-                pageCount: 1,
-            };
-
-            let illustId = a.attr('href').match(/\d+/);
-            if (illustId == null) {
-                DoLog(LogLevel.Warning, 'Can not found illust id of this image, skip.');
-                return;
-            } else {
-                ctlAttrs.illustId = illustId[0];
-            }
-            let pageCount = a.find('span:first').next();
-            if (pageCount.length > 0) {
-                ctlAttrs.pageCount = parseInt($(pageCount.get(pageCount.length - 1)).text());
-            }
-            if ($(a.children('div').get(0)).children('svg').length > 0) {
-                ctlAttrs.illustType = 2;
-            }
-
-            let control = a;
-            if (control.attr('illustId') != ctlAttrs.illustId) {
-                returnMap.forceUpdate = true;
-            }
-            control.attr({
-                'illustId': ctlAttrs.illustId,
-                'illustType': ctlAttrs.illustType,
-                'pageCount': ctlAttrs.pageCount
-            });
-
-            returnMap.controlElements.push(control.get(0));
-        });
+        processElementListCommon(lis);
+        returnMap.controlElements = $('.pp-control');
+        returnMap.loadingComplete = true;
 
         DoLog(LogLevel.Info, 'Process page elements complete.');
         DoLog(LogLevel.Elements, returnMap);
 
-        returnMap.loadingComplete = true;
         this.private.returnMap = returnMap;
+
+        // 全尺寸缩略图
+        if (g_settings.fullSizeThumb) {
+            if (!this.private.returnMap.loadingComplete) {
+                return;
+            }
+            replaceThumbCommon(this.private.returnMap.controlElements);
+        }
+
         return returnMap;
     },
     GetProcessedPageElements: function () {
