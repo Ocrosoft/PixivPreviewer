@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name                Pixiv Previewer(Dev)
 // @namespace           https://github.com/Ocrosoft/PixivPreviewer
-// @version             3.7.24
+// @version             3.7.25
 // @description         Display preview images (support single image, multiple images, moving images); Download animation(.zip); Sorting the search page by favorite count(and display it). Updated for the latest search page.
 // @description:zh-CN   显示预览图（支持单图，多图，动图）；动图压缩包下载；搜索页按热门度（收藏数）排序并显示收藏数，适配11月更新。
 // @description:ja      プレビュー画像の表示（単一画像、複数画像、動画のサポート）; アニメーションのダウンロード（.zip）; お気に入りの数で検索ページをソートします（そして表示します）。 最新の検索ページ用に更新されました。
@@ -1751,96 +1751,30 @@ Pages[PageType.Artwork] = {
             /^https:\/\/www.pixiv.net\/en\/artworks\/.*/.test(url)
     },
     ProcessPageElements: function () {
-        let returnMap = {
+       let returnMap = {
             loadingComplete: false,
             controlElements: [],
         };
 
-        // 是动图
-        let canvas = $('main').find('figure').find('canvas');
-        if ($('main').find('figure').find('canvas').length > 0) {
-            this.private.needProcess = true;
-            canvas.addClass('pp-canvas');
-        }
+        let lis = findLiByImgTag();
 
-        if (location.href.indexOf('#preview') == -1) {
-            // 相关作品，container找不到说明还没加载
-            let containerDiv = $('.gtm-illust-recommend-zone');
-            if (containerDiv.length == 0) {
-                let asides = $('#root').find('aside');
-                $.each(asides, function (i, e) {
-                    if ($(e).children('section').length == 1) {
-                        containerDiv = $(e);
-                        return false;
-                    }
-                });
-            }
-            if (containerDiv.length > 0) {
-                DoLog(LogLevel.Info, 'Found container div.');
-                DoLog(LogLevel.Elements, containerDiv);
-
-                containerDiv.find('ul:first').children().each(function (i, e) {
-                    let _this = $(e);
-
-                    let img = _this.find('img');
-                    if (img.length === 0) {
-                        DoLog(LogLevel.Warning, 'Can not found <img>, skip this element.');
-                        return;
-                    }
-
-                    let link = _this.find('a:first');
-                    if (link.length === 0) {
-                        DoLog(LogLevel.Warning, 'Can not found <a>, skip this element.');
-                        return;
-                    }
-
-                    let ctlAttrs = {
-                        illustId: 0,
-                        illustType: 0,
-                        pageCount: 1,
-                    };
-
-                    let href = link.attr('href');
-                    if (href == null || href === '') {
-                        DoLog(LogLevel.Warning, 'No href found, skip.');
-                        return;
-                    } else {
-                        let matched = href.match(/artworks\/(\d+)/);
-                        if (matched) {
-                            ctlAttrs.illustId = matched[1];
-                        } else {
-                            DoLog(LogLevel.Warning, 'Can not found illust id, skip.');
-                            return;
-                        }
-                    }
-
-                    if (link.children().length > 1) {
-                        let pageCount = link.find('span:first').next();
-                        if (pageCount.length > 0) {
-                            ctlAttrs.pageCount = parseInt($(pageCount.get(pageCount.length - 1)).text());
-                        }
-                        if ($(link.children('div').get(0)).children('svg').length > 0) {
-                            ctlAttrs.illustType = 2;
-                        }
-                    }
-
-                    let control = link.parent();
-                    control.attr({
-                        'illustId': ctlAttrs.illustId,
-                        'illustType': ctlAttrs.illustType,
-                        'pageCount': ctlAttrs.pageCount
-                    });
-
-                    returnMap.controlElements.push(control.get(0));
-                });
-            }
-
-            DoLog(LogLevel.Info, 'Process page elements complete.');
-            DoLog(LogLevel.Elements, returnMap);
-        }
-
+        processElementListCommon(lis);
+        returnMap.controlElements = $('.pp-control');
         returnMap.loadingComplete = true;
+
+        DoLog(LogLevel.Info, 'Process page elements complete.');
+        DoLog(LogLevel.Elements, returnMap);
+
         this.private.returnMap = returnMap;
+
+        // 全尺寸缩略图
+        if (g_settings.fullSizeThumb) {
+            if (!this.private.returnMap.loadingComplete) {
+                return;
+            }
+            replaceThumbCommon(this.private.returnMap.controlElements);
+        }
+
         return returnMap;
     },
     GetProcessedPageElements: function () {
@@ -3381,6 +3315,10 @@ function PixivSK(callback) {
                 bookmarkCountDiv.addClass('ppBookmarkCount');
 
                 img.attr('src', '');
+                let animationTag = img.next();
+                if (animationTag.length != 0 && animationTag.get(0).tagName == 'SVG') {
+                    animationTag.remove();
+                }
                 additionTagDiv.empty();
                 bookmarkCountDiv.empty();
                 bookmarkSvg.find('path:first').css('fill', 'rgb(31, 31, 31)');
