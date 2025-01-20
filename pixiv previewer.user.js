@@ -1132,8 +1132,14 @@ function findLiByImgTag() {
     let lis = [];
     $.each($('img'), (i, e) => {
         let el = $(e);
-        let p = el.parent().parent().parent();
-        if (p.attr('data-gtm-value') != '' && p.attr('href') && p.attr('href').indexOf('/artwork') != -1) {
+        let p = el;
+        for (let i = 0; i < 3; ++i) {
+            p = p.parent();
+            if (p.length == 0) break;
+            if (p.attr('data-gtm-value') == '') continue;
+            let href = p.attr('href');
+            if (undefined == href || href == '') continue;
+            if (href.indexOf('/artwork') == -1) continue;
             for (let i = 0; i < 10; ++i) {
                 el = el.parent();
                 if (el.length == 0) {
