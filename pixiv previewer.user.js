@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name                Pixiv Previewer(Dev)
 // @namespace           https://github.com/Ocrosoft/PixivPreviewer
-// @version             3.7.30
+// @version             3.7.31
 // @description         Display preview images (support single image, multiple images, moving images); Download animation(.zip); Sorting the search page by favorite count(and display it). Updated for the latest search page.
 // @description:zh-CN   显示预览图（支持单图，多图，动图）；动图压缩包下载；搜索页按热门度（收藏数）排序并显示收藏数，适配11月更新。
 // @description:ja      プレビュー画像の表示（単一画像、複数画像、動画のサポート）; アニメーションのダウンロード（.zip）; お気に入りの数で検索ページをソートします（そして表示します）。 最新の検索ページ用に更新されました。
@@ -1403,6 +1403,8 @@ Pages[PageType.Home] = {
     CheckUrl: function (url) {
         return /https?:\/\/www.pixiv.net\/?$/.test(url) ||
             /https?:\/\/www.pixiv.net\/en\/?$/.test(url) ||
+            /https?:\/\/www.pixiv.net\/illustration\/?$/.test(url) ||
+            /https?:\/\/www.pixiv.net\/manga\/?$/.test(url) ||
             /https?:\/\/www.pixiv.net\/cate_r18\.php$/.test(url) ||
             /https?:\/\/www.pixiv.net\/en\/cate_r18\.php$/.test(url);
     },
