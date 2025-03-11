@@ -1155,6 +1155,43 @@ function findLiByImgTag() {
     return lis;
 }
 
+// Replaces deleted artwork indicators with search engine links.
+function showSearchLinksForDeletedArtworks() {
+    // Array of search engines.
+    const searchEngines = [
+        { name: 'Google', url: 'https://www.google.com/search?q=' },
+        { name: 'Bing', url: 'https://www.bing.com/search?q=' },
+        { name: 'Baidu', url: 'https://www.baidu.com/s?wd=' }
+    ];
+    // Find all <span> elements with a "to" attribute.
+    const spans = document.querySelectorAll('span[to]');
+    spans.forEach(span => {
+        const artworkPath = span.getAttribute('to');
+        // Check if the span indicates that it is a deleted artwork
+        if (span.textContent.trim() === "-----" && artworkPath.startsWith("/artworks/")) {
+            // Extract ID from artworkPath by slicing off "/artworks/".
+            const keyword = `pixiv "${artworkPath.slice(10)}"`
+            // Create a container element to hold the links.
+            const container = document.createElement('span');
+            container.className = span.className;
+            // For each search engine, create an <a> element and append it to the container.
+            searchEngines.forEach((engine, i) => {
+                const link = document.createElement("a");
+                link.href = engine.url + encodeURIComponent(keyword);
+                link.textContent = engine.name; // Display the search engine's name.
+                link.target = "_blank"; // Open in a new tab.
+                container.appendChild(link);
+                // Append a separator between links, except after the last one.
+                if (i < searchEngines.length - 1) {
+                    container.appendChild(document.createTextNode(' | '));
+                }
+            });
+            // Replace the original <span> with the container holding the links.
+            span.parentNode.replaceChild(container, span);
+        }
+    });
+}
+
 Pages[PageType.Search] = {
     PageTypeString: 'SearchPage',
     CheckUrl: function (url) {
@@ -1352,6 +1389,7 @@ Pages[PageType.Member] = {
         return /^https?:\/\/www.pixiv.net\/(en\/)?users\/\d+/.test(url)
     },
     ProcessPageElements: function () {
+        showSearchLinksForDeletedArtworks();
         let returnMap = {
             loadingComplete: false,
             controlElements: [],
