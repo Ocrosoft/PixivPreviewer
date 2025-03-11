@@ -78,11 +78,11 @@ if ("undefined" != typeof (GM_xmlhttpRequest)) {
 // Required for iOS <6, where Blob URLs are not available. This is slow...
 // Source: https://gist.github.com/jonleighton/958841
 function base64ArrayBuffer(arrayBuffer, off, byteLength) {
-    var base64    = '';
+    var base64 = '';
     var encodings = 'ABCDEFGHIJKLMNOPQRSTUVWXYZabcdefghijklmnopqrstuvwxyz0123456789+/';
-    var bytes         = new Uint8Array(arrayBuffer);
+    var bytes = new Uint8Array(arrayBuffer);
     var byteRemainder = byteLength % 3;
-    var mainLength    = off + byteLength - byteRemainder;
+    var mainLength = off + byteLength - byteRemainder;
     var a, b, c, d;
     var chunk;
     // Main loop deals with bytes in chunks of 3
@@ -92,8 +92,8 @@ function base64ArrayBuffer(arrayBuffer, off, byteLength) {
 
         // Use bitmasks to extract 6-bit segments from the triplet
         a = (chunk & 16515072) >> 18; // 16515072 = (2^6 - 1) << 18
-        b = (chunk & 258048)   >> 12; // 258048   = (2^6 - 1) << 12
-        c = (chunk & 4032)     >>  6; // 4032     = (2^6 - 1) << 6
+        b = (chunk & 258048) >> 12; // 258048   = (2^6 - 1) << 12
+        c = (chunk & 4032) >> 6; // 4032     = (2^6 - 1) << 6
         d = chunk & 63;               // 63       = 2^6 - 1
 
         // Convert the raw binary segments to the appropriate ASCII encoding
@@ -107,17 +107,17 @@ function base64ArrayBuffer(arrayBuffer, off, byteLength) {
         a = (chunk & 252) >> 2; // 252 = (2^6 - 1) << 2
 
         // Set the 4 least significant bits to zero
-        b = (chunk & 3)   << 4; // 3   = 2^2 - 1
+        b = (chunk & 3) << 4; // 3   = 2^2 - 1
 
         base64 += encodings[a] + encodings[b] + '==';
     } else if (byteRemainder == 2) {
         chunk = (bytes[mainLength] << 8) | bytes[mainLength + 1];
 
         a = (chunk & 64512) >> 10; // 64512 = (2^6 - 1) << 10
-        b = (chunk & 1008)  >>  4; // 1008  = (2^6 - 1) << 4
+        b = (chunk & 1008) >> 4; // 1008  = (2^6 - 1) << 4
 
         // Set the 2 least significant bits to zero
-        c = (chunk & 15)    <<  2; // 15    = 2^4 - 1
+        c = (chunk & 15) << 2; // 15    = 2^4 - 1
 
         base64 += encodings[a] + encodings[b] + encodings[c] + '=';
     }
@@ -128,17 +128,17 @@ function base64ArrayBuffer(arrayBuffer, off, byteLength) {
 function ZipImagePlayer(options) {
     this.op = options;
     this._URL = (window.URL || window.webkitURL || window.MozURL
-                 || window.MSURL);
+        || window.MSURL);
     this._Blob = (window.Blob || window.WebKitBlob || window.MozBlob
-                  || window.MSBlob);
+        || window.MSBlob);
     this._BlobBuilder = (window.BlobBuilder || window.WebKitBlobBuilder
-                         || window.MozBlobBuilder || window.MSBlobBuilder);
+        || window.MozBlobBuilder || window.MSBlobBuilder);
     this._Uint8Array = (window.Uint8Array || window.WebKitUint8Array
-                        || window.MozUint8Array || window.MSUint8Array);
+        || window.MozUint8Array || window.MSUint8Array);
     this._DataView = (window.DataView || window.WebKitDataView
-                      || window.MozDataView || window.MSDataView);
+        || window.MozDataView || window.MSDataView);
     this._ArrayBuffer = (window.ArrayBuffer || window.WebKitArrayBuffer
-                         || window.MozArrayBuffer || window.MSArrayBuffer);
+        || window.MozArrayBuffer || window.MSArrayBuffer);
     this._maxLoadAhead = 0;
     if (!this._URL) {
         this._debugLog("No URL support! Will use slower data: URLs.");
@@ -182,31 +182,31 @@ function ZipImagePlayer(options) {
 ZipImagePlayer.prototype = {
     _trailerBytes: 30000,
     _failed: false,
-    _mkerr: function(msg) {
+    _mkerr: function (msg) {
         var _this = this;
-        return function() {
+        return function () {
             _this._error(msg);
         }
     },
-    _error: function(msg) {
+    _error: function (msg) {
         this._failed = true;
         throw Error("ZipImagePlayer error: " + msg);
     },
-    _debugLog: function(msg) {
+    _debugLog: function (msg) {
         if (this.op.debug) {
             console.log(msg);
         }
     },
-    _load: function(offset, length, callback) {
+    _load: function (offset, length, callback) {
         var _this = this;
         // Unfortunately JQuery doesn't support ArrayBuffer XHR
         var xhr = new XMLHttpRequest();
-        xhr.addEventListener("load", function(ev) {
+        xhr.addEventListener("load", function (ev) {
             if (_this._dead) {
                 return;
             }
             _this._debugLog("Load: " + offset + " " + length + " status=" +
-                            xhr.status);
+                xhr.status);
             if (xhr.status == 200) {
                 _this._debugLog("Range disabled or unsupported, complete load");
                 offset = 0;
@@ -220,8 +220,8 @@ ZipImagePlayer.prototype = {
                 }
                 if (xhr.response.byteLength != length) {
                     _this._error("Unexpected length " +
-                                 xhr.response.byteLength +
-                                 " (expected " + length + ")");
+                        xhr.response.byteLength +
+                        " (expected " + length + ")");
                 }
                 _this._bytes.set(new _this._Uint8Array(xhr.response), offset);
             }
@@ -245,7 +245,7 @@ ZipImagePlayer.prototype = {
         /*this._debugLog("Load: " + offset + " " + length);*/
         xhr.send();
     },
-    _startLoad: function() {
+    _startLoad: function () {
         var _this = this;
         if (!this.op.source) {
             // Unpacked mode (individiual frame URLs) - just load the frames.
@@ -255,7 +255,7 @@ ZipImagePlayer.prototype = {
         $.ajax({
             url: this.op.source,
             type: "HEAD"
-        }).done(function(data, status, xhr) {
+        }).done(function (data, status, xhr) {
             if (_this._dead) {
                 return;
             }
@@ -266,7 +266,7 @@ ZipImagePlayer.prototype = {
             if (!len) {
                 _this._debugLog("HEAD request failed: invalid file length.");
                 _this._debugLog("Falling back to full file mode.");
-                _this._load(null, null, function(off, len) {
+                _this._load(null, null, function (off, len) {
                     _this._pTail = 0;
                     _this._pHead = len;
                     _this._findCentralDirectory();
@@ -282,13 +282,13 @@ ZipImagePlayer.prototype = {
                 off = 0;
             }
             _this._pTail = len;
-            _this._load(off, len - off, function(off, len) {
+            _this._load(off, len - off, function (off, len) {
                 _this._pTail = off;
                 _this._findCentralDirectory();
             });
         }).fail(this._mkerr("Length fetch failed"));
     },
-    _findCentralDirectory: function() {
+    _findCentralDirectory: function () {
         // No support for ZIP file comment
         var dv = new this._DataView(this._buf, this._len - 22, 22);
         if (dv.getUint32(0, true) != 0x06054b50) {
@@ -298,7 +298,7 @@ ZipImagePlayer.prototype = {
         var cd_size = dv.getUint32(12, true);
         var cd_off = dv.getUint32(16, true);
         if (cd_off < this._pTail) {
-            this._load(cd_off, this._pTail - cd_off, function() {
+            this._load(cd_off, this._pTail - cd_off, function () {
                 this._pTail = cd_off;
                 this._readCentralDirectory(cd_off, cd_size, cd_count);
             });
@@ -306,10 +306,10 @@ ZipImagePlayer.prototype = {
             this._readCentralDirectory(cd_off, cd_size, cd_count);
         }
     },
-    _readCentralDirectory: function(offset, size, count) {
+    _readCentralDirectory: function (offset, size, count) {
         var dv = new this._DataView(this._buf, offset, size);
         var p = 0;
-        for (var i = 0; i < count; i++ ) {
+        for (var i = 0; i < count; i++) {
             if (dv.getUint32(p, true) != 0x02014b50) {
                 this._error("Invalid Central Directory signature");
             }
@@ -331,7 +331,7 @@ ZipImagePlayer.prototype = {
             p += nameLen + extraLen + cmtLen;
             /*this._debugLog("File: " + name + " (" + uncompSize +
                            " bytes @ " + off + ")");*/
-            this._files[name] = {off: off, len: uncompSize};
+            this._files[name] = { off: off, len: uncompSize };
         }
         // Two outstanding fetches at any given time.
         // Note: the implementation does not support more than two.
@@ -344,7 +344,7 @@ ZipImagePlayer.prototype = {
             this._loadNextChunk();
         }
     },
-    _loadNextChunk: function() {
+    _loadNextChunk: function () {
         if (this._pFetch >= this._pTail) {
             return;
         }
@@ -354,7 +354,7 @@ ZipImagePlayer.prototype = {
             len = this._pTail - this._pFetch;
         }
         this._pFetch += len;
-        this._load(off, len, function() {
+        this._load(off, len, function () {
             if (off == this._pHead) {
                 if (this._pNextHead) {
                     this._pHead = this._pNextHead;
@@ -367,7 +367,7 @@ ZipImagePlayer.prototype = {
                 }
                 /*this._debugLog("New pHead: " + this._pHead);*/
                 $(this).triggerHandler("loadProgress",
-                                       [this._pHead / this._len]);
+                    [this._pHead / this._len]);
                 if (!this._loadTimer) {
                     this._loadNextFrame();
                 }
@@ -377,13 +377,13 @@ ZipImagePlayer.prototype = {
             this._loadNextChunk();
         });
     },
-    _fileDataStart: function(offset) {
+    _fileDataStart: function (offset) {
         var dv = new DataView(this._buf, offset, 30);
         var nameLen = dv.getUint16(26, true);
         var extraLen = dv.getUint16(28, true);
         return offset + 30 + nameLen + extraLen;
     },
-    _isFileAvailable: function(name) {
+    _isFileAvailable: function (name) {
         var info = this._files[name];
         if (!info) {
             this._error("File " + name + " not found in ZIP");
@@ -393,7 +393,7 @@ ZipImagePlayer.prototype = {
         }
         return this._pHead >= (this._fileDataStart(info.off) + info.len);
     },
-    _loadNextFrame: function() {
+    _loadNextFrame: function () {
         if (this._dead) {
             return;
         }
@@ -427,11 +427,11 @@ ZipImagePlayer.prototype = {
             }
             var blob;
             try {
-                blob = new this._Blob([slice], {type: mime_type});
+                blob = new this._Blob([slice], { type: mime_type });
             }
             catch (err) {
                 this._debugLog("Blob constructor failed. Trying BlobBuilder..."
-                               + " (" + err.message + ")");
+                    + " (" + err.message + ")");
                 var bb = new this._BlobBuilder();
                 bb.append(slice);
                 blob = bb.getBlob();
@@ -441,15 +441,15 @@ ZipImagePlayer.prototype = {
             this._loadImage(frame, url, true);
         } else {
             url = ("data:" + mime_type + ";base64,"
-                   + base64ArrayBuffer(this._buf, off, end - off));
+                + base64ArrayBuffer(this._buf, off, end - off));
             this._loadImage(frame, url, false);
         }
     },
-    _loadImage: function(frame, url, isBlob) {
+    _loadImage: function (frame, url, isBlob) {
         var _this = this;
         var image = new Image();
         var meta = this.op.metadata.frames[frame];
-        image.addEventListener('load', function() {
+        image.addEventListener('load', function () {
             _this._debugLog("Loaded " + meta.file + " to frame " + frame);
             if (isBlob) {
                 _this._URL.revokeObjectURL(url);
@@ -471,7 +471,7 @@ ZipImagePlayer.prototype = {
                     (frame - _this._frame) < _this._maxLoadAhead) {
                     _this._loadNextFrame();
                 } else if (!_this._loadTimer) {
-                    _this._loadTimer = setTimeout(function() {
+                    _this._loadTimer = setTimeout(function () {
                         _this._loadTimer = null;
                         _this._loadNextFrame();
                     }, 200);
@@ -480,13 +480,13 @@ ZipImagePlayer.prototype = {
         });
         image.src = url;
     },
-    _setLoadingState: function(state) {
+    _setLoadingState: function (state) {
         if (this._loadingState != state) {
             this._loadingState = state;
             $(this).triggerHandler("loadingStateChanged", [state]);
         }
     },
-    _displayFrame: function() {
+    _displayFrame: function () {
         if (this._dead) {
             return;
         }
@@ -511,17 +511,17 @@ ZipImagePlayer.prototype = {
             }
         };
         this._context.clearRect(0, 0, this.op.canvas.width,
-                                this.op.canvas.height);
+            this.op.canvas.height);
         this._context.drawImage(image, 0, 0);
         $(this).triggerHandler("frame", this._frame);
         if (!this._paused) {
-            this._timer = setTimeout(function() {
+            this._timer = setTimeout(function () {
                 _this._timer = null;
                 _this._nextFrame.apply(_this);
             }, meta.delay);
         }
     },
-    _nextFrame: function(frame) {
+    _nextFrame: function (frame) {
         if (this._frame >= (this._frameCount - 1)) {
             if (this.op.loop) {
                 this._frame = 0;
@@ -534,7 +534,7 @@ ZipImagePlayer.prototype = {
         }
         this._displayFrame();
     },
-    play: function() {
+    play: function () {
         if (this._dead) {
             return;
         }
@@ -544,7 +544,7 @@ ZipImagePlayer.prototype = {
             this._displayFrame();
         }
     },
-    pause: function() {
+    pause: function () {
         if (this._dead) {
             return;
         }
@@ -556,7 +556,7 @@ ZipImagePlayer.prototype = {
             $(this).triggerHandler("pause", [this._frame]);
         }
     },
-    rewind: function() {
+    rewind: function () {
         if (this._dead) {
             return;
         }
@@ -566,7 +566,7 @@ ZipImagePlayer.prototype = {
         }
         this._displayFrame();
     },
-    stop: function() {
+    stop: function () {
         this._debugLog("Stopped!");
         this._dead = true;
         if (this._timer) {
@@ -580,16 +580,16 @@ ZipImagePlayer.prototype = {
         this._bytes = null;
         $(this).triggerHandler("stop");
     },
-    getCurrentFrame: function() {
+    getCurrentFrame: function () {
         return this._frame;
     },
-    getLoadedFrames: function() {
+    getLoadedFrames: function () {
         return this._frameImages.length;
     },
-    getFrameCount: function() {
+    getFrameCount: function () {
         return this._frameCount;
     },
-    hasError: function() {
+    hasError: function () {
         return this._failed;
     }
 }
@@ -2224,19 +2224,19 @@ function PixivPreview() {
             g_mousePos = { x: e.pageX, y: e.pageY };
             // 预览 Div
             let previewDiv = $(document.createElement('div')).addClass('pp-main').attr('illustId', illustId)
-            .css({
-                'position': 'absolute', 'z-index': '999999', 'left': g_mousePos.x + 'px', 'top': g_mousePos.y + 'px',
-                'border-style': 'solid', 'border-color': '#6495ed', 'border-width': '2px', 'border-radius': '20px',
-                'width': '48px', 'height': '48px',
-                'background-image': 'url(https://pp-1252089172.cos.ap-chengdu.myqcloud.com/transparent.png)',
-                'display': 'none', 'text-align': 'center'
-            });
+                .css({
+                    'position': 'absolute', 'z-index': '999999', 'left': g_mousePos.x + 'px', 'top': g_mousePos.y + 'px',
+                    'border-style': 'solid', 'border-color': '#6495ed', 'border-width': '2px', 'border-radius': '20px',
+                    'width': '48px', 'height': '48px',
+                    'background-image': 'url(https://pp-1252089172.cos.ap-chengdu.myqcloud.com/transparent.png)',
+                    'display': 'none', 'text-align': 'center'
+                });
             // 添加到 body
             $('.pp-main').remove();
             $('body').append(previewDiv);
 
             if (g_settings.previewFullScreen) {
-                previewDiv.css({'background': '#ffffff80', 'position': 'fixed'});
+                previewDiv.css({ 'background': '#ffffff80', 'position': 'fixed' });
                 previewDiv.click((e) => {
                     if ($(e.target).hasClass('pp-image')) {
                         return;
@@ -2266,7 +2266,7 @@ function PixivPreview() {
 
             // 原图（笑脸）图标
             let originIcon = $(new Image()).addClass('pp-original').attr('src', 'https://source.pixiv.net/www/images/pixivcomic-favorite.png')
-            .css({ 'position': 'absolute', 'bottom': '5px', 'right': '5px', 'display': 'none' });
+                .css({ 'position': 'absolute', 'bottom': '5px', 'right': '5px', 'display': 'none' });
             previewDiv.append(originIcon);
 
             // 点击图标新网页打开原图
@@ -2277,7 +2277,7 @@ function PixivPreview() {
             // 右上角张数标记
             let pageCountHTML = '<div class="pp-pageCount" style="display: flex;-webkit-box-align: center;align-items: center;box-sizing: border-box;margin-left: auto;height: 20px;color: rgb(255, 255, 255);font-size: 10px;line-height: 12px;font-weight: bold;flex: 0 0 auto;padding: 4px 6px;background: rgba(0, 0, 0, 0.32);border-radius: 10px;margin-top:5px;margin-right:5px;">\<svg viewBox="0 0 9 10" width="9" height="10" style="stroke: none;line-height: 0;font-size: 0px;fill: currentcolor;"><path d="M8,3 C8.55228475,3 9,3.44771525 9,4 L9,9 C9,9.55228475 8.55228475,10 8,10 L3,10 C2.44771525,10 2,9.55228475 2,9 L6,9 C7.1045695,9 8,8.1045695 8,7 L8,3 Z M1,1 L6,1 C6.55228475,1 7,1.44771525 7,2 L7,7 C7,7.55228475 6.55228475,8 6,8 L1,8 C0.44771525,8 0,7.55228475 0,7 L0,2 C0,1.44771525 0.44771525,1 1,1 Z"></path></svg><span style="margin-left:2px;" class="pp-page">0/0</span></div>';
             let pageCountDiv = $(pageCountHTML)
-            .css({ 'position': 'absolute', 'top': '0px', 'display': 'none', 'right': '0px', 'display': 'none' });
+                .css({ 'position': 'absolute', 'top': '0px', 'display': 'none', 'right': '0px', 'display': 'none' });
             previewDiv.append(pageCountDiv);
 
             $('.pp-main').mouseleave(function (e) {
@@ -2702,7 +2702,7 @@ function PixivPreview() {
         }).mouseleave(function () {
             enableScroll();
         });
-        $(g_ugoriaPlayer).on("frameLoaded", function(ev, frame) {
+        $(g_ugoriaPlayer).on("frameLoaded", function (ev, frame) {
             if (displayTargetIllustId != previewTargetIllustId) {
                 return;
             }
@@ -2717,8 +2717,8 @@ function PixivPreview() {
             $('.pp-loading').css('display', 'none');
             let w = ev.currentTarget._frameImages[0].width;
             let h = ev.currentTarget._frameImages[0].height;
-            canvas.attr({'width': w, 'height': h}).css({'border-radius': '20px'});
-            canvas.attr({'originWidth': w, 'originHeight': h});
+            canvas.attr({ 'width': w, 'height': h }).css({ 'border-radius': '20px' });
+            canvas.attr({ 'originWidth': w, 'originHeight': h });
             AdjustDivPosition();
         });
     }
@@ -3608,7 +3608,7 @@ function PixivSK(callback) {
             }
         });
     }
-    };
+};
 /* ---------------------------------------- 小说 ---------------------------------------- */
 function PixivNS(callback) {
     function findNovelSection() {
@@ -4409,7 +4409,7 @@ function Load() {
         newListItem.appendChild(newButton);
         toolBar.appendChild(newListItem);
 
-        $(newButton).click(function() {
+        $(newButton).click(function () {
             this.disabled = true;
             runPixivPreview(true);
             setTimeout(() => {
@@ -4428,7 +4428,7 @@ function Load() {
         newListItem.appendChild(newButton);
         toolBar.appendChild(newListItem);
 
-        $(newButton).click(function() {
+        $(newButton).click(function () {
             ShowSetting();
         });
     }
@@ -4461,7 +4461,7 @@ function Load() {
         SetTargetBlank(returnMap);
         runPixivPreview();
     }, 500);
-    function runPixivPreview(eventFromButton = false){
+    function runPixivPreview(eventFromButton = false) {
         try {
             if (g_pageType == PageType.Artwork) {
                 Pages[g_pageType].Work();
