@@ -4418,6 +4418,35 @@ function Load() {
         });
     }
 
+    // A fixed next page button next to the setting button
+    if ($('#pp-nextPage-fixed').length === 0) {
+        const newListItem = toolBar.firstChild.cloneNode(true);
+        newListItem.innerHTML = '';
+        const newButton = document.createElement('button');
+        newButton.id = 'pp-nextPage-fixed';
+        newButton.style.cssText = 'background-color: rgb(0, 0, 0); margin-top: 5px; opacity: 0.8; cursor: pointer; border: none; padding: 12px; border-radius: 24px; width: 48px; height: 48px;';
+        newButton.innerHTML = '<svg viewBox="0 0 120 120" width="24" height="24" stroke="white" fill="none" stroke-width="10" stroke-linecap="round" stroke-linejoin="round" style="transform: rotate(90deg);"> <polyline points="60,105 60,8"></polyline> <polyline points="10,57 60,8 110,57"></polyline> </svg>';
+        newListItem.appendChild(newButton);
+        toolBar.appendChild(newListItem);
+
+        $(newButton).click(function() {
+            let nextPageHref = null;
+
+            // Try to reuse .pp-nextPage, otherwise fallback to Pixiv native paginator's last link (>)
+            let nextPageAnchor = $('.pp-nextPage');
+            if (nextPageAnchor.length > 0 && nextPageAnchor.attr('hidden') !== 'hidden') {
+                nextPageHref = nextPageAnchor.attr('href');
+            } else {
+                nextPageHref = [...document.querySelectorAll("nav")].find(nav => [...nav.children].filter(el => el.tagName === "A").every(el => /\?p=\d+$/.test(el.href)))?.lastElementChild?.href ?? null;
+            }
+
+            // Open the next page if available
+            if (nextPageHref != null) {
+                location.href = nextPageHref;
+            }
+        });
+    }
+
     if ($('#pp-settings').length === 0) {
         const newListItem = toolBar.firstChild.cloneNode(true);
         newListItem.innerHTML = '';
