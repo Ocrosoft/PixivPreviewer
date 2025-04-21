@@ -1,7 +1,7 @@
 // ==UserScript==
 // @name                Pixiv Previewer(Dev)
 // @namespace           https://github.com/Ocrosoft/PixivPreviewer
-// @version             3.7.35
+// @version             3.7.36
 // @description         Display preview images (support single image, multiple images, moving images); Download animation(.zip); Sorting the search page by favorite count(and display it). Updated for the latest search page.
 // @description:zh-CN   显示预览图（支持单图，多图，动图）；动图压缩包下载；搜索页按热门度（收藏数）排序并显示收藏数，适配11月更新。
 // @description:ja      プレビュー画像の表示（単一画像、複数画像、動画のサポート）; アニメーションのダウンロード（.zip）; お気に入りの数で検索ページをソートします（そして表示します）。 最新の検索ページ用に更新されました。
@@ -717,6 +717,8 @@ Texts[Lang.zh_CN] = {
     setting_novelSection: '小说排序',
     setting_close: '关闭',
     setting_maxXhr: '收藏数并发（推荐 64）',
+    setting_hideByCountLessThan: '隐藏图片张数少于设定值的作品',
+    setting_hideByCountMoreThan: '隐藏图片张数多于设定值的作品',
     // 搜索时过滤值太高
     sort_noWork: '没有可以显示的作品（隐藏了 %1 个作品）',
     sort_getWorks: '正在获取第%1/%2页作品',
@@ -773,6 +775,8 @@ Texts[Lang.en_US] = {
     setting_novelSection: 'Novel Sorting',
     setting_close: 'Close',
     setting_maxXhr: 'Bookmark count concurrency (recommended 64)',
+    setting_hideByCountLessThan: 'Hide works with image count less than set value',
+    setting_hideByCountMoreThan: 'Hide works with image count more than set value',
     sort_noWork: 'No works to display (%1 works hideen)',
     sort_getWorks: 'Getting artworks of page: %1 of %2',
     sort_getBookmarkCount: 'Getting bookmark count of artworks：%1 of %2',
@@ -825,6 +829,8 @@ Texts[Lang.ru_RU] = {
     setting_novelSection: 'Сортировка (Роман)',
     setting_close: 'Закрыть',
     setting_maxXhr: 'Количество закладок (рекомендуется 64)',
+    setting_hideByCountLessThan: 'Скрыть работы с количеством изображений меньше установленного значения',
+    setting_hideByCountMoreThan: 'Скрыть работы с количеством изображений больше установленного значения',
     sort_noWork: 'Нет работ для отображения (%1 works hidden)',
     sort_getWorks: 'Получение иллюстраций страницы: %1 из %2',
     sort_getBookmarkCount: 'Получение количества закладок artworks：%1 из %2',
@@ -875,6 +881,8 @@ Texts[Lang.ja_JP] = {
     setting_novelSection: 'ソート（小説）',
     setting_close: '閉じる',
     setting_maxXhr: 'ブックマーク数の同時リクエスト数（推奨64）',
+    setting_hideByCountLessThan: '画像数が設定値未満の作品を非表示',
+    setting_hideByCountMoreThan: '画像数が設定値を超える作品を非表示',
     sort_noWork: '表示する作品がありません（%1 作品が非表示）',
     sort_getWorks: 'ページの作品を取得中：%1 / %2',
     sort_getBookmarkCount: '作品のブックマーク数を取得中：%1 / %2',
@@ -2718,7 +2726,7 @@ function gmcInit() {
                     'info',
                     'debug',
                 ],
-                default: 'error',
+                default: 'info',
             },
             clearSettings: {
                 label: Texts[g_language].setting_reset,
@@ -2816,6 +2824,16 @@ function gmcInit() {
                 label: Texts[g_language].setting_hideByTagPlaceholder,
                 type: "text",
                 default: "",
+            },
+            hideCountLessThan: {
+                label: Texts[g_language].setting_hideByCountLessThan,
+                type: "text",
+                default: 0,
+            },
+            hideCountMoreThan: {
+                label: Texts[g_language].setting_hideByCountMoreThan,
+                type: "text",
+                default: 0,
             },
             pageByKey: {
                 label: Texts[g_language].setting_turnPage,
@@ -3683,6 +3701,7 @@ function PixivSK(callback) {
             let bookmarkFilteredCount = 0;
             let aiFilteredCount = 0;
             let tagFilteredCount = 0;
+            let countFilteredCount = 0;
             $(works).each(function (i, work) {
                 let bookmarkCount = work.bookmarkCount ? work.bookmarkCount : 0;
                 if (bookmarkCount < g_settings.favFilter) {
@@ -3701,11 +3720,29 @@ function PixivSK(callback) {
                     tagFilteredCount++;
                     return true;
                 }
+                if (g_settings.hideCountLessThan >= 0 && 
+                    g_settings.hideCountMoreThan >= 0) {
+                    let less = g_settings.hideCountLessThan;
+                    let more = g_settings.hideCountMoreThan;
+                    let pageCount = 1;
+                    if (work.pageCount) {
+                        pageCount = work.pageCount;
+                    }
+                    if (less > 0 && pageCount < less) {
+                        countFilteredCount++;
+                        return true;
+                    }
+                    if (more > 0 && pageCount > more) {
+                        countFilteredCount++;
+                        return true;
+                    }
+                }
                 tmp.push(work);
             });
             iLog.i(bookmarkFilteredCount + ' works were hide by bookmark count.');
             iLog.i(aiFilteredCount + ' works were hide by AI type.');
             iLog.i(tagFilteredCount + ' works were hide by tag.');
+            iLog.i(countFilteredCount + ' works were hide by page count.');
             works = tmp;
 
             filterByUser().then(function () {
@@ -4858,21 +4895,23 @@ function ConvertSettingsFromGMC() {
         'enableSort': GMC.get('enableSort'),
         'enableAnimeDownload': GMC.get('enableAnimeDownload'),
         'original': GMC.get('original'),
-        'previewDelay': parseInt(GMC.get('previewDelay')),
+        'previewDelay': parseInt(GMC.get('previewDelay')) || 200,
         'previewByKey': GMC.get('previewByKey'),
-        'pageCount': parseInt(GMC.get('pageCount')),
-        'favFilter': parseInt(GMC.get('favFilter')),
+        'pageCount': parseInt(GMC.get('pageCount')) || 3,
+        'favFilter': parseInt(GMC.get('favFilter')) || 0,
         'aiFilter': GMC.get('aiFilter'),
         'hideFavorite': GMC.get('hideFavorite'),
         'hideFollowed': GMC.get('hideFollowed'),
         'hideByTag': GMC.get('hideByTag'),
         'hideByTagList': GMC.get('hideByTagList'),
+        'hideCountLessThan': parseInt(GMC.get('hideCountLessThan')) || 0,
+        'hideCountMoreThan': parseInt(GMC.get('hideCountMoreThan')) || 0,
         'linkBlank': GMC.get('linkBlank'),
         'pageByKey': GMC.get('pageByKey'),
         'fullSizeThumb': GMC.get('fullSizeThumb'),
         'enableNovelSort': GMC.get('enableNovelSort'),
-        'novelPageCount': parseInt(GMC.get('novelPageCount')),
-        'novelFavFilter': parseInt(GMC.get('novelFavFilter')),
+        'novelPageCount': parseInt(GMC.get('novelPageCount')) || 3,
+        'novelFavFilter': parseInt(GMC.get('novelFavFilter')) || 0,
         'novelHideFavorite': GMC.get('novelHideFavorite'),
         'previewFullScreen': GMC.get('previewFullScreen'),
         'previewKey': 17,
