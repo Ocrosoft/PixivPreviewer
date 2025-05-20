@@ -1507,7 +1507,7 @@ Pages[PageType.Ranking] = {
 
         returnMap.loadingComplete = true;
 
-        d('Process page elements complete.');
+        iLog.d('Process page elements complete.');
         iLog.d(returnMap);
 
         this.private.returnMap = returnMap;
