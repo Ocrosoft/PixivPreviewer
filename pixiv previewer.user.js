@@ -5,7 +5,7 @@
 // @name:zh-CN          Pixiv Previewer (Dev)
 // @name:zh-TW          Pixiv Previewer (Dev)
 // @namespace           https://github.com/Ocrosoft/PixivPreviewer
-// @version             3.7.39
+// @version             3.7.40
 // @description         Display preview images (support single image, multiple images, moving images); Download animation(.zip); Sorting the search page by favorite count(and display it). Updated for the latest search page.
 // @description:zh-CN   显示预览图（支持单图，多图，动图）；动图压缩包下载；搜索页按热门度（收藏数）排序并显示收藏数，适配11月更新。
 // @description:ja      プレビュー画像の表示（単一画像、複数画像、動画のサポート）; アニメーションのダウンロード（.zip）; お気に入りの数で検索ページをソートします（そして表示します）。 最新の検索ページ用に更新されました。
@@ -704,7 +704,7 @@ Texts[Lang.zh_CN] = {
     setting_hideFav: '排序时隐藏已收藏的作品',
     setting_hideFollowed: '排序时隐藏已关注画师作品',
     setting_hideByTag: '排序时隐藏指定标签的作品',
-    setting_hideByTagPlaceholder: '输入标签名，多个标签用\',\'分隔',
+    setting_hideByTagPlaceholder: '输入标签名，如 "tag1|tag2"，支持正则',
     setting_clearFollowingCache: '清除缓存',
     setting_clearFollowingCacheHelp: '关注画师信息会在本地保存一天，如果希望立即更新，请点击清除缓存',
     setting_followingCacheCleared: '已清除缓存，请刷新页面。',
@@ -762,7 +762,7 @@ Texts[Lang.en_US] = {
     setting_hideFav: 'Hide favorites when sorting',
     setting_hideFollowed: 'Hide artworks of followed artists when sorting',
     setting_hideByTag: 'Hide artworks by tag',
-    setting_hideByTagPlaceholder: 'Input tag name, multiple tags separated by \',\'',
+    setting_hideByTagPlaceholder: 'Input tag name, e.g. "tag1|tag2", regular expressions supported',
     setting_clearFollowingCache: 'Clear Cache',
     setting_clearFollowingCacheHelp: 'The folloing artists info. will be saved locally for one day, if you want to update immediately, please click this to clear cache',
     setting_followingCacheCleared: 'Success, please refresh the page.',
@@ -818,7 +818,7 @@ Texts[Lang.ru_RU] = {
     setting_hideFav: 'При сортировке, скрыть избранное',
     setting_hideFollowed: 'При сортировке, скрыть работы художников на которых подписаны',
     setting_hideByTag: 'При сортировке, скрыть работы с указанным тегом',
-    setting_hideByTagPlaceholder: 'Введите имя тега, несколько тегов разделите запятой',
+    setting_hideByTagPlaceholder: 'Введите имя тега, например "tag1|tag2", поддерживается регулярное выражение',
     setting_clearFollowingCache: 'Очистить кэш',
     setting_clearFollowingCacheHelp: 'Следующая информация о художниках будет сохранена локально в течение одного дня, если вы хотите обновить её немедленно, нажмите на эту кнопку, чтобы очистить кэш',
     setting_followingCacheCleared: 'Готово, обновите страницу.',
@@ -871,7 +871,7 @@ Texts[Lang.ja_JP] = {
     setting_hideFav: 'ブックマーク数をソート時に非表示にする',
     setting_hideFollowed: 'ソート時にフォローしているアーティストの作品を非表示',
     setting_hideByTag: 'ソート時に指定したタグの作品を非表示',
-    setting_hideByTagPlaceholder: 'タグ名を入力し、複数のタグを \',\' で区切る',
+    setting_hideByTagPlaceholder: 'タグ名を入力してください（例："tag1|tag2"、正規表現対応）',
     setting_clearFollowingCache: 'キャッシュをクリア',
     setting_clearFollowingCacheHelp: 'フォローしているアーティストの情報がローカルに1日保存されます。すぐに更新したい場合は、このキャッシュをクリアしてください。',
     setting_followingCacheCleared: '成功しました。ページを更新してください。',
@@ -2638,6 +2638,10 @@ function gmcBuildStyle() {
         #gmc-frame .reset_holder {
           display: none;
         }
+
+        #gmc-frame_hideByTagList_var {
+            display: none !important;
+        }
       `;
     document.head.appendChild(gmcFrameStyle);
 }
@@ -2843,6 +2847,11 @@ function gmcInit() {
                 default: false,
             },
             hideByTagList: {
+                label: Texts[g_language].setting_hideByTagPlaceholder,
+                type: "hidden",
+                default: "",
+            },
+            hideByTagRegex: {
                 label: Texts[g_language].setting_hideByTagPlaceholder,
                 type: "text",
                 default: "",
@@ -3719,7 +3728,6 @@ function PixivSK(callback) {
             text = text.replace('%1', (g_settings.hideFavorite ? Texts[g_language].sort_filteringHideFavorite : ''));
             $('#progress').text(text); // 实际上这个太快完全看不到
             let tmp = [];
-            let tagsToHide = new Set(g_settings.hideByTagList.replace('，', ',').split(','));
             let bookmarkFilteredCount = 0;
             let aiFilteredCount = 0;
             let tagFilteredCount = 0;
@@ -3738,9 +3746,19 @@ function PixivSK(callback) {
                     aiFilteredCount++;
                     return true;
                 }
-                if (g_settings.hideByTag && work.tags.some(tag => tagsToHide.has(tag))) {
-                    tagFilteredCount++;
-                    return true;
+                if (g_settings.hideByTag) {
+                    let regex = null;
+                    try {
+                        if (g_settings.hideByTagRegex && g_settings.hideByTagRegex.trim() !== '') {
+                            regex = new RegExp(g_settings.hideByTagRegex);
+                        }
+                    } catch (e) {
+                        iLog.w('Invalid hideByTagRegex: ' + g_settings.hideByTagRegex);
+                    }
+                    if (regex && regex.test(work.tags)) {
+                        tagFilteredCount++;
+                        return true;
+                    }
                 }
                 if (g_settings.hideCountLessThan >= 0 && 
                     g_settings.hideCountMoreThan >= 0) {
@@ -4911,6 +4929,14 @@ function ShowUpgradeMessage() {
     });
 }
 function ConvertSettingsFromGMC() {
+    let hideByTagList = GMC.get('hideByTagList');
+    if (hideByTagList != null && hideByTagList != '') {
+        let hideByTagRegex = hideByTagList.replace(/,|，/g, '|');
+        GMC.set('hideByTagRegex', hideByTagRegex);
+        GMC.set('hideByTagList', '');
+        GMC.save();
+    }
+
     let settings = {
         'enablePreview': GMC.get('enablePreview'),
         'enableAnimePreview': GMC.get('enableAnimePreview'),
@@ -4925,7 +4951,7 @@ function ConvertSettingsFromGMC() {
         'hideFavorite': GMC.get('hideFavorite'),
         'hideFollowed': GMC.get('hideFollowed'),
         'hideByTag': GMC.get('hideByTag'),
-        'hideByTagList': GMC.get('hideByTagList'),
+        'hideByTagRegex': GMC.get('hideByTagRegex'),
         'hideCountLessThan': parseInt(GMC.get('hideCountLessThan')) || 0,
         'hideCountMoreThan': parseInt(GMC.get('hideCountMoreThan')) || 0,
         'linkBlank': GMC.get('linkBlank'),
@@ -4959,7 +4985,7 @@ function MigrateFromOldSetting() {
             GMC.set('hideFavorite', settings.hideFavorite);
             GMC.set('hideFollowed', settings.hideFollowed);
             GMC.set('hideByTag', settings.hideByTag);
-            GMC.set('hideByTagList', settings.hideByTagList);
+            GMC.set('hideByTagRegex', settings.hideByTagRegex);
             GMC.set('linkBlank', settings.linkBlank);
             GMC.set('pageByKey', settings.pageByKey);
             GMC.set('fullSizeThumb', settings.fullSizeThumb);
