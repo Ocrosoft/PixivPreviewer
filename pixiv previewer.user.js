@@ -1003,10 +1003,12 @@ let ControlElementsAttributesSample = {
 };
 
 function findToolbarCommon() {
-    let rootToolbar = $('#root').find('ul:last').get(0);
-    if (rootToolbar) return rootToolbar;
-    let nextToolbar = $('#__next').find('ul:last').get(0);
-    return nextToolbar;
+    let toolbar = $('#pp-toolbar');
+    if (toolbar.length > 0) {
+        return toolbar.get(0);
+    }
+    $('body').append('<div id="pp-toolbar" style="position:fixed;right:28px;bottom:160px;"></div>')
+    return $('#pp-toolbar').get(0);
 }
 function findToolbarOld() {
     return $('._toolmenu').get(0);
@@ -5139,8 +5141,7 @@ function Load() {
     g_settings = GetSettings();
 
     if ($('#pp-sort').length === 0 && !(g_settings?.enableSort)) {
-        const newListItem = toolBar.firstChild.cloneNode(true);
-        newListItem.innerHTML = '';
+        const newListItem = document.createElement('div');
         const newButton = document.createElement('button');
         newButton.id = 'pp-sort';
         newButton.style.cssText = 'background-color: rgb(0, 0, 0); margin-top: 5px; opacity: 0.8; cursor: pointer; border: none; padding: 0px; border-radius: 24px; width: 48px; height: 48px;';
@@ -5159,7 +5160,7 @@ function Load() {
 
     // A fixed next page button next to the setting button
     if ($('#pp-nextPage-fixed').length === 0) {
-        const newListItem = toolBar.firstChild.cloneNode(true);
+        const newListItem = document.createElement('div');
         newListItem.innerHTML = '';
         const newButton = document.createElement('button');
         newButton.id = 'pp-nextPage-fixed';
@@ -5187,8 +5188,7 @@ function Load() {
     }
 
     if ($('#pp-settings').length === 0) {
-        const newListItem = toolBar.firstChild.cloneNode(true);
-        newListItem.innerHTML = '';
+        const newListItem = document.createElement('div');
         const newButton = document.createElement('button');
         newButton.id = 'pp-settings';
         newButton.style.cssText = 'background-color: rgb(0, 0, 0); margin-top: 5px; opacity: 0.8; cursor: pointer; border: none; padding: 12px; border-radius: 24px; width: 48px; height: 48px;';
