@@ -1428,6 +1428,19 @@ Pages[PageType.Home] = {
         iLog.d('Process page elements complete.');
         iLog.d(returnMap);
 
+        if (this.private.returnMap) {
+            let oldIds = new Set();
+            $.each(this.private.returnMap.controlElements, (i, e) => {
+                oldIds.add($(e).attr('illustId'));
+            });
+            $.each(returnMap.controlElements, (i, e) => {
+                if (!oldIds.has($(e).attr('illustId'))) {
+                    returnMap.forceUpdate = true;
+                    return false;
+                }
+            });
+        }
+
         this.private.returnMap = returnMap;
 
         // 全尺寸缩略图
