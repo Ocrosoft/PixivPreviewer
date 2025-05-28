@@ -3775,7 +3775,7 @@ function PixivSK(callback) {
                         return true;
                     }
                 }
-                if (g_settings.hideCountLessThan >= 0 && 
+                if (g_settings.hideCountLessThan >= 0 &&
                     g_settings.hideCountMoreThan >= 0) {
                     let less = g_settings.hideCountLessThan;
                     let more = g_settings.hideCountMoreThan;
@@ -5083,7 +5083,7 @@ function SetTargetBlank(returnMap) {
 /* --------------------------------------- 主函数 --------------------------------------- */
 let loadInterval = null;
 let itv = null;
-function MigrationLanguage(){
+function MigrationLanguage() {
     let oldSettings = GetLocalStorage('PixivPreview');
     if (oldSettings && oldSettings != 'null') {
         let settings = JSON.parse(oldSettings);
@@ -5091,7 +5091,7 @@ function MigrationLanguage(){
             return parseInt(settings.lang);
         }
     }
-    
+
     let langString = 'PixivPreviewLang';
     let langData = GetLocalStorage(langString);
     if (langData == null || langData == 'null') {
