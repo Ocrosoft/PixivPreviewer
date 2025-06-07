@@ -3982,7 +3982,8 @@ function PixivSK(callback) {
                 iLog.i('Clear ad container complete.');
                 iLog.d(works);
 
-                GetBookmarkCount(0);
+                // GetBookmarkCount(0);
+                GetBookmarkCountUsingFetch(0);
             } else {
                 getWorks(onloadCallback);
             }
@@ -3991,121 +3992,43 @@ function PixivSK(callback) {
         getWorks(onloadCallback);
     }
 
-    let xhrs = [];
-    let currentRequestGroupMinimumIndex = 0;
-    function FillXhrsArray() {
-        xhrs.length = 0;
-        let onloadFunc = function (event) {
-            let json = null;
-            try {
-                json = JSON.parse(event.responseText);
-            } catch (e) {
-                iLog.e('Parse json failed!');
-                iLog.d(e);
-                return;
-            }
+    let completeCount = 0;
+    let failCount = 0;
+    let nextBatchIndex = 0;
 
-            if (json) {
-                let illustId = '';
-                let illustIdMatched = event.finalUrl.match(/illust_id=(\d+)/);
-                if (illustIdMatched) {
-                    illustId = illustIdMatched[1];
-                } else {
-                    iLog.e('Can not get illust id from url: ' + event.finalUrl);
-                    return;
-                }
-                let indexOfThisRequest = -1;
-                for (let j = 0; j < g_maxXhr; j++) {
-                    if (xhrs[j].illustId == illustId) {
-                        indexOfThisRequest = j;
-                        break;
-                    }
-                }
-                if (indexOfThisRequest == -1) {
-                    iLog.e('This url not match any request!');
-                    return;
-                }
-                xhrs[indexOfThisRequest].complete = true;
-
-                if (!json.error) {
-                    let bookmarkCount = json.body.illust_details.bookmark_user_total;
-                    works[currentRequestGroupMinimumIndex + indexOfThisRequest].bookmarkCount = parseInt(bookmarkCount);
-                    iLog.d('IllustId: ' + illustId + ', bookmarkCount: ' + bookmarkCount);
-                } else {
-                    iLog.e('Some error occured: ' + json.message);
-                }
-
-                let completeCount = 0;
-                // 真实完成数（不包含没有发起请求的XHR，最后一批请求时）
-                let completeReally = 0;
-                for (let j = 0; j < g_maxXhr; j++) {
-                    if (xhrs[j].complete) {
-                        completeCount++;
-                        if (xhrs[j].illustId != '') {
-                            completeReally++;
-                        }
-                    }
-                }
-                $('#loading').find('#progress').text(Texts[g_language].sort_getBookmarkCount.replace('%1', currentRequestGroupMinimumIndex + completeReally).replace('%2', works.length));
-                if (completeCount == g_maxXhr) {
-                    currentRequestGroupMinimumIndex += g_maxXhr;
-                    GetBookmarkCount(currentRequestGroupMinimumIndex);
-                }
-            }
-        };
-        let onerrorFunc = function (event) {
-            let illustId = '';
-            let illustIdMatched = event.finalUrl.match(/illust_id=(\d+)/);
-            if (illustIdMatched) {
-                illustId = illustIdMatched[1];
-            } else {
-                iLog.e('Can not get illust id from url: ' + event.finalUrl);
-                return;
-            }
-
-            iLog.e('Send request failed, set this illust(' + illustId + ')\'s bookmark count to 0!');
-
-            let indexOfThisRequest = -1;
-            for (let j = 0; j < g_maxXhr; j++) {
-                if (xhrs[j].illustId == illustId) {
-                    indexOfThisRequest = j;
-                    break;
-                }
-            }
-            if (indexOfThisRequest == -1) {
-                iLog.e('This url not match any request!');
-                return;
-            }
-            works[currentRequestGroupMinimumIndex + indexOfThisRequest].bookmarkCount = 0;
-            xhrs[indexOfThisRequest].complete = true;
-
-            let completeCount = 0;
-            let completeReally = 0;
-            for (let j = 0; j < g_maxXhr; j++) {
-                if (xhrs[j].complete) {
-                    completeCount++;
-                    if (xhrs[j].illustId != '') {
-                        completeReally++;
-                    }
-                }
-            }
-            $('#loading').find('#progress').text(Texts[g_language].sort_getBookmarkCount.replace('%1', currentRequestGroupMinimumIndex + completeReally).replace('%2', works.length));
-            if (completeCount == g_maxXhr) {
-                currentRequestGroupMinimumIndex += g_maxXhr;
-                GetBookmarkCount(currentRequestGroupMinimumIndex + g_maxXhr);
-            }
-        };
-        for (let i = 0; i < g_maxXhr; i++) {
-            xhrs.push({
-                illustId: '',
-                complete: false,
-                onabort: onerrorFunc,
-                onerror: onerrorFunc,
-                onload: onloadFunc,
-                ontimeout: onerrorFunc,
-            });
+    let onloadFunc = function (index, event) {
+        let json = null;
+        try {
+            json = JSON.parse(event.responseText);
+        } catch (e) {
+            iLog.e('Parse json failed!');
+            iLog.d(e);
         }
-    }
+
+        if (json && !json.error) {
+            let bookmarkCount = json.body.illust_details.bookmark_user_total;
+            works[index].bookmarkCount = parseInt(bookmarkCount);
+            iLog.d('IllustId: ' + works[index].id + ', bookmarkCount: ' + bookmarkCount);
+        }
+        else {
+            iLog.e('Some error occured: ' + json.message);
+        }
+
+        $('#loading').find('#progress').text(Texts[g_language].sort_getBookmarkCount.replace('%1', ++completeCount).replace('%2', works.length));
+        if (completeCount == nextBatchIndex) {
+            GetBookmarkCount(nextBatchIndex);
+        }
+    };
+    let onerrorFunc = function (index) {
+        iLog.e('Send request failed, set this illust(' + works[index].id + ')\'s bookmark count to 0!');
+
+        works[index].bookmarkCount = 0;
+
+        $('#loading').find('#progress').text(Texts[g_language].sort_getBookmarkCount.replace('%1', ++completeCount).replace('%2', works.length));
+        if (completeCount == nextBatchIndex) {
+            GetBookmarkCount(nextBatchIndex);
+        }
+    };
 
     let GetBookmarkCount = function (index) {
         if (index >= works.length) {
@@ -4113,32 +4036,68 @@ function PixivSK(callback) {
             return;
         }
 
-        if (xhrs.length === 0) {
-            FillXhrsArray();
-        }
-
-        for (let i = 0; i < g_maxXhr; i++) {
-            if (index + i >= works.length) {
-                xhrs[i].complete = true;
-                xhrs[i].illustId = '';
-                continue;
-            }
-
-            let illustId = works[index + i].id;
+        let batchCount = works.length - index;
+        if (batchCount > g_maxXhr) batchCount = g_maxXhr;
+        nextBatchIndex = index + batchCount;
+        for (let i = 0; i < batchCount; i++) {
+            let j = index + i;
+            let illustId = works[j].id;
             let url = 'https://www.pixiv.net/touch/ajax/illust/details?illust_id=' + illustId;
-            xhrs[i].illustId = illustId;
-            xhrs[i].complete = false;
             GM__xmlHttpRequest({
                 method: 'GET',
                 url: url,
                 anonymous: true,
-                onabort: xhrs[i].onerror,
-                onerror: xhrs[i].onerror,
-                onload: xhrs[i].onload,
-                ontimeout: xhrs[i].onerror,
+                onabort: () => onerrorFunc(j),
+                onerror: () => onerrorFunc(j),
+                onload: (e) => onloadFunc(j, e),
+                ontimeout: () => onerrorFunc(j),
             });
         }
     };
+
+
+    let GetBookmarkCountUsingFetch = function (index) {
+        if (index >= works.length) {
+            clearAndUpdateWorks();
+            return;
+        }
+        let batchCount = works.length - index;
+        if (batchCount > g_maxXhr) batchCount = g_maxXhr;
+        nextBatchIndex = index + batchCount;
+        let completed = 0;
+        for (let i = 0; i < batchCount; i++) {
+            let j = index + i;
+            let illustId = works[j].id;
+            let url = 'https://www.pixiv.net/touch/ajax/illust/details?illust_id=' + illustId;
+            fetch(url, { credentials: 'omit' })
+                .then(response => response.json())
+                .then(json => {
+                    if (json && !json.error) {
+                        let bookmarkCount = json.body.illust_details.bookmark_user_total;
+                        works[j].bookmarkCount = parseInt(bookmarkCount);
+                        iLog.d('IllustId: ' + works[j].id + ', bookmarkCount: ' + bookmarkCount);
+                    } else {
+                        iLog.e('Some error occured: ' + (json && json.message));
+                        works[j].bookmarkCount = 0;
+                    }
+                })
+                .catch(err => {
+                    iLog.e('Fetch failed for illustId ' + illustId + ': ' + err);
+                    works[j].bookmarkCount = 0;
+                    ++failCount;
+                })
+                .finally(() => {
+                    let text = Texts[g_language].sort_getBookmarkCount.replace('%1', ++completeCount).replace('%2', works.length);
+                    if (failCount > 0) {
+                        text += ' (' + failCount + ' failed)';
+                    }
+                    $('#loading').find('#progress').text(text);
+                    if (++completed === batchCount) {
+                        GetBookmarkCountUsingFetch(nextBatchIndex);
+                    }
+                });
+        }
+    }
 
     /*
     li
@@ -5218,7 +5177,7 @@ function Load() {
     if (g_pageType == PageType.Search || g_pageType == PageType.NovelSearch) {
         $.get(location.href, function (data) {
             let matched = data.match(/token\\":\\"([a-z0-9]{32})/);
-            if (matched.length > 0) {
+            if (matched != null && matched.length > 0) {
                 g_csrfToken = matched[1];
                 iLog.d('Got g_csrfToken: ' + g_csrfToken);
             } else {
