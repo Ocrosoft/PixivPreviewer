@@ -1112,9 +1112,16 @@ function findLiByImgTag() {
                 if (el.length == 0) {
                     break;
                 }
-                if (el.get(0).tagName == 'LI' || el.parent().get(0).tagName == 'UL') {
+                if (el.get(0).tagName == 'LI') {
                     lis.push(el);
                     break;
+                }
+                if (el.parent().length > 0 && el.parent().get(0).tagName == 'UL') {
+                    lis.push(el);
+                    break;
+                }
+                if (el.parent().parent().length > 0 && el.parent().parent().get(0).tagName == 'NAV') {
+                    lis.push(el);
                 }
             }
         }
