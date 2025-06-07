@@ -3420,7 +3420,7 @@ function PixivPreview() {
                 }
 
                 if (regular.length == 1) {
-                    return;
+                    return false;
                 }
                 // 如果是多图，点击切换下一张
                 if (ev.originalEvent.wheelDelta < 0) {
@@ -3438,7 +3438,13 @@ function PixivPreview() {
                     let image = new Image();
                     image.src = isOriginal ? original[i] : regular[i];;
                 }
+                return false;
             });
+            if (g_settings.previewFullScreen) {
+                $('.pp-main').bind('onwheel' in document.createElement('div') ? 'wheel' : 'mousewheel', function (ev) {
+                    $('.pp-image').trigger(ev);
+                });
+            }
 
             //  scrollLock
             if (!g_settings.previewFullScreen) {
