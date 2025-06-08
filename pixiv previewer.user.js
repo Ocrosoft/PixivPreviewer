@@ -718,6 +718,7 @@ Texts[Lang.zh_CN] = {
     setting_novelHideWork: '隐藏收藏数少于设定值的作品',
     setting_novelHideFav: '排序时隐藏已收藏的作品',
     setting_previewFullScreen: '全屏预览',
+    setting_scrollLockWhenPreview: '预览时阻止页面滚动',
     setting_logLevel: '日志等级',
     setting_novelSection: '小说排序',
     setting_close: '关闭',
@@ -776,6 +777,7 @@ Texts[Lang.en_US] = {
     setting_novelHideWork: 'Hide works with bookmark count less than set value',
     setting_novelHideFav: 'Hide favorites when sorting',
     setting_previewFullScreen: 'Full screen preview',
+    setting_scrollLockWhenPreview: 'Prevent page scrolling during preview',
     setting_logLevel: 'Log Level',
     setting_novelSection: 'Novel Sorting',
     setting_close: 'Close',
@@ -831,6 +833,8 @@ Texts[Lang.ru_RU] = {
     setting_novelMaxPage: 'Максимальное количество страниц, подсчитанных за сортировку романа',
     setting_novelHideWork: 'Скрыть работы с количеством закладок меньше установленного значения',
     setting_novelHideFav: 'При сортировке, скрыть избранное',
+    setting_previewFullScreen: 'Предпросмотр в полноэкранном режиме',
+    setting_scrollLockWhenPreview: 'Блокировать прокрутку страницы при предпросмотре',
     setting_novelSection: 'Сортировка (Роман)',
     setting_close: 'Закрыть',
     setting_maxXhr: 'Количество закладок (рекомендуется 64)',
@@ -884,6 +888,8 @@ Texts[Lang.ja_JP] = {
     setting_novelMaxPage: '小説のソートのページ数の最大値',
     setting_novelHideWork: '設定値未満のブックマーク数の作品を非表示',
     setting_novelHideFav: 'ソート時にお気に入りを非表示',
+    setting_previewFullScreen: '全画面プレビュー',
+    setting_scrollLockWhenPreview: 'プレビュー時にページのスクロールをロックする',
     setting_novelSection: 'ソート（小説）',
     setting_close: '閉じる',
     setting_maxXhr: 'ブックマーク数の同時リクエスト数（推奨64）',
@@ -2829,6 +2835,11 @@ function gmcInit() {
                 type: 'checkbox',
                 default: false,
             },
+            scrollLockWhenPreview: {
+                label: Texts[g_language].setting_scrollLockWhenPreview,
+                type: 'checkbox',
+                default: true,
+            },
 
             enableSort: {
                 label: Texts[g_language].setting_sort,
@@ -2974,7 +2985,9 @@ function PixivPreview() {
             } else {
                 iLog.d('Hide main.');
                 div.hide();
-                enableScroll();
+                if (g_settings.previewFullScreen) {
+                    enableScroll();
+                }
             }
         }
         function showPreviewDiv() {
@@ -2986,7 +2999,7 @@ function PixivPreview() {
                 iLog.d('Show main.');
                 AdjustDivPosition();
                 div.show();
-                if (g_settings.previewFullScreen) {
+                if (g_settings.scrollLockWhenPreview) {
                     disableScroll();
                 }
             }
@@ -3193,6 +3206,9 @@ function PixivPreview() {
             if (!isMoveToPreviewElement) {
                 // 非预览图上
                 $('.pp-main').remove();
+                if (g_settings.scrollLockWhenPreview) {
+                    enableScroll();
+                }
             }
         });
 
@@ -3209,6 +3225,13 @@ function PixivPreview() {
                 AdjustDivPosition();
             }
         });
+
+        // 只有页面不滚动的时候才能支持
+        if (g_settings.scrollLockWhenPreview) {
+            $(returnMap.controlElements).bind('onwheel' in document.createElement('div') ? 'wheel' : 'mousewheel', function (ev) {
+                $('.pp-image').trigger(ev);
+            });
+        }
 
         // 这个页面有自动加载
         if (Pages[g_pageType].HasAutoLoad && autoLoadInterval == null) {
@@ -3447,13 +3470,12 @@ function PixivPreview() {
             }
 
             //  scrollLock
-            if (!g_settings.previewFullScreen) {
-                $(".pp-image").mouseenter(function () {
-                    disableScroll()
-                }).mouseleave(function () {
-                    enableScroll()
-                });
+            if (!g_settings.scrollLockWhenPreview) {
+                $('.pp-image').mouseenter(disableScroll);
             }
+            $(".pp-image").mouseleave(function () {
+                enableScroll();
+            });
 
             // 图片预加载完成
             $('.pp-image').on('load', function () {
@@ -4950,6 +4972,7 @@ function ConvertSettingsFromGMC() {
         'novelHideFavorite': GMC.get('novelHideFavorite'),
         'previewFullScreen': GMC.get('previewFullScreen'),
         'previewKey': 17,
+        'scrollLockWhenPreview': GMC.get('scrollLockWhenPreview'),
     };
     return settings;
 }
