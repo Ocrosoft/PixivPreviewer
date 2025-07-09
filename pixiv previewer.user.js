@@ -701,6 +701,7 @@ Texts[Lang.zh_CN] = {
     setting_maxPage: '每次排序时统计的最大页数',
     setting_hideWork: '隐藏收藏数少于设定值的作品',
     setting_hideAiWork: '隐藏 AI 生成作品',
+    setting_onlyAiWork: '只显示 AI 生成作品',
     setting_hideFav: '排序时隐藏已收藏的作品',
     setting_hideFollowed: '排序时隐藏已关注画师作品',
     setting_hideByTag: '排序时隐藏指定标签的作品',
@@ -760,6 +761,7 @@ Texts[Lang.en_US] = {
     setting_maxPage: 'Maximum number of pages counted per sort',
     setting_hideWork: 'Hide works with bookmark count less than set value',
     setting_hideAiWork: 'Hide AI works',
+    setting_onlyAiWork: 'Show only AI-generated works',
     setting_hideFav: 'Hide favorites when sorting',
     setting_hideFollowed: 'Hide artworks of followed artists when sorting',
     setting_hideByTag: 'Hide artworks by tag',
@@ -817,6 +819,7 @@ Texts[Lang.ru_RU] = {
     setting_maxPage: 'Максимальное количество страниц, подсчитанных за сортировку',
     setting_hideWork: 'Скрыть работы с количеством закладок меньше установленного значения',
     setting_hideAiWork: 'Скрыть работы, созданные ИИ',
+    setting_onlyAiWork: 'Показывать только работы, созданные ИИ',
     setting_hideFav: 'При сортировке, скрыть избранное',
     setting_hideFollowed: 'При сортировке, скрыть работы художников на которых подписаны',
     setting_hideByTag: 'При сортировке, скрыть работы с указанным тегом',
@@ -872,6 +875,7 @@ Texts[Lang.ja_JP] = {
     setting_maxPage: 'ソートするときに取得する最大ページ数',
     setting_hideWork: '一定以下のブクマーク数の作品を非表示にする',
     setting_hideAiWork: 'AIの作品を非表示にする',
+    setting_onlyAiWork: 'AI生成作品のみ表示',
     setting_hideFav: 'ブックマーク数をソート時に非表示にする',
     setting_hideFollowed: 'ソート時にフォローしているアーティストの作品を非表示',
     setting_hideByTag: 'ソート時に指定したタグの作品を非表示',
@@ -2864,6 +2868,11 @@ function gmcInit() {
                 type: "checkbox",
                 default: false,
             },
+            aiOnly: {
+                label: Texts[g_language].setting_onlyAiWork,
+                type: "checkbox",
+                default: false,
+            },
             hideFavorite: {
                 label: Texts[g_language].setting_hideFav,
                 type: "checkbox",
@@ -3792,10 +3801,16 @@ function PixivSK(callback) {
                     bookmarkFilteredCount++;
                     return true;
                 }
+
+                /* —— Apply AI artworks filter firstly, then check show AI artworks only flag —— */
                 if (g_settings.aiFilter == 1 && work.aiType == 2) {
                     aiFilteredCount++;
                     return true;
                 }
+                if (g_settings.aiOnly && work.aiType != 2) {
+                    return true;
+                }
+
                 if (g_settings.hideByTag) {
                     let regex = null;
                     try {
@@ -4957,6 +4972,7 @@ function ConvertSettingsFromGMC() {
         'pageCount': parseInt(GMC.get('pageCount')) || 3,
         'favFilter': parseInt(GMC.get('favFilter')) || 0,
         'aiFilter': GMC.get('aiFilter'),
+        'aiOnly': GMC.get('aiOnly'),
         'hideFavorite': GMC.get('hideFavorite'),
         'hideFollowed': GMC.get('hideFollowed'),
         'hideByTag': GMC.get('hideByTag'),
@@ -4992,6 +5008,7 @@ function MigrateFromOldSetting() {
             GMC.set('pageCount', settings.pageCount);
             GMC.set('favFilter', settings.favFilter);
             GMC.set('aiFilter', settings.aiFilter);
+            GMC.set('aiOnly', settings.aiOnly);
             GMC.set('hideFavorite', settings.hideFavorite);
             GMC.set('hideFollowed', settings.hideFollowed);
             GMC.set('hideByTag', settings.hideByTag);
