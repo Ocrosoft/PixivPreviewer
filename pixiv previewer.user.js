@@ -5,7 +5,7 @@
 // @name:zh-CN          Pixiv Previewer (Dev)
 // @name:zh-TW          Pixiv Previewer (Dev)
 // @namespace           https://github.com/Ocrosoft/PixivPreviewer
-// @version             3.7.45
+// @version             3.8.0
 // @description         Display preview images (support single image, multiple images, moving images); Download animation(.zip); Sorting the search page by favorite count(and display it).
 // @description:zh-CN   显示预览图（支持单图，多图，动图）；动图压缩包下载；搜索页按热门度（收藏数）排序并显示收藏数。
 // @description:ja      プレビュー画像の表示（単一画像、複数画像、動画のサポート）; アニメーションのダウンロード（.zip）; お気に入りの数で検索ページをソートします（そして表示します）。
@@ -735,6 +735,9 @@ Texts[Lang.zh_CN] = {
     sort_filtering: '过滤%1收藏量低于%2的作品',
     sort_filteringHideFavorite: '已收藏和',
     sort_fullSizeThumb: '全尺寸缩略图（搜索页、用户页）',
+    sort_sortByBookmark: '按❤️排序',
+    sort_sortByLike: '按👍排序',
+    sort_sortByView: '按👀排序',
     // 小说排序
     nsort_getWorks: '正在获取第1%/2%页作品',
     nsort_sorting: '正在按收藏量排序',
@@ -794,6 +797,9 @@ Texts[Lang.en_US] = {
     sort_filtering: 'Filtering%1works with bookmark count less than %2',
     sort_filteringHideFavorite: ' favorited works and ',
     sort_fullSizeThumb: 'Display not cropped images.(Search page and User page only.)',
+    sort_sortByBookmark: 'Sort by ❤️',
+    sort_sortByLike: 'Sort by 👍',
+    sort_sortByView: 'Sort by 👀',
     nsort_getWorks: 'Getting novels of page: 1% of 2%',
     nsort_sorting: 'Sorting by bookmark cound',
     nsort_hideFav: 'Hide favorites when sorting',
@@ -851,6 +857,9 @@ Texts[Lang.ru_RU] = {
     sort_filtering: 'Фильтрация %1 работ с количеством закладок меньше чем %2',
     sort_filteringHideFavorite: ' избранные работы и ',
     sort_fullSizeThumb: 'Показать неотредактированное изображение (Страницы поиска и Artwork)',
+    sort_sortByBookmark: 'Сортировать по ❤️',
+    sort_sortByLike: 'Сортировать по 👍',
+    sort_sortByView: 'Сортировать по 👀',
     nsort_getWorks: 'Получение романов страницы: 1% из 2%',
     nsort_sorting: 'Сортировка по количеству закладок',
     nsort_hideFav: 'При сортировке, скрыть избранное',
@@ -907,6 +916,9 @@ Texts[Lang.ja_JP] = {
     sort_filtering: 'ブックマーク数が%2未満の作品%1件をフィルタリング',
     sort_filteringHideFavorite: ' お気に入り登録済みの作品および  ',
     sort_fullSizeThumb: 'トリミングされていない画像を表示（検索ページおよびユーザーページのみ）。',
+    sort_sortByBookmark: '❤️ でソート',
+    sort_sortByLike: '👍 でソート',
+    sort_sortByView: '👀 でソート',
     nsort_getWorks: '小説のページを取得中：1% / 2%',
     nsort_sorting: 'ブックマーク数で並べ替え',
     nsort_hideFav: 'ソート時にお気に入りを非表示',
@@ -3777,7 +3789,8 @@ function PixivSK(callback) {
     };
 
     // 排序和筛选
-    let filterAndSort = function () {
+    // sortType: 0：收藏（喜欢）；1：点赞；2：查看
+    let filterAndSort = function (sortType = 0) {
         return new Promise(function (resolve, reject) {
             iLog.i('Start sort.');
             iLog.d(works);
@@ -3853,8 +3866,19 @@ function PixivSK(callback) {
             filterByUser().then(function () {
                 // 排序
                 works.sort(function (a, b) {
-                    let favA = a.bookmarkCount;
-                    let favB = b.bookmarkCount;
+                    let favA = 0;
+                    let favB = 0;
+                    if (sortType == 0) {
+                        favA = a.bookmarkCount;
+                        favB = b.bookmarkCount;
+                    }
+                    else if (sortType == 1) {
+                        favA = a.likeCount;
+                        favB = b.likeCount;
+                    } else if (sortType == 2) {
+                        favA = a.viewCount;
+                        favB = b.viewCount;
+                    }
                     if (!favA) {
                         favA = 0;
                     }
@@ -4046,66 +4070,6 @@ function PixivSK(callback) {
     let failCount = 0;
     let nextBatchIndex = 0;
 
-    let onloadFunc = function (index, event) {
-        let json = null;
-        try {
-            json = JSON.parse(event.responseText);
-        } catch (e) {
-            iLog.e('Parse json failed!');
-            iLog.d(e);
-        }
-
-        if (json && !json.error) {
-            let bookmarkCount = json.body.illust_details.bookmark_user_total;
-            works[index].bookmarkCount = parseInt(bookmarkCount);
-            iLog.d('IllustId: ' + works[index].id + ', bookmarkCount: ' + bookmarkCount);
-        }
-        else {
-            iLog.e('Some error occured: ' + json.message);
-        }
-
-        $('#loading').find('#progress').text(Texts[g_language].sort_getBookmarkCount.replace('%1', ++completeCount).replace('%2', works.length));
-        if (completeCount == nextBatchIndex) {
-            GetBookmarkCount(nextBatchIndex);
-        }
-    };
-    let onerrorFunc = function (index) {
-        iLog.e('Send request failed, set this illust(' + works[index].id + ')\'s bookmark count to 0!');
-
-        works[index].bookmarkCount = 0;
-
-        $('#loading').find('#progress').text(Texts[g_language].sort_getBookmarkCount.replace('%1', ++completeCount).replace('%2', works.length));
-        if (completeCount == nextBatchIndex) {
-            GetBookmarkCount(nextBatchIndex);
-        }
-    };
-
-    let GetBookmarkCount = function (index) {
-        if (index >= works.length) {
-            clearAndUpdateWorks();
-            return;
-        }
-
-        let batchCount = works.length - index;
-        if (batchCount > g_maxXhr) batchCount = g_maxXhr;
-        nextBatchIndex = index + batchCount;
-        for (let i = 0; i < batchCount; i++) {
-            let j = index + i;
-            let illustId = works[j].id;
-            let url = 'https://www.pixiv.net/touch/ajax/illust/details?illust_id=' + illustId;
-            GM__xmlHttpRequest({
-                method: 'GET',
-                url: url,
-                anonymous: true,
-                onabort: () => onerrorFunc(j),
-                onerror: () => onerrorFunc(j),
-                onload: (e) => onloadFunc(j, e),
-                ontimeout: () => onerrorFunc(j),
-            });
-        }
-    };
-
-
     let GetBookmarkCountUsingFetch = function (index) {
         if (index >= works.length) {
             clearAndUpdateWorks();
@@ -4118,14 +4082,15 @@ function PixivSK(callback) {
         for (let i = 0; i < batchCount; i++) {
             let j = index + i;
             let illustId = works[j].id;
-            let url = 'https://www.pixiv.net/touch/ajax/illust/details?illust_id=' + illustId;
+            let url = 'https://www.pixiv.net/ajax/illust/' + illustId;
             fetch(url, { credentials: 'omit' })
                 .then(response => response.json())
                 .then(json => {
                     if (json && !json.error) {
-                        let bookmarkCount = json.body.illust_details.bookmark_user_total;
-                        works[j].bookmarkCount = parseInt(bookmarkCount);
-                        iLog.d('IllustId: ' + works[j].id + ', bookmarkCount: ' + bookmarkCount);
+                        works[j].bookmarkCount = json.body.bookmarkCount;
+                        works[j].likeCount = json.body.likeCount;
+                        works[j].viewCount = json.body.viewCount;
+                        iLog.d('IllustId: ' + works[j].id + ', bookmarkCount: ' + works[j].bookmarkCount);
                     } else {
                         iLog.e('Some error occured: ' + (json && json.message));
                         works[j].bookmarkCount = 0;
@@ -4163,8 +4128,9 @@ function PixivSK(callback) {
     ---a: 作品标题，跳转链接
     ---div: 作者头像和昵称
     */
-    let clearAndUpdateWorks = function () {
-        filterAndSort().then(function () {
+    // sortType: 0：收藏（喜欢）；1：点赞；2：查看
+    let clearAndUpdateWorks = function (sortType = 0) {
+        filterAndSort(sortType).then(function () {
             let container = Pages[PageType.Search].GetImageListContainer();
             let firstImageElement = Pages[PageType.Search].GetFirstImageElement();
             // 排序兼容 PixivBatchDownloader
@@ -4270,7 +4236,15 @@ function PixivSK(callback) {
                     let pageCountHTML = '<div style="display: flex;-webkit-box-align: center;align-items: center;box-sizing: border-box;margin-left: auto;height: 20px;color: rgb(255, 255, 255);font-size: 10px;line-height: 12px;font-weight: bold;flex: 0 0 auto;padding: 4px 6px;background: rgba(0, 0, 0, 0.32);border-radius: 10px;">\<svg viewBox="0 0 9 10" width="9" height="10" style="stroke: none;line-height: 0;font-size: 0px;fill: currentcolor;"><path d="M8,3 C8.55228475,3 9,3.44771525 9,4 L9,9 C9,9.55228475 8.55228475,10 8,10 L3,10 C2.44771525,10 2,9.55228475 2,9 L6,9 C7.1045695,9 8,8.1045695 8,7 L8,3 Z M1,1 L6,1 C6.55228475,1 7,1.44771525 7,2 L7,7 C7,7.55228475 6.55228475,8 6,8 L1,8 C0.44771525,8 0,7.55228475 0,7 L0,2 C0,1.44771525 0.44771525,1 1,1 Z"></path></svg><span style="margin-left: 2px;">' + works[i].pageCount + '</span></div>';
                     li.find('.ppAdditionTag').append(pageCountHTML);
                 }
-                let bookmarkCountHTML = '<div style="margin-bottom: 6px; margin-left: 2px;"><div style="color: rgb(7, 95, 166);font-weight: bold;font-size: 13px;line-height: 1;padding: 3px 6px;border-radius: 3px;background: rgb(204, 236, 255);">' + works[i].bookmarkCount + ' likes</div></div>';
+                let countHtml = '';
+                if (sortType == 0) {
+                    countHtml = '❤️' + works[i].bookmarkCount;
+                } else if (sortType == 1) {
+                    countHtml = '👍' + works[i].likeCount;
+                } else if (sortType == 2) {
+                    countHtml = '👀' + works[i].viewCount;
+                }
+                let bookmarkCountHTML = '<div style="margin-bottom: 6px; margin-left: 2px;"><div style="color: rgb(7, 95, 166);font-weight: bold;font-size: 13px;line-height: 1;padding: 3px 6px;border-radius: 3px;background: rgb(204, 236, 255);">' + countHtml + '</div></div>';
                 li.find('.ppBookmarkCount').append(bookmarkCountHTML);
                 if (works[i].illustType == 2) {
                     let animationHTML = '<svg viewBox="0 0 24 24" style="width: 48px; height: 48px;stroke: none;fill: rgb(255, 255, 255);line-height: 0;font-size: 0px;vertical-align: middle;position:absolute;"><circle cx="12" cy="12" r="10" style="fill: rgb(0, 0, 0);fill-opacity: 0.4;"></circle><path d="M9,8.74841664 L9,15.2515834 C9,15.8038681 9.44771525,16.2515834 10,16.2515834 C10.1782928,16.2515834 10.3533435,16.2039156 10.5070201,16.1135176 L16.0347118,12.8619342 C16.510745,12.5819147 16.6696454,11.969013 16.3896259,11.4929799 C16.3034179,11.3464262 16.1812655,11.2242738 16.0347118,11.1380658 L10.5070201,7.88648243 C10.030987,7.60646294 9.41808527,7.76536339 9.13806578,8.24139652 C9.04766776,8.39507316 9,8.57012386 9,8.74841664 Z"></path></svg>';
@@ -4443,6 +4417,20 @@ function PixivSK(callback) {
             $('#loading').remove();
             $(container).show();
 
+            if ($('#sortTypeButtons').length == 0) {
+                let sortDiv = $('<div id="sortTypeButtons" style="display:inline-flex; margin-bottom: 10px;"></div>');
+                let bookmarkSortButton = $('<div style="cursor: pointer; box-sizing: border-box;text-decoration: none;display: flex;-webkit-box-align: center;align-items: center;border-radius: 4px;height: 40px;padding-right: 24px;padding-left: 24px;color: var(--charcoal-text5);background-color: rgb(131, 126, 200);">' + Texts[g_language].sort_sortByBookmark + '</div>');
+                let likeSortButton = $('<div style="cursor: pointer; box-sizing: border-box;text-decoration: none;display: flex;-webkit-box-align: center;align-items: center;border-radius: 4px;height: 40px;padding-right: 24px;padding-left: 24px;color: var(--charcoal-text5);background-color: rgb(200, 126, 173); margin-left: 10px;">' + Texts[g_language].sort_sortByLike + '</div>');
+                let viewSortButton = $('<div style="cursor: pointer; box-sizing: border-box;text-decoration: none;display: flex;-webkit-box-align: center;align-items: center;border-radius: 4px;height: 40px;padding-right: 24px;padding-left: 24px;color: var(--charcoal-text5);background-color: rgb(130, 200, 126); margin-left:10px">' + Texts[g_language].sort_sortByView + '</div>');
+                bookmarkSortButton.click(() => clearAndUpdateWorks(0));
+                likeSortButton.click(() => clearAndUpdateWorks(1));
+                viewSortButton.click(() => clearAndUpdateWorks(2));
+                sortDiv.append(bookmarkSortButton);
+                sortDiv.append(likeSortButton);
+                sortDiv.append(viewSortButton);
+                $(container).before(sortDiv);
+            }
+
             Pages[PageType.Search].ProcessPageElements();
 
             // 监听键盘的左右键，用来翻页
@@ -4472,6 +4460,7 @@ function PixivSK(callback) {
         });
     }
 };
+
 /* ---------------------------------------- 小说 ---------------------------------------- */
 function PixivNS(callback) {
     function findNovelSection() {
