@@ -1045,7 +1045,7 @@ function convertThumbUrlToSmall(thumbUrl) {
     return thumbUrl.replace(/c\/.*\/custom-thumb/, replace1).replace('_custom', replace2)
         .replace(/c\/.*\/img-master/, replace1).replace('_square', replace2);
 }
-function processElementListCommon(lis) {
+function processElementListCommon(lis, controlFinder) {
     $.each(lis, function (i, e) {
         let li = $(e);
 
@@ -1085,20 +1085,15 @@ function processElementListCommon(lis) {
         }
 
         // 添加 attr
-        let control = li.children('div:first');
-        if (control.children().length == 0) {
-            if (li.children('div').length > 1) {
-                control = $(li.children('div').get(1));
-            }
-        } else {
-            control = control.children('div:first');
+        let control = li;
+        if (controlFinder) {
+            control = controlFinder(li);
         }
         control.attr({
             'illustId': ctlAttrs.illustId,
             'illustType': ctlAttrs.illustType,
             'pageCount': ctlAttrs.pageCount
         });
-
         control.addClass('pp-control');
     });
 }
@@ -1134,16 +1129,25 @@ function findLiByImgTag() {
                 if (el.length == 0) {
                     break;
                 }
+                // 常用的 <li>
                 if (el.get(0).tagName == 'LI') {
                     lis.push(el);
                     break;
                 }
+                // <ul> 套 <div>
                 if (el.parent().length > 0 && el.parent().get(0).tagName == 'UL') {
                     lis.push(el);
                     break;
                 }
+                // 主页、作品页的翻页列表
                 if (el.parent().parent().length > 0 && el.parent().parent().get(0).tagName == 'NAV') {
                     lis.push(el);
+                    break;
+                }
+                // 推荐用户列表
+                if (el.get(0).tagName == 'DIV' && el.attr('type') == 'illust') {
+                    lis.push(el);
+                    break;
                 }
             }
         }
@@ -1242,7 +1246,7 @@ Pages[PageType.Search] = {
             aside.next().remove();
         }
 
-        processElementListCommon(lis);
+        processElementListCommon(lis, (e) => e.find('div:first>div:first'));
         returnMap.controlElements = $('.pp-control');
         this.private.pageSelector = ul.next().get(0);
         // fix: 除了“顶部”，“插画”、“漫画”的页选择器挪到了外面，兼容这种情况
