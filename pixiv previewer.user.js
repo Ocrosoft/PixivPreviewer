@@ -3744,7 +3744,7 @@ function PixivSK(callback) {
 
             let following = GetLocalStorage('followingOfUid-' + user_id);
             if (following != null && following != 'null') {
-                resolve(following);
+                resolve(JSON.parse(following));
                 return;
             }
 
