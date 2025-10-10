@@ -3606,10 +3606,6 @@ function PixivPreview() {
             if (oldReturnMap.controlElements.length != newReturnMap.controlElements.length || newReturnMap.forceUpdate) {
                 iLog.i('Page loaded ' + (newReturnMap.controlElements.length - oldReturnMap.controlElements.length) + ' new work(s).');
 
-                if (g_settings.linkBlank) {
-                    $(newReturnMap.controlElements).find('a').attr('target', '_blank');
-                }
-
                 SetTargetBlank(newReturnMap);
                 DeactivePreview();
                 ActivePreview();
@@ -5075,7 +5071,16 @@ function SetTargetBlank(returnMap) {
             target.push(e);
         });
 
-        $.each(target, function (i, e) {
+        let tempTarget = [];
+        $.each(target, (i, e) => {
+            let pol = $(e).find('polyline');
+            if (pol.length > 0 && pol.get(0).className.baseVal.indexOf('WedgeIcon_arrow') != -1) {
+                return true;
+            }
+            tempTarget.push(e);
+        });
+
+        $.each(tempTarget, function (i, e) {
             $(e).attr({ 'target': '_blank', 'rel': 'external' });
             // js监听跳转，特殊处理
             if (g_pageType == PageType.Home || g_pageType == PageType.Member || g_pageType == PageType.Artwork || g_pageType == PageType.BookMarkNew) {
