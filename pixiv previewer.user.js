@@ -3764,6 +3764,7 @@ function PixivSK(callback) {
         return new Promise(function (resolve, reject) {
             if (!g_settings.hideFollowed) {
                 resolve();
+                return;
             }
 
             getFollowingOfCurrentUser().then(function (members) {
