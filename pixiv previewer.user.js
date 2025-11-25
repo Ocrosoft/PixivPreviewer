@@ -1056,27 +1056,32 @@ function processElementListCommon(lis, controlFinder) {
             pageCount: 1,
         };
 
-        let imageLink = li.find('a:first');
-        let animationSvg = imageLink.children('div:first').find('svg:first');
-        let pageCountSpan = imageLink.children('div:last').find('span:last');
-
+        let links = li.find('a');
+        let imageLink = null;
+        for (let i = 0; i < links.length; ++i) {
+            imageLink = $(links[i]);
+            let link = imageLink.attr('href');
+            if (link == null) {
+                iLog.w('Invalid href, skip this.');
+                continue;
+            }
+            let linkMatched = link.match(/artworks\/(\d+)/);
+            if (linkMatched) {
+                ctlAttrs.illustId = linkMatched[1];
+                break;
+            } else {
+                iLog.e('Get illustId failed, skip this list item!');
+                continue;
+            }
+        }
         if (imageLink == null) {
             iLog.w('Can not found img or imageLink, skip this.');
             return;
         }
 
-        let link = imageLink.attr('href');
-        if (link == null) {
-            iLog.w('Invalid href, skip this.');
-            return;
-        }
-        let linkMatched = link.match(/artworks\/(\d+)/);
-        if (linkMatched) {
-            ctlAttrs.illustId = linkMatched[1];
-        } else {
-            iLog.e('Get illustId failed, skip this list item!');
-            return;
-        }
+        let animationSvg = imageLink.children('div:first').find('svg:first');
+        let pageCountSpan = imageLink.children('div:last').find('span:last');
+
         if (animationSvg.length > 0) {
             ctlAttrs.illustType = 2;
         }
@@ -1085,7 +1090,7 @@ function processElementListCommon(lis, controlFinder) {
         }
 
         // 添加 attr
-        let control = li;
+        let control = li.find('div:first>div:first')
         if (controlFinder) {
             control = controlFinder(li);
         }
@@ -1246,7 +1251,7 @@ Pages[PageType.Search] = {
             aside.next().remove();
         }
 
-        processElementListCommon(lis, (e) => e.find('div:first>div:first'));
+        processElementListCommon(lis);
         returnMap.controlElements = $('.pp-control');
         this.private.pageSelector = ul.next().get(0);
         // fix: 除了“顶部”，“插画”、“漫画”的页选择器挪到了外面，兼容这种情况
