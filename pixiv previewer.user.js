@@ -1516,53 +1516,10 @@ Pages[PageType.Ranking] = {
             controlElements: [],
         };
 
-        let works = $('._work');
+        let lis = findLiByImgTag();
 
-        iLog.d('Found .work, length: ' + works.length);
-        iLog.d(works);
-
-        works.each(function (i, e) {
-            let _this = $(e);
-
-            let ctlAttrs = {
-                illustId: 0,
-                illustType: 0,
-                pageCount: 1,
-            };
-
-            let href = _this.attr('href');
-
-            if (href == null || href === '') {
-                iLog.w('Can not found illust id, skip this.');
-                return;
-            }
-
-            let matched = href.match(/artworks\/(\d+)/);
-            if (matched) {
-                ctlAttrs.illustId = matched[1];
-            } else {
-                iLog.w('Can not found illust id, skip this.');
-                return;
-            }
-
-            if (_this.hasClass('multiple')) {
-                ctlAttrs.pageCount = _this.find('.page-count').find('span').text();
-            }
-
-            if (_this.hasClass('ugoku-illust')) {
-                ctlAttrs.illustType = 2;
-            }
-
-            // 添加 attr
-            _this.attr({
-                'illustId': ctlAttrs.illustId,
-                'illustType': ctlAttrs.illustType,
-                'pageCount': ctlAttrs.pageCount
-            });
-
-            returnMap.controlElements.push(e);
-        });
-
+        processElementListCommon(lis, (e) => $(e.children().get(1)));
+        returnMap.controlElements = $('.pp-control');
         returnMap.loadingComplete = true;
 
         iLog.d('Process page elements complete.');
@@ -1578,7 +1535,7 @@ Pages[PageType.Ranking] = {
         return this.private.returnMap;
     },
     GetToolBar: function () {
-        return findToolbarOld();
+        return findToolbarCommon();
     },
     HasAutoLoad: true,
     private: {
