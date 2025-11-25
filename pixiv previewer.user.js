@@ -706,6 +706,8 @@ Texts[Lang.zh_CN] = {
     setting_hideFollowed: '排序时隐藏已关注画师作品',
     setting_hideByTag: '排序时隐藏指定标签的作品',
     setting_hideByTagPlaceholder: '输入标签名，如 "tag1|tag2"，支持正则',
+    setting_hideByUser: '排序时隐藏指定用户的作品',
+    setting_hideByUserPlaceholder: '输入用户ID，如 "12345|67890"',
     setting_clearFollowingCache: '清除缓存',
     setting_clearFollowingCacheHelp: '关注画师信息会在本地保存一天，如果希望立即更新，请点击清除缓存',
     setting_followingCacheCleared: '已清除缓存，请刷新页面。',
@@ -769,6 +771,8 @@ Texts[Lang.en_US] = {
     setting_hideFollowed: 'Hide artworks of followed artists when sorting',
     setting_hideByTag: 'Hide artworks by tag',
     setting_hideByTagPlaceholder: 'Input tag name, e.g. "tag1|tag2", regular expressions supported',
+    setting_hideByUser: 'Hide artworks by user',
+    setting_hideByUserPlaceholder: 'Input user ID, e.g. "12345|67890"',
     setting_clearFollowingCache: 'Clear Cache',
     setting_clearFollowingCacheHelp: 'The folloing artists info. will be saved locally for one day, if you want to update immediately, please click this to clear cache',
     setting_followingCacheCleared: 'Success, please refresh the page.',
@@ -830,6 +834,8 @@ Texts[Lang.ru_RU] = {
     setting_hideFollowed: 'При сортировке, скрыть работы художников на которых подписаны',
     setting_hideByTag: 'При сортировке, скрыть работы с указанным тегом',
     setting_hideByTagPlaceholder: 'Введите имя тега, например "tag1|tag2", поддерживается регулярное выражение',
+    setting_hideByUser: 'При сортировке, скрыть работы от указанного пользователя',
+    setting_hideByUserPlaceholder: 'Введите ID пользователя, например "12345|67890"',
     setting_clearFollowingCache: 'Очистить кэш',
     setting_clearFollowingCacheHelp: 'Следующая информация о художниках будет сохранена локально в течение одного дня, если вы хотите обновить её немедленно, нажмите на эту кнопку, чтобы очистить кэш',
     setting_followingCacheCleared: 'Готово, обновите страницу.',
@@ -889,6 +895,8 @@ Texts[Lang.ja_JP] = {
     setting_hideFollowed: 'ソート時にフォローしているアーティストの作品を非表示',
     setting_hideByTag: 'ソート時に指定したタグの作品を非表示',
     setting_hideByTagPlaceholder: 'タグ名を入力してください（例："tag1|tag2"、正規表現対応）',
+    setting_hideByUser: 'ソート時に指定したユーザーの作品を非表示',
+    setting_hideByUserPlaceholder: 'ユーザーIDを入力してください（例："12345|67890"）',
     setting_clearFollowingCache: 'キャッシュをクリア',
     setting_clearFollowingCacheHelp: 'フォローしているアーティストの情報がローカルに1日保存されます。すぐに更新したい場合は、このキャッシュをクリアしてください。',
     setting_followingCacheCleared: '成功しました。ページを更新してください。',
@@ -2876,6 +2884,16 @@ function gmcInit() {
                 type: "text",
                 default: "",
             },
+            hideByUser: {
+                label: Texts[g_language].setting_hideByUser,
+                type: "checkbox",
+                default: false,
+            },
+            hideByUserList: {
+                label: Texts[g_language].setting_hideByUserPlaceholder,
+                type: "text",
+                default: "",
+            },
             hideCountLessThan: {
                 label: Texts[g_language].setting_hideByCountLessThan,
                 type: "text",
@@ -3766,6 +3784,7 @@ function PixivSK(callback) {
             let bookmarkFilteredCount = 0;
             let aiFilteredCount = 0;
             let tagFilteredCount = 0;
+            let userFilteredCount = 0;
             let countFilteredCount = 0;
             $(works).each(function (i, work) {
                 let bookmarkCount = work.bookmarkCount ? work.bookmarkCount : 0;
@@ -3801,6 +3820,20 @@ function PixivSK(callback) {
                         return true;
                     }
                 }
+                if (g_settings.hideByUser) {
+                    let users = null;
+                    try {
+                        users = g_settings.hideByUserList.split('|').map(function (item) {
+                            return item.trim();
+                        });
+                    } catch (e) {
+                        iLog.w('Invalid hideByUser: ' + g_settings.hideByUserList);
+                    }
+                    if (users && users.includes(work.userId)) {
+                        userFilteredCount++;
+                        return true;
+                    }
+                }
                 if (g_settings.hideCountLessThan >= 0 &&
                     g_settings.hideCountMoreThan >= 0) {
                     let less = g_settings.hideCountLessThan;
@@ -3823,6 +3856,7 @@ function PixivSK(callback) {
             iLog.i(bookmarkFilteredCount + ' works were hide by bookmark count.');
             iLog.i(aiFilteredCount + ' works were hide by AI type.');
             iLog.i(tagFilteredCount + ' works were hide by tag.');
+            iLog.i(userFilteredCount + ' works were hide by user.');
             iLog.i(countFilteredCount + ' works were hide by page count.');
             works = tmp;
 
@@ -4929,6 +4963,8 @@ function ConvertSettingsFromGMC() {
         'hideFollowed': GMC.get('hideFollowed'),
         'hideByTag': GMC.get('hideByTag'),
         'hideByTagRegex': GMC.get('hideByTagRegex'),
+        'hideByUser': GMC.get('hideByUser'),
+        'hideByUserList': GMC.get('hideByUserList'),
         'hideCountLessThan': parseInt(GMC.get('hideCountLessThan')) || 0,
         'hideCountMoreThan': parseInt(GMC.get('hideCountMoreThan')) || 0,
         'linkBlank': GMC.get('linkBlank'),
