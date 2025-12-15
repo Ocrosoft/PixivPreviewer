@@ -1098,9 +1098,15 @@ function processElementListCommon(lis, controlFinder) {
         }
 
         // 添加 attr
-        let control = li.find('div:first>div:first')
+        let control;
         if (controlFinder) {
             control = controlFinder(li);
+        } else {
+            control = li.find('div:first>div:first');
+        }
+        // 兜底部分页面，如 hover 作者头像弹出的作品预览
+        if (control.length == 0) {
+            control = li;
         }
         control.attr({
             'illustId': ctlAttrs.illustId,
