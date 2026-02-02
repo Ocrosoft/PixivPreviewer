@@ -5,7 +5,7 @@
 // @name:zh-CN          Pixiv Previewer (Dev)
 // @name:zh-TW          Pixiv Previewer (Dev)
 // @namespace           https://github.com/Ocrosoft/PixivPreviewer
-// @version             3.8.3
+// @version             3.8.4
 // @description         Display preview images (support single image, multiple images, moving images); Download animation(.zip); Sorting the search page by favorite count(and display it).
 // @description:zh-CN   显示预览图（支持单图，多图，动图）；动图压缩包下载；搜索页按热门度（收藏数）排序并显示收藏数。
 // @description:ja      プレビュー画像の表示（単一画像、複数画像、動画のサポート）; アニメーションのダウンロード（.zip）; お気に入りの数で検索ページをソートします（そして表示します）。
@@ -1153,8 +1153,28 @@ function findLiByImgTag() {
                     lis.push(el);
                     break;
                 }
+                // <ul> 套 <div>（当 ul 用） 再套 <div>
+                // 作品页收藏后弹出的推荐作品
+                // <ul>
+                //  <div>
+                //    <div></div>
+                //    <div></div>
+                //  </div>
+                // </ul>
+                if (el.parent().parent().length > 0 &&
+                    el.parent().parent().get(0).tagName == 'UL' &&
+                    el.parent().parent().children().length == 1) {
+                    lis.push(el);
+                    break;
+                }
                 // <ul> 套 <div>
-                if (el.parent().length > 0 && el.parent().get(0).tagName == 'UL') {
+                // <ul>
+                //  <div></div>
+                //  <div></div>
+                // </ul>
+                if (el.parent().length > 0 &&
+                    el.parent().get(0).tagName == 'UL' &&
+                    el.parent().children().length > 1) {
                     lis.push(el);
                     break;
                 }
