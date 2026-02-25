@@ -1266,13 +1266,6 @@ Pages[PageType.Search] = {
         iLog.v('premium: ' + premiumSectionIndex);
         iLog.v('result: ' + resultSectionIndex);
 
-        let ul = $(sections[resultSectionIndex]).find('ul');
-        let lis = ul.find('li').toArray();
-        if (premiumSectionIndex != -1) {
-            let lis2 = $(sections[premiumSectionIndex]).find('ul').find('li');
-            lis = lis.concat(lis2.toArray());
-        }
-
         if (premiumSectionIndex != -1) {
             let aside = $(sections[premiumSectionIndex]).find('aside');
             $.each(aside.children(), (i, e) => {
@@ -1285,15 +1278,35 @@ Pages[PageType.Search] = {
             aside.next().remove();
         }
 
+        // 兼容新版本
+        let lis = [];
+        if (premiumSectionIndex == resultSectionIndex) {
+            let imageContainer = $('div[data-ga4-label="works_content"]');
+            lis = imageContainer.children('div:last').children('div').toArray();
+            if (premiumSectionIndex != -1) {
+                let lis2 = $(sections[premiumSectionIndex]).find('ul').find('li');
+                lis = lis.concat(lis2.toArray());
+            }
+            this.private.pageSelector = imageContainer.next('nav').get(0);
+            this.private.imageListContainer = imageContainer.children('div:last').get(0);
+        } else {
+            let ul = $(sections[resultSectionIndex]).find('ul');
+            lis = ul.find('li').toArray();
+            if (premiumSectionIndex != -1) {
+                let lis2 = $(sections[premiumSectionIndex]).find('ul').find('li');
+                lis = lis.concat(lis2.toArray());
+            }
+            this.private.pageSelector = ul.next().get(0);
+            // fix: 除了“顶部”，“插画”、“漫画”的页选择器挪到了外面，兼容这种情况
+            if (this.private.pageSelector == null) {
+                this.private.pageSelector = ul.parent().next().get(0);
+            }
+            this.private.imageListContainer = ul.get(0);
+        }
+
         processElementListCommon(lis);
         returnMap.controlElements = $('.pp-control');
-        this.private.pageSelector = ul.next().get(0);
-        // fix: 除了“顶部”，“插画”、“漫画”的页选择器挪到了外面，兼容这种情况
-        if (this.private.pageSelector == null) {
-            this.private.pageSelector = ul.parent().next().get(0);
-        }
         returnMap.loadingComplete = true;
-        this.private.imageListConrainer = ul.get(0);
 
         iLog.d('Process page elements complete.');
         iLog.d(returnMap);
@@ -1313,10 +1326,14 @@ Pages[PageType.Search] = {
     // 搜索页有 lazyload，不开排序的情况下，最后几张图片可能会无法预览。这里把它当做自动加载处理
     HasAutoLoad: true,
     GetImageListContainer: function () {
-        return this.private.imageListConrainer;
+        return this.private.imageListContainer;
     },
     GetFirstImageElement: function () {
-        return $(this.private.imageListConrainer).find('li').get(0);
+        let li = $(this.private.imageListContainer).find('li');
+        if (li.length > 0) {
+            return li.get(0);
+        }
+        return $(this.private.imageListContainer).children('div:first').get(0);
     },
     GetPageSelector: function () {
         return this.private.pageSelector;
@@ -4244,7 +4261,7 @@ function PixivSK(callback) {
                 li.find('.ppTitleLink').attr('href', '/artworks/' + works[i].id).text(works[i].title);
                 li.find('.ppAuthorLink, .ppAuthorLinkProfileImage').attr('href', '/member.php?id=' + works[i].userId).attr({ 'userId': works[i].userId, 'profileImageUrl': works[i].profileImageUrl, 'userName': works[i].userName });
                 li.find('.ppAuthorName').text(works[i].userName);
-                li.find('.ppAuthorImage').parent().attr('titile', works[i].userName);
+                li.find('.ppAuthorImage').parent().attr('title', works[i].userName);
                 li.find('.ppAuthorImage').attr('src', works[i].profileImageUrl);
                 li.find('.ppBookmarkSvg').attr('illustId', works[i].id);
                 if (works[i].bookmarkData) {
@@ -4441,7 +4458,7 @@ function PixivSK(callback) {
             $(container).show();
 
             if ($('#sortTypeButtons').length == 0) {
-                let sortDiv = $('<div id="sortTypeButtons" style="display:inline-flex; margin-bottom: 10px;"></div>');
+                let sortDiv = $('<div id="sortTypeButtons" class="mx-auto [width:calc(var(--columns)*80px+(var(--columns)-1)*24px)] box-border" style="display:flex; margin-bottom: 10px;"></div>');
                 let bookmarkSortButton = $('<div style="cursor: pointer; box-sizing: border-box;text-decoration: none;display: flex;-webkit-box-align: center;align-items: center;border-radius: 4px;height: 40px;padding-right: 24px;padding-left: 24px;color: var(--charcoal-text5);background-color: rgb(131, 126, 200);">' + Texts[g_language].sort_sortByBookmark + '</div>');
                 let likeSortButton = $('<div style="cursor: pointer; box-sizing: border-box;text-decoration: none;display: flex;-webkit-box-align: center;align-items: center;border-radius: 4px;height: 40px;padding-right: 24px;padding-left: 24px;color: var(--charcoal-text5);background-color: rgb(200, 126, 173); margin-left: 10px;">' + Texts[g_language].sort_sortByLike + '</div>');
                 let viewSortButton = $('<div style="cursor: pointer; box-sizing: border-box;text-decoration: none;display: flex;-webkit-box-align: center;align-items: center;border-radius: 4px;height: 40px;padding-right: 24px;padding-left: 24px;color: var(--charcoal-text5);background-color: rgb(130, 200, 126); margin-left:10px">' + Texts[g_language].sort_sortByView + '</div>');
