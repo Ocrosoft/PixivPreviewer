@@ -1235,8 +1235,8 @@ Pages[PageType.Search] = {
     PageTypeString: 'SearchPage',
     CheckUrl: function (url) {
         // 没有 /artworks 的页面不支持
-        return /^https?:\/\/www.pixiv.net\/tags\/.*\/(artworks|illustrations|manga)/.test(url) ||
-            /^https?:\/\/www.pixiv.net\/en\/tags\/.*\/(artworks|illustrations|manga)/.test(url);
+        return /^https?:\/\/www\.pixiv\.net\/(en\/)?search\?.*type=(artwork|manga)/.test(url) ||
+            /^https?:\/\/www\.pixiv\.net\/(en\/)?tags\/.*\/(artworks|illustrations|manga)/.test(url);
     },
     ProcessPageElements: function () {
         let returnMap = {
@@ -1957,17 +1957,22 @@ Pages[PageType.Artwork] = {
 Pages[PageType.NovelSearch] = {
     PageTypeString: 'NovelSearchPage',
     CheckUrl: function (url) {
-        return /^https:\/\/www.pixiv.net\/tags\/.*\/novels/.test(url) ||
-            /^https:\/\/www.pixiv.net\/en\/tags\/.*\/novels/.test(url);
+        return /^https?:\/\/www\.pixiv\.net\/(en\/)?search\?.*type=novel/.test(url) ||
+            /^https?:\/\/www\.pixiv\.net\/(en\/)?tags\/.*\/novels/.test(url);
     },
     ProcessPageElements: function () {
         let returnMap = {
             loadingComplete: false,
             controlElements: [],
         };
-        let ul = $('section:first').find('ul:first');
-        if (ul.length > 0) {
+        let worksContent = $('[data-ga4-label="works_content"]');
+        if (worksContent.length > 0 && worksContent.find('[class*="col-span"]').length > 0) {
             returnMap.loadingComplete = true;
+        } else {
+            let ul = $('section:first').find('ul:first');
+            if (ul.length > 0 && ul.children().length > 0) {
+                returnMap.loadingComplete = true;
+            }
         }
         this.private.returnMap = returnMap;
         return returnMap;
@@ -1982,6 +1987,8 @@ Pages[PageType.NovelSearch] = {
         return findToolbarCommon();
     },
     GetPageSelector: function () {
+        let nav = $('[data-ga4-label="works_content"]').next('nav');
+        if (nav.length > 0) return nav;
         return $('section:first').find('nav:first');
     },
     HasAutoLoad: false,
@@ -2107,6 +2114,7 @@ function CheckUrlTest() {
         'https://www.pixiv.net/artworks/77996773',
         'https://www.pixiv.net/artworks/77996773#preview',
         'https://www.pixiv.net/tags/miku/novels',
+        'https://www.pixiv.net/search?q=miku&type=novel',
     ];
 
     for (let j = 0; j < urls.length; j++) {
@@ -3677,10 +3685,14 @@ function PixivSK(callback) {
         let url = currentUrl.replace(/p=\d+/, 'p=' + currentPage);
 
         if (location.href.indexOf('?') != -1) {
-            let param = location.href.split('?')[1];
-            param = param.replace(/^p=\d+/, '');
-            param = param.replace(/&p=\d+/, '');
-            url += '&' + param;
+            let params = new URLSearchParams(location.search);
+            params.delete('p');
+            params.delete('q');
+            params.delete('type');
+            let paramStr = params.toString();
+            if (paramStr.length > 0) {
+                url += '&' + paramStr;
+            }
         }
 
         if (url.indexOf('order=') == -1) {
@@ -3949,25 +3961,31 @@ function PixivSK(callback) {
                 iLog.d('Add "&p=1": ' + url);
             }
         }
-        let wordMatch = url.match(/\/tags\/([^/]*)\//);
         let searchWord = '';
-        if (wordMatch) {
-            iLog.i('Search key word: ' + searchWord);
-            searchWord = wordMatch[1];
+        let apiType = 'artworks';
+        let tagsMatch = location.pathname.match(/\/tags\/([^/]+)\/(artworks|illustrations|manga)/);
+        if (tagsMatch) {
+            searchWord = decodeURIComponent(tagsMatch[1]);
+            apiType = tagsMatch[2];
         } else {
+            let urlParams = new URLSearchParams(location.search);
+            searchWord = urlParams.get('q') || '';
+            let typeMap = { 'artwork': 'artworks', 'manga': 'manga', 'illustrations': 'illustrations' };
+            apiType = typeMap[urlParams.get('type')] || 'artworks';
+        }
+        if (!searchWord) {
             iLog.e('Can not found search key word!');
             return;
         }
+        iLog.i('Search key word: ' + searchWord);
 
         // page
         let page = url.match(/p=(\d*)/)[1];
         currentPage = parseInt(page);
         iLog.i('Current page: ' + currentPage);
 
-        let type = url.match(/tags\/.*\/(.*)[?$]/)[1];
-        currentUrl += type + '/';
-
-        currentUrl += searchWord + '?word=' + searchWord + '&p=' + currentPage;
+        currentUrl += apiType + '/';
+        currentUrl += encodeURIComponent(searchWord) + '?word=' + encodeURIComponent(searchWord) + '&p=' + currentPage;
         iLog.i('Current url: ' + currentUrl);
     } else {
         iLog.e('???');
@@ -4500,6 +4518,13 @@ function PixivSK(callback) {
 /* ---------------------------------------- 小说 ---------------------------------------- */
 function PixivNS(callback) {
     function findNovelSection() {
+        let worksContent = $('[data-ga4-label="works_content"]');
+        if (worksContent.length > 0) {
+            let cols = worksContent.find('[class*="col-span"]');
+            if (cols.length > 0) {
+                return cols.first().parent();
+            }
+        }
         let ul = $('section:first').find('ul:first');
         if (ul.length == 0) {
             iLog.e('Can not found novel list.');
@@ -4509,14 +4534,17 @@ function PixivNS(callback) {
     }
 
     function getSearchParamsWithoutPage() {
-        return location.search.substr(1).replace(/&?p=\d+/, '');
+        return location.search.substr(1)
+            .split('&')
+            .filter(p => !/^(p|q|type|word)=/.test(p))
+            .join('&');
     }
 
     function getNovelTemplate(ul) {
         if (!ul) {
             return null;
         }
-        if (ul.length == 0) {
+        if (ul.length == 0 || ul.children().length == 0) {
             iLog.e('Empty list, can not create template.');
             return null;
         }
@@ -4598,11 +4626,9 @@ function PixivNS(callback) {
         }
         let tagList = template.find('.pns-tag-list');
         let search = getSearchParamsWithoutPage();
-        if (search.length > 0) {
-            search = '?' + search;
-        }
         $.each(novel.tags, function (i, tag) {
-            let tagItem = $('<span"><a style="color: rgb(61, 118, 153);" href="/tags/' + encodeURIComponent(tag) + '/novels' + search + '">' + tag + '</a></span>');
+            let href = '/search?q=' + encodeURIComponent(tag) + '&type=novel' + (search.length > 0 ? '&' + search : '');
+            let tagItem = $('<span"><a style="color: rgb(61, 118, 153);" href="' + href + '">' + tag + '</a></span>');
             if (tag == 'R-18' || tag == 'R-18G') {
                 tagItem.find('a').css({ 'color': 'rgb(255, 64, 96)', 'font-weight': 'bold' }).text(tag);
             }
@@ -4640,7 +4666,7 @@ function PixivNS(callback) {
             total = to - from;
         }
 
-        let url = location.origin + g_getNovelUrl.replace(/#key#/g, key).replace(/#page#/g, from);
+        let url = location.origin + g_getNovelUrl.replace(/#key#/g, encodeURIComponent(key)).replace(/#page#/g, from);
         let search = getSearchParamsWithoutPage();
         if (search.length > 0) {
             url += '&' + search;
@@ -4745,11 +4771,12 @@ function PixivNS(callback) {
     }
 
     function getKeyWord() {
-        let match = location.pathname.match(/\/tags\/(.+)\/novels/);
-        if (!match) {
-            return '';
+        let tagsMatch = location.pathname.match(/\/tags\/([^/]+)\/novels/);
+        if (tagsMatch) {
+            return decodeURIComponent(tagsMatch[1]);
         }
-        return match[1];
+        let word = new URLSearchParams(location.search).get('q');
+        return word ? word : '';
     }
 
     function getCurrentPage() {
