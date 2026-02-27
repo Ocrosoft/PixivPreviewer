@@ -1250,10 +1250,6 @@ Pages[PageType.Search] = {
 
         let premiumSectionIndex = -1;
         let resultSectionIndex = 0;
-        if (sections.length == 0) {
-            iLog.e('No suitable <section>!');
-            return returnMap;
-        }
 
         $.each(sections, (i, e) => {
             if ($(e).find('aside').length > 0) {
@@ -1280,7 +1276,7 @@ Pages[PageType.Search] = {
 
         // 兼容新版本
         let lis = [];
-        if (premiumSectionIndex == resultSectionIndex) {
+        if (sections.length == 0 || premiumSectionIndex == resultSectionIndex) {
             let imageContainer = $('div[data-ga4-label="works_content"]');
             lis = imageContainer.children('div:last').children('div').toArray();
             if (premiumSectionIndex != -1) {
