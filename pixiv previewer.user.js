@@ -1234,8 +1234,7 @@ function showSearchLinksForDeletedArtworks() {
 Pages[PageType.Search] = {
     PageTypeString: 'SearchPage',
     CheckUrl: function (url) {
-        // 没有 /artworks 的页面不支持
-        return /^https?:\/\/www\.pixiv\.net\/(en\/)?search\?.*type=(artwork|manga)/.test(url) ||
+        return /^https?:\/\/www\.pixiv\.net\/(en\/)?search\?.*type=(artwork|manga|illust_ugoira)/.test(url) ||
             /^https?:\/\/www\.pixiv\.net\/(en\/)?tags\/.*\/(artworks|illustrations|manga)/.test(url);
     },
     ProcessPageElements: function () {
@@ -1966,7 +1965,7 @@ Pages[PageType.NovelSearch] = {
             controlElements: [],
         };
         let worksContent = $('[data-ga4-label="works_content"]');
-        if (worksContent.length > 0 && worksContent.find('[class*="col-span"]').length > 0) {
+        if (worksContent.length > 0) {
             returnMap.loadingComplete = true;
         } else {
             let ul = $('section:first').find('ul:first');
@@ -3665,6 +3664,9 @@ function PixivSK(callback) {
     let currentGettingPageCount = 0;
     // 当前加载的页面 URL
     let currentUrl = 'https://www.pixiv.net/ajax/search/';
+    let currentSearchWord = '';
+    let currentApiType = 'artworks';
+    let useLegacyArtworkUrlRule = false;
     // 当前加载的是第几张页面
     let currentPage = 0;
     // 获取到的作品
@@ -3679,31 +3681,77 @@ function PixivSK(callback) {
 
     // 获取第 currentPage 页的作品
     // 这个方法还是用带 cookie 的请求，防止未登录拉不到数据
-    let getWorks = function (onloadCallback) {
-        $('#progress').text(Texts[g_language].sort_getWorks.replace('%1', currentGettingPageCount + 1).replace('%2', g_settings.pageCount));
+    function getArtworkAjaxUrl(word, page, apiType, useLegacyUrlRule) {
+        let pageParams = new URLSearchParams(location.search);
+        let apiParams = new URLSearchParams();
+        let sMode = pageParams.get('s_mode') || 's_tag_full';
+        let sModeMap = {
+            'tag_full': 's_tag_full',
+            's_tag_full': 's_tag_full',
+            'tag_tc': 's_tag_tc',
+            's_tag_tc': 's_tag_tc',
+            'tag': 's_tag',
+            's_tag': 's_tag',
+            'tag_only': 's_tag_only',
+            's_tag_only': 's_tag_only',
+            'content': 's_tc',
+            's_tc': 's_tc'
+        };
+        sMode = sModeMap[sMode] || 's_tag_full';
 
-        let url = currentUrl.replace(/p=\d+/, 'p=' + currentPage);
+        apiParams.set('order', pageParams.get('order') || 'date_d');
+        apiParams.set('mode', pageParams.get('mode') || 'all');
+        apiParams.set('p', page);
+        apiParams.set('ai_type', pageParams.get('ai_type') || '0');
+        apiParams.set('csw', pageParams.get('csw') || '0');
+        apiParams.set('s_mode', sMode);
+        let pageLang = pageParams.get('lang');
+        if (!pageLang) {
+            pageLang = $('html').attr('lang');
+            if (pageLang && pageLang.indexOf('-') != -1) {
+                pageLang = pageLang.split('-')[0];
+            }
+        }
+        apiParams.set('lang', pageLang || 'zh');
 
-        if (location.href.indexOf('?') != -1) {
-            let params = new URLSearchParams(location.search);
-            params.delete('p');
-            params.delete('q');
-            params.delete('type');
-            let paramStr = params.toString();
-            if (paramStr.length > 0) {
-                url += '&' + paramStr;
+        if (apiType == 'illustrations') {
+            let pageType = pageParams.get('type');
+            let illustrationTypeMap = {
+                'illust_ugoira': 'illust_and_ugoira',
+                'illustrations': 'illust_and_ugoira',
+                'illust': 'illust',
+                'ugoira': 'ugoira'
+            };
+            if (pageType && illustrationTypeMap[pageType]) {
+                apiParams.set('type', illustrationTypeMap[pageType]);
             }
         }
 
-        if (url.indexOf('order=') == -1) {
-            url += '&order=date_d';
+        ['scd', 'ecd', 'blt', 'bgt', 'wlt', 'wgt', 'hlt', 'hgt', 'tool', 'work_lang']
+            .forEach(function (param) {
+                let value = pageParams.get(param);
+                if (value != null && value !== '') {
+                    apiParams.set(param, value);
+                }
+            });
+        if (pageParams.has('ratio')) {
+            apiParams.set('ratio', pageParams.get('ratio') || '');
         }
-        if (url.indexOf('mode=') == -1) {
-            url += '&mode=all';
-        }
-        if (url.indexOf('s_mode=') == -1) {
-            url += '&s_mode=s_tag_full';
-        }
+
+        let passthroughIgnore = ['q', 'type', 'word', 'p', 'order', 'mode', 'ai_type', 'csw', 's_mode', 'lang', 'scd', 'ecd', 'blt', 'bgt', 'wlt', 'wgt', 'hlt', 'hgt', 'ratio', 'tool', 'work_lang'];
+        pageParams.forEach(function (value, param) {
+            if (passthroughIgnore.includes(param)) {
+                return;
+            }
+            apiParams.set(param, value);
+        });
+
+        return location.origin + '/ajax/search/' + apiType + '/' + encodeURIComponent(word) + '?word=' + encodeURIComponent(word) + '&' + apiParams.toString();
+    }
+
+    let getWorks = function (onloadCallback) {
+        $('#progress').text(Texts[g_language].sort_getWorks.replace('%1', currentGettingPageCount + 1).replace('%2', g_settings.pageCount));
+        let url = getArtworkAjaxUrl(currentSearchWord, currentPage, currentApiType, useLegacyArtworkUrlRule);
 
         iLog.i('getWorks url: ' + url);
 
@@ -3963,6 +4011,7 @@ function PixivSK(callback) {
         }
         let searchWord = '';
         let apiType = 'artworks';
+        let useLegacyUrlRule = false;
         let tagsMatch = location.pathname.match(/\/tags\/([^/]+)\/(artworks|illustrations|manga)/);
         if (tagsMatch) {
             searchWord = decodeURIComponent(tagsMatch[1]);
@@ -3970,7 +4019,14 @@ function PixivSK(callback) {
         } else {
             let urlParams = new URLSearchParams(location.search);
             searchWord = urlParams.get('q') || '';
-            let typeMap = { 'artwork': 'artworks', 'manga': 'manga', 'illustrations': 'illustrations' };
+            let typeMap = {
+                'artwork': 'artworks',
+                'manga': 'manga',
+                'illustrations': 'illustrations',
+                'illust_ugoira': 'illustrations',
+                'illust': 'illustrations',
+                'ugoira': 'illustrations'
+            };
             apiType = typeMap[urlParams.get('type')] || 'artworks';
         }
         if (!searchWord) {
@@ -3984,8 +4040,10 @@ function PixivSK(callback) {
         currentPage = parseInt(page);
         iLog.i('Current page: ' + currentPage);
 
-        currentUrl += apiType + '/';
-        currentUrl += encodeURIComponent(searchWord) + '?word=' + encodeURIComponent(searchWord) + '&p=' + currentPage;
+        currentSearchWord = searchWord;
+        currentApiType = apiType;
+        useLegacyArtworkUrlRule = false;
+        currentUrl = getArtworkAjaxUrl(currentSearchWord, currentPage, currentApiType, useLegacyArtworkUrlRule);
         iLog.i('Current url: ' + currentUrl);
     } else {
         iLog.e('???');
@@ -4540,6 +4598,66 @@ function PixivNS(callback) {
             .join('&');
     }
 
+    function isLegacyNovelSearchPage() {
+        if (/\/tags\/[^/]+\/novels/.test(location.pathname)) {
+            return true;
+        }
+        return false;
+    }
+
+    function getNovelAjaxUrl(key, page, useLegacyUrlRule) {
+        let pageParams = new URLSearchParams(location.search);
+        let apiParams = new URLSearchParams();
+        let sMode = pageParams.get('s_mode') || 's_tag_full';
+        let sModeMap = {
+            'tag_full': 's_tag_full',
+            's_tag_full': 's_tag_full',
+            'tag_tc': 's_tag',
+            's_tag_tc': 's_tag',
+            'tag': 's_tag',
+            's_tag': 's_tag',
+            'tag_only': 's_tag_only',
+            's_tag_only': 's_tag_only',
+            'content': 's_tc',
+            's_tc': 's_tc'
+        };
+        sMode = sModeMap[sMode] || 's_tag_full';
+
+        apiParams.set('order', pageParams.get('order') || 'date_d');
+        apiParams.set('mode', pageParams.get('mode') || 'all');
+        apiParams.set('p', page);
+        apiParams.set('ai_type', pageParams.get('ai_type') || '0');
+        apiParams.set('csw', pageParams.get('csw') || '0');
+        apiParams.set('s_mode', sMode);
+        apiParams.set('gs', pageParams.get('gs') || '0');
+        let pageLang = pageParams.get('lang');
+        if (!pageLang) {
+            pageLang = $('html').attr('lang');
+            if (pageLang && pageLang.indexOf('-') != -1) {
+                pageLang = pageLang.split('-')[0];
+            }
+        }
+        apiParams.set('lang', pageLang || 'zh');
+
+        ['scd', 'ecd', 'blt', 'bgt', 'tlt', 'tgt', 'wlt', 'wgt', 'rlt', 'rgt', 'original_only', 'genre', 'work_lang', 'replaceable_only']
+            .forEach(function (param) {
+                let value = pageParams.get(param);
+                if (value != null && value !== '') {
+                    apiParams.set(param, value);
+                }
+            });
+
+        let passthroughIgnore = ['q', 'type', 'word', 'p', 'order', 'mode', 'ai_type', 'csw', 's_mode', 'gs', 'lang'];
+        pageParams.forEach(function (value, param) {
+            if (passthroughIgnore.includes(param)) {
+                return;
+            }
+            apiParams.set(param, value);
+        });
+
+        return location.origin + '/ajax/search/novels/' + encodeURIComponent(key) + '?' + apiParams.toString();
+    }
+
     function getNovelTemplate(ul) {
         if (!ul) {
             return null;
@@ -4580,10 +4698,11 @@ function PixivNS(callback) {
         let tagDiv = detailDiv.children().eq(2).children().eq(0);
         let bookmarkDiv = tagDiv.children().eq(2);
         bookmarkDiv.find('span:first').addClass('pns-text-count');
-        if (bookmarkDiv.find('span').length < 2) {
-            let textSpan = bookmarkDiv.find('.pns-text-count');
-            textSpan.append('<span class="pns-bookmark-count"><span><div class="sc-eoqmwo-1 grSeZG"><span class="sc-14heosd-0 gbNjEj"><svg viewBox="0 0 12 12" size="12" class="sc-14heosd-1 YtZop"><path fill-rule="evenodd" clip-rule="evenodd" d="M9 0.75C10.6569 0.75 12 2.09315 12 3.75C12 7.71703 7.33709 10.7126 6.23256 11.3666C6.08717 11.4526 5.91283 11.4526 5.76744 11.3666C4.6629 10.7126 0 7.71703 0 3.75C0 2.09315 1.34315 0.75 3 0.75C4.1265 0.75 5.33911 1.60202 6 2.66823C6.66089 1.60202 7.8735 0.75 9 0.75Z"></path></svg></span><span class="sc-eoqmwo-2 dfUmJJ">2,441</span></div></span></span>');
-            bookmarkDiv.find('.pns-bookmark-count').addClass(textSpan.get(0).className);
+        if (bookmarkDiv.find('span').length < 3) {
+            let lastSpan = bookmarkDiv.find('span:last');
+            let newSpan = $('<span class="sc-a2e4344e-0 jYWqxI"><span><div class="sc-a2e4344e-1 qwlUc"><span class="sc-64133715-0 jVVkEz"><svg viewBox="0 0 12 12" size="12" class="sc-64133715-1 iNnScV"><path fill-rule="evenodd" clip-rule="evenodd" d="M9 0.75C10.6569 0.75 12 2.09315 12 3.75C12 7.71703 7.33709 10.7126 6.23256 11.3666C6.08717 11.4526 5.91283 11.4526 5.76744  11.3666C4.6629 10.7126 0 7.71703 0 3.75C0 2.09315 1.34315 0.75 3   0.75C4.1265 0.75 5.33911 1.60202 6 2.66823C6.66089 1.60202 7.8735 0.75 9 0.75Z"></path></svg></span><span class="pns-bookmark-count sc-a2e4344e-2 jjOPpe">1</span></div></span></span>');
+            newSpan.addClass(lastSpan.get(0).className);
+            lastSpan.after(newSpan);
         } else {
             bookmarkDiv.find('span:last').addClass('pns-bookmark-count').parent().addClass('pns-bookmark-div');
         }
@@ -4618,7 +4737,9 @@ function PixivNS(callback) {
         let authorLink = template.find('.pns-author').attr('href').replace(/\d+$/, novel.userId);
         template.find('.pns-author').text(novel.userName).attr('href', authorLink);
         template.find('.pns-author-img').attr('href', authorLink).find('img').attr('src', novel.profileImageUrl);
-        template.find('.pns-text-count').text(novel.textCount + '文字');
+        let textCount = Number(novel.textCount);
+        let formattedTextCount = Number.isFinite(textCount) ? textCount.toLocaleString('en-US') : novel.textCount;
+        template.find('.pns-text-count').text(template.find('.pns-text-count').text().replace(/[\d,]+/, formattedTextCount));
         if (novel.bookmarkCount == 0) {
             template.find('.pns-bookmark-div').hide();
         } else {
@@ -4666,11 +4787,8 @@ function PixivNS(callback) {
             total = to - from;
         }
 
-        let url = location.origin + g_getNovelUrl.replace(/#key#/g, encodeURIComponent(key)).replace(/#page#/g, from);
-        let search = getSearchParamsWithoutPage();
-        if (search.length > 0) {
-            url += '&' + search;
-        }
+        let useLegacyUrlRule = isLegacyNovelSearchPage();
+        let url = getNovelAjaxUrl(key, from, useLegacyUrlRule);
 
         updateProgress(Texts[g_language].nsort_getWorks.replace('1%', total - to + from + 1).replace('2%', total));
 
@@ -4693,6 +4811,7 @@ function PixivNS(callback) {
         }
 
         return new Promise(function (resolve, reject) {
+            iLog.i('getNovelByPage url: ' + url);
             $.ajax({
                 url: url,
                 success: function (data) {
