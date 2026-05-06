@@ -5,7 +5,7 @@
 // @name:zh-CN          Pixiv Previewer (Dev)
 // @name:zh-TW          Pixiv Previewer (Dev)
 // @namespace           https://github.com/Ocrosoft/PixivPreviewer
-// @version             3.8.5
+// @version             3.8.6
 // @description         Display preview images (support single image, multiple images, moving images); Download animation(.zip); Sorting the search page by favorite count(and display it).
 // @description:zh-CN   显示预览图（支持单图，多图，动图）；动图压缩包下载；搜索页按热门度（收藏数）排序并显示收藏数。
 // @description:ja      プレビュー画像の表示（単一画像、複数画像、動画のサポート）; アニメーションのダウンロード（.zip）; お気に入りの数で検索ページをソートします（そして表示します）。
@@ -1862,10 +1862,22 @@ Pages[PageType.Artwork] = {
     },
     HasAutoLoad: true,
     Work: function () {
-        function AddDownloadButton(button, offsetToOffsetTop) {
+        function AddDownloadButton() {
             if (!g_settings.enableAnimeDownload) {
                 return;
             }
+
+            // 普通模式，只需要添加下载按钮到内嵌模式的 div 里
+            let button = $('.pp-canvas').parent().find('button');
+            if (button.length == 0) {
+                setTimeout(AddDownloadButton, 1000);
+                return;
+            }
+
+            let offsetToOffsetTop = parseInt($('header').css('height')) +
+                parseInt($('header').css('padding-top')) + parseInt($('header').css('padding-bottom')) +
+                parseInt($('header').css('margin-top')) + parseInt($('header').css('margin-bottom')) +
+                parseInt($('header').css('border-bottom-width')) + parseInt($('header').css('border-top-width'));
 
             let cloneButton = button.clone().css({ 'bottom': '50px', 'padding': 0, 'width': '48px', 'height': '48px', 'opacity': '0.4', 'cursor': 'pointer' });
             cloneButton.get(0).innerHTML = '<svg viewBox="0 0 120 120" style="width: 40px; height: 40px; stroke-width: 10; stroke-linecap: round; stroke-linejoin: round; border-radius: 24px; background-color: black; stroke: limegreen; fill: none;" class="_3Fo0Hjg"><polyline points="60,30 60,90"></polyline><polyline points="30,60 60,90 90,60"></polyline></svg></button>';
@@ -1885,12 +1897,6 @@ Pages[PageType.Artwork] = {
                         };
                     }
                 }
-
-                /*let offset = getOffset(button.get(0));
-                iLog.i('offset of download button: ' + offset.offsetTop + ', ' + offset.offsetLeft);
-                iLog.d(offset);
-
-                cloneButton.css({ 'position': 'absolute' }).show();*/
             }
 
             MoveButton();
@@ -1935,17 +1941,7 @@ Pages[PageType.Artwork] = {
         }
 
         if (this.private.needProcess) {
-            let canvas = $('.pp-canvas');
-            // 普通模式，只需要添加下载按钮到内嵌模式的 div 里
-            let div = $('div[role="presentation"]:last');
-            let button = div.find('button');
-
-            let headerRealHeight = parseInt($('header').css('height')) +
-                parseInt($('header').css('padding-top')) + parseInt($('header').css('padding-bottom')) +
-                parseInt($('header').css('margin-top')) + parseInt($('header').css('margin-bottom')) +
-                parseInt($('header').css('border-bottom-width')) + parseInt($('header').css('border-top-width'));
-
-            AddDownloadButton(button, headerRealHeight);
+            setTimeout(AddDownloadButton, 1000);
         }
     },
     private: {
