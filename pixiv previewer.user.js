@@ -1235,8 +1235,8 @@ function showSearchLinksForDeletedArtworks() {
 Pages[PageType.Search] = {
     PageTypeString: 'SearchPage',
     CheckUrl: function (url) {
-        return /^https?:\/\/www\.pixiv\.net\/(en\/)?search\?.*type=(artwork|manga|illust_ugoira)/.test(url) ||
-            /^https?:\/\/www\.pixiv\.net\/(en\/)?tags\/.*\/(artworks|illustrations|manga)/.test(url);
+        return /^https?:\/\/www\.pixiv\.net\/(en\/)?search\?.*type=(artwork|manga|illust_ugoira|ugoira)/.test(url) ||
+            /^https?:\/\/www\.pixiv\.net\/(en\/)?tags\/.*\/(artworks|illustrations|manga|ugoira)/.test(url);
     },
     ProcessPageElements: function () {
         let returnMap = {
