@@ -1088,9 +1088,10 @@ function processElementListCommon(lis, controlFinder) {
         }
 
         let animationSvg = imageLink.children('div:first').find('svg:first');
+        let animationIcon = imageLink.children('div:first').find('pixiv-icon[name="24/Play"]');
         let pageCountSpan = imageLink.children('div:last').find('span:last');
 
-        if (animationSvg.length > 0) {
+        if (animationSvg.length > 0 || animationIcon.length > 0) {
             ctlAttrs.illustType = 2;
         }
         if (pageCountSpan.length > 0) {
