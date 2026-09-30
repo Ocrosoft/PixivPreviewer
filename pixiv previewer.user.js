@@ -2995,6 +2995,7 @@ let autoLoadInterval = null;
 function PixivPreview() {
     // 最终需要显示的预览图ID，用于避免鼠标滑过多张图片时，最终显示的图片错误
     let previewTargetIllustId = '';
+    let previewPageIndexes = new Map();
 
     function createPlayer(opts) {
         var canvas = document.createElement('canvas');
@@ -3218,7 +3219,11 @@ function PixivPreview() {
                             iLog.d(regular);
                             iLog.d(original);
 
-                            ViewImages(regular, 0, original, g_settings.original, illustId);
+                            let index = previewPageIndexes.get(illustId);
+                            if (index == null || index >= regular.length) {
+                                index = 0;
+                            }
+                            ViewImages(regular, index, original, g_settings.original, illustId);
                         }
                     },
                     error: function (data) {
@@ -3564,6 +3569,9 @@ function PixivPreview() {
         }
 
         $('.pp-image').attr('src', isShowOriginal ? original[index] : regular[index]).attr('index', index);
+        if (regular.length > 1) {
+            previewPageIndexes.set(illustId, index);
+        }
     }
     // 显示动图
     var g_ugoriaPlayer;
