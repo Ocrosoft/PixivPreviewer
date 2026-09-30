@@ -6,11 +6,11 @@
 // @name:zh-TW          Pixiv Previewer (Dev)
 // @namespace           https://github.com/Ocrosoft/PixivPreviewer
 // @version             3.8.7
-// @description         Display preview images (support single image, multiple images, moving images); Download animation(.zip); Sorting the search page by favorite count(and display it).
-// @description:zh-CN   显示预览图（支持单图，多图，动图）；动图压缩包下载；搜索页按热门度（收藏数）排序并显示收藏数。
-// @description:ja      プレビュー画像の表示（単一画像、複数画像、動画のサポート）; アニメーションのダウンロード（.zip）; お気に入りの数で検索ページをソートします（そして表示します）。
-// @description:zh-TW   顯示預覽圖像（支持單幅圖像，多幅圖像，運動圖像）； 下載動畫（.zip）; 按收藏夾數對搜索頁進行排序（並顯示）。
-// @description:ru      Отображение превью изображений (поддержка одиночных, множественных и анимированных изображений); Скачивание анимаций (.zip); Сортировка страницы поиска по количеству добавлений в закладки (с отображением количества).
+// @description         Display preview images (support single image, multiple images, moving images); Download animation(.gif); Sorting the search page by favorite count(and display it).
+// @description:zh-CN   显示预览图（支持单图，多图，动图）；动图 GIF 下载；搜索页按热门度（收藏数）排序并显示收藏数。
+// @description:ja      プレビュー画像の表示（単一画像、複数画像、動画のサポート）; アニメーションのダウンロード（.gif）; お気に入りの数で検索ページをソートします（そして表示します）。
+// @description:zh-TW   顯示預覽圖像（支持單幅圖像，多幅圖像，運動圖像）； 下載動畫（.gif）; 按收藏夾數對搜索頁進行排序（並顯示）。
+// @description:ru      Отображение превью изображений (поддержка одиночных, множественных и анимированных изображений); Скачивание анимаций (.gif); Сортировка страницы поиска по количеству добавлений в закладки (с отображением количества).
 // @author              Ocrosoft
 // @match               *://www.pixiv.net/*
 // @grant               unsafeWindow
@@ -21,6 +21,7 @@
 // @icon64              https://t0.gstatic.com/faviconV2?client=SOCIAL&type=FAVICON&fallback_opts=TYPE,SIZE,URL&size=64&url=https://www.pixiv.net
 // @require             https://update.greasyfork.org/scripts/515994/1478507/gh_2215_make_GM_xhr_more_parallel_again.js
 // @require             https://openuserjs.org/src/libs/sizzle/GM_config.js
+// @require             https://greasyfork.org/scripts/2963-gif-js/code/gifjs.js?version=8596
 // ==/UserScript==
 
 // https://greasyfork.org/zh-CN/scripts/417761-ilog
@@ -195,7 +196,9 @@ ZipImagePlayer.prototype = {
     },
     _error: function (msg) {
         this._failed = true;
-        throw Error("ZipImagePlayer error: " + msg);
+        let error = Error("ZipImagePlayer error: " + msg);
+        $(this).triggerHandler("error", [error]);
+        throw error;
     },
     _debugLog: function (msg) {
         if (this.op.debug) {
@@ -483,6 +486,7 @@ ZipImagePlayer.prototype = {
                 }
             }
         });
+        image.addEventListener('error', this._mkerr("Image load failed: " + meta.file), false);
         image.src = url;
     },
     _setLoadingState: function (state) {
@@ -594,9 +598,138 @@ ZipImagePlayer.prototype = {
     getFrameCount: function () {
         return this._frameCount;
     },
+    getFrameImages: function () {
+        return this._frameImages;
+    },
     hasError: function () {
         return this._failed;
     }
+}
+
+function CreateUgoiraGif(source, mimeType, frames, onProgress) {
+    return new Promise(function (resolve, reject) {
+        if (typeof GIF == 'undefined' || typeof GIF_worker_URL == 'undefined') {
+            reject(Error('GIF encoder is not available.'));
+            return;
+        }
+        if (!source || !frames || frames.length == 0) {
+            reject(Error('Ugoira data is incomplete.'));
+            return;
+        }
+
+        let player = null;
+        let settled = false;
+        let canvas = document.createElement('canvas');
+
+        function reportProgress(progress) {
+            if (onProgress) {
+                onProgress(progress);
+            }
+        }
+        function stopPlayer() {
+            if (player) {
+                $(player).off('.gifDownload');
+                player.stop();
+                player = null;
+            }
+        }
+        function fail(error) {
+            if (settled) {
+                return;
+            }
+            settled = true;
+            stopPlayer();
+            reject(error instanceof Error ? error : Error(error));
+        }
+
+        try {
+            player = new ZipImagePlayer({
+                canvas: canvas,
+                source: source,
+                metadata: {
+                    mime_type: mimeType,
+                    frames: frames,
+                },
+                chunkSize: 300000,
+                loop: false,
+                autoStart: false,
+                debug: false,
+            });
+        } catch (error) {
+            fail(error);
+            return;
+        }
+
+        $(player).on('loadProgress.gifDownload', function (event, progress) {
+            reportProgress(progress * 0.5);
+        });
+        $(player).on('error.gifDownload', function (event, error) {
+            fail(error);
+        });
+        $(player).on('loadingStateChanged.gifDownload', function (event, state) {
+            if (state != 2 || settled) {
+                return;
+            }
+
+            try {
+                let frameImages = player.getFrameImages();
+                if (!frameImages || frameImages.length != frames.length) {
+                    throw Error('Not all ugoira frames were loaded.');
+                }
+                for (let i = 0; i < frameImages.length; i++) {
+                    if (!frameImages[i]) {
+                        throw Error('Ugoira frame ' + i + ' was not loaded.');
+                    }
+                }
+
+                let firstFrame = frameImages[0];
+                let gif = new GIF({
+                    workers: 2,
+                    quality: 10,
+                    width: firstFrame.naturalWidth || firstFrame.width,
+                    height: firstFrame.naturalHeight || firstFrame.height,
+                    workerScript: GIF_worker_URL,
+                });
+                gif.on('progress', function (progress) {
+                    reportProgress(0.5 + progress * 0.5);
+                });
+                gif.on('finished', function (blob) {
+                    if (settled) {
+                        return;
+                    }
+                    settled = true;
+                    reportProgress(1);
+                    stopPlayer();
+                    resolve(blob);
+                });
+                gif.on('abort', function () {
+                    fail(Error('GIF encoding was aborted.'));
+                });
+
+                for (let i = 0; i < frameImages.length; i++) {
+                    gif.addFrame(frameImages[i], { delay: frames[i].delay });
+                }
+                reportProgress(0.5);
+                gif.render();
+            } catch (error) {
+                fail(error);
+            }
+        });
+    });
+}
+
+function DownloadBlob(blob, fileName) {
+    let url = window.URL.createObjectURL(blob);
+    let link = document.createElement('a');
+    link.href = url;
+    link.download = fileName;
+    link.style.display = 'none';
+    document.body.appendChild(link);
+    link.click();
+    link.remove();
+    setTimeout(function () {
+        window.URL.revokeObjectURL(url);
+    }, 1000);
 }
 
 // https://greasyfork.org/zh-CN/scripts/417760-checkjquery
@@ -1904,38 +2037,65 @@ Pages[PageType.Artwork] = {
             $(window).on('resize', MoveButton);
             button.after(cloneButton);
 
-            cloneButton.mouseover(function () {
+            let buttonHtml = cloneButton.html();
+            let isDownloading = false;
+
+            function updateProgress(progress) {
+                let percent = Math.round(progress * 100);
+                cloneButton.text(percent + '%').attr('title', '正在生成 GIF：' + percent + '%');
+            }
+            function resetButton() {
+                isDownloading = false;
+                cloneButton.prop('disabled', false).css('cursor', 'pointer').html(buttonHtml).attr('title', '下载 GIF');
+            }
+            function showDownloadError(error) {
+                let message = error && error.message ? error.message : error;
+                iLog.e('GIF download failed: ' + message);
+                alert('GIF 生成失败：' + message);
+            }
+
+            cloneButton.attr('title', '下载 GIF').mouseover(function () {
                 $(this).css('opacity', '0.2');
             }).mouseleave(function () {
                 $(this).css('opacity', '0.4');
             }).click(function () {
-                let illustId = '';
+                if (isDownloading) {
+                    return;
+                }
 
                 let matched = location.href.match(/artworks\/(\d+)/);
-                if (matched) {
-                    illustId = matched[1];
-                    iLog.i('IllustId=' + illustId);
-                } else {
+                if (!matched) {
                     iLog.e('Can not found illust id!');
                     return;
                 }
+                let illustId = matched[1];
+                iLog.i('IllustId=' + illustId);
+
+                isDownloading = true;
+                cloneButton.prop('disabled', true).css('cursor', 'wait');
+                updateProgress(0);
 
                 $.ajax(g_getUgoiraUrl.replace('#id#', illustId), {
                     method: 'GET',
                     success: function (json) {
                         iLog.d(json);
-
                         if (json.error == true) {
-                            iLog.e('Server response an error: ' + json.message);
+                            showDownloadError(json.message);
+                            resetButton();
                             return;
                         }
 
-                        // 因为浏览器会拦截不同域的 open 操作，绕一下
-                        let newWindow = window.open('_blank');
-                        newWindow.location = json.body.originalSrc;
+                        let source = json.body.originalSrc || json.body.src;
+                        CreateUgoiraGif(source, json.body.mime_type, json.body.frames, updateProgress)
+                            .then(function (blob) {
+                                DownloadBlob(blob, 'pixiv_' + illustId + '.gif');
+                            })
+                            .catch(showDownloadError)
+                            .finally(resetButton);
                     },
                     error: function () {
-                        iLog.e('Request zip file failed!');
+                        showDownloadError('Request ugoira metadata failed.');
+                        resetButton();
                     }
                 });
             });
