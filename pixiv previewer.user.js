@@ -858,7 +858,7 @@ Texts[Lang.zh_CN] = {
     setting_logLevel: '日志等级',
     setting_novelSection: '小说排序',
     setting_close: '关闭',
-    setting_maxXhr: '收藏数并发（推荐 64）',
+    setting_maxXhr: '收藏数请求并发（推荐 4，最大 8）',
     setting_hideByCountLessThan: '隐藏图片张数少于设定值的作品',
     setting_hideByCountMoreThan: '隐藏图片张数多于设定值的作品',
     // 搜索时过滤值太高
@@ -923,7 +923,7 @@ Texts[Lang.en_US] = {
     setting_logLevel: 'Log Level',
     setting_novelSection: 'Novel Sorting',
     setting_close: 'Close',
-    setting_maxXhr: 'Bookmark count concurrency (recommended 64)',
+    setting_maxXhr: 'Bookmark count concurrency (recommended 4, maximum 8)',
     setting_hideByCountLessThan: 'Hide works with image count less than set value',
     setting_hideByCountMoreThan: 'Hide works with image count more than set value',
     sort_noWork: 'No works to display (%1 works hideen)',
@@ -985,7 +985,7 @@ Texts[Lang.ru_RU] = {
     setting_scrollLockWhenPreview: 'Блокировать прокрутку страницы при предпросмотре',
     setting_novelSection: 'Сортировка (Роман)',
     setting_close: 'Закрыть',
-    setting_maxXhr: 'Количество закладок (рекомендуется 64)',
+    setting_maxXhr: 'Параллельные запросы закладок (рекомендуется 4, максимум 8)',
     setting_hideByCountLessThan: 'Скрыть работы с количеством изображений меньше установленного значения',
     setting_hideByCountMoreThan: 'Скрыть работы с количеством изображений больше установленного значения',
     sort_noWork: 'Нет работ для отображения (%1 works hidden)',
@@ -1046,7 +1046,7 @@ Texts[Lang.ja_JP] = {
     setting_scrollLockWhenPreview: 'プレビュー時にページのスクロールをロックする',
     setting_novelSection: 'ソート（小説）',
     setting_close: '閉じる',
-    setting_maxXhr: 'ブックマーク数の同時リクエスト数（推奨64）',
+    setting_maxXhr: 'ブックマーク数の同時リクエスト数（推奨4、最大8）',
     setting_hideByCountLessThan: '画像数が設定値未満の作品を非表示',
     setting_hideByCountMoreThan: '画像数が設定値を超える作品を非表示',
     sort_noWork: '表示する作品がありません（%1 作品が非表示）',
@@ -1093,8 +1093,8 @@ let g_loadingImage = 'https://pp-1252089172.cos.ap-chengdu.myqcloud.com/loading.
 let initialUrl = location.href;
 // 设置
 let g_settings;
-// 排序时同时请求收藏量的 Request 数量，没必要太多，并不会加快速度
-let g_maxXhr = 64;
+// 排序时同时请求收藏量的 Request 数量。Pixiv 会对高频请求限流。
+let g_maxXhr = 4;
 // 排序是否完成（如果排序时页面出现了非刷新切换，强制刷新）
 let g_sortComplete = true;
 
@@ -3115,7 +3115,7 @@ function gmcInit() {
             maxXhr: {
                 label: Texts[g_language].setting_maxXhr,
                 type: 'text',
-                default: 64,
+                default: 4,
             },
 
             enableNovelSort: {
@@ -4350,50 +4350,173 @@ function PixivSK(callback) {
 
     let completeCount = 0;
     let failCount = 0;
-    let nextBatchIndex = 0;
+    let nextWorkIndex = 0;
+    let nextRequestAt = 0;
+    let rateLimitUntil = 0;
+    let requestInterval = 700;
+    let successStreak = 0;
+    let requestAttemptCount = 0;
+    const minRequestInterval = 400;
+    const maxRequestInterval = 5000;
+    const maxRetryCount = 4;
 
-    let GetBookmarkCountUsingFetch = function (index) {
-        if (index >= works.length) {
-            clearAndUpdateWorks();
+    function sleep(ms) {
+        return new Promise(resolve => setTimeout(resolve, ms));
+    }
+
+    // All workers share this start-time gate. Limiting concurrency alone is not
+    // enough: a fast response would otherwise immediately start another burst.
+    async function waitForRequestSlot() {
+        while (true) {
+            let now = Date.now();
+            let startAt = Math.max(now, nextRequestAt, rateLimitUntil);
+            nextRequestAt = startAt + requestInterval + Math.floor(Math.random() * 151);
+            if (startAt > now) {
+                await sleep(startAt - now);
+            }
+            // A different worker may have received a 429 while this one slept.
+            // Reserve a new slot after the shared cooldown instead of leaking
+            // already scheduled requests into the blocked window.
+            if (Date.now() < rateLimitUntil) {
+                continue;
+            }
             return;
         }
-        let batchCount = works.length - index;
-        if (batchCount > g_maxXhr) batchCount = g_maxXhr;
-        nextBatchIndex = index + batchCount;
-        let completed = 0;
-        for (let i = 0; i < batchCount; i++) {
-            let j = index + i;
-            let illustId = works[j].id;
-            let url = 'https://www.pixiv.net/ajax/illust/' + illustId;
-            fetch(url, { credentials: 'omit' })
-                .then(response => response.json())
-                .then(json => {
-                    if (json && !json.error) {
-                        works[j].bookmarkCount = json.body.bookmarkCount;
-                        works[j].likeCount = json.body.likeCount;
-                        works[j].viewCount = json.body.viewCount;
-                        iLog.d('IllustId: ' + works[j].id + ', bookmarkCount: ' + works[j].bookmarkCount);
-                    } else {
-                        iLog.e('Some error occured: ' + (json && json.message));
-                        works[j].bookmarkCount = 0;
-                    }
-                })
-                .catch(err => {
-                    iLog.e('Fetch failed for illustId ' + illustId + ': ' + err);
-                    works[j].bookmarkCount = 0;
-                    ++failCount;
-                })
-                .finally(() => {
-                    let text = Texts[g_language].sort_getBookmarkCount.replace('%1', ++completeCount).replace('%2', works.length);
-                    if (failCount > 0) {
-                        text += ' (' + failCount + ' failed)';
-                    }
-                    $('#loading').find('#progress').text(text);
-                    if (++completed === batchCount) {
-                        GetBookmarkCountUsingFetch(nextBatchIndex);
-                    }
-                });
+    }
+
+    function getRetryDelay(response, retryCount) {
+        let retryAfter = response ? response.headers.get('Retry-After') : null;
+        if (retryAfter) {
+            let seconds = Number(retryAfter);
+            if (Number.isFinite(seconds)) {
+                return Math.max(seconds * 1000, 1000);
+            }
+            let retryAt = Date.parse(retryAfter);
+            if (Number.isFinite(retryAt)) {
+                return Math.max(retryAt - Date.now(), 1000);
+            }
         }
+        return Math.min(5000 * Math.pow(2, retryCount), 60000) + Math.floor(Math.random() * 1000);
+    }
+
+    function slowDownAfterRateLimit(response, retryCount, illustId) {
+        let retryDelay = getRetryDelay(response, retryCount);
+        successStreak = 0;
+        requestInterval = Math.min(Math.ceil(requestInterval * 2), maxRequestInterval);
+        rateLimitUntil = Math.max(rateLimitUntil, Date.now() + retryDelay);
+        console.warn('[Pixiv Previewer] API rate limited', {
+            illustId: illustId,
+            status: response.status,
+            requestAttemptCount: requestAttemptCount,
+            completeCount: completeCount,
+            retryAfter: response.headers.get('Retry-After'),
+            cooldownMs: retryDelay,
+            nextRequestIntervalMs: requestInterval,
+        });
+        return retryDelay;
+    }
+
+    function speedUpAfterSuccess() {
+        if (++successStreak < 24 || requestInterval <= minRequestInterval) {
+            return;
+        }
+        successStreak = 0;
+        requestInterval = Math.max(requestInterval - 50, minRequestInterval);
+    }
+
+    async function getArtworkCount(index) {
+        let illustId = works[index].id;
+        let url = location.origin + '/ajax/illust/' + illustId;
+
+        for (let retryCount = 0; retryCount <= maxRetryCount; retryCount++) {
+            await waitForRequestSlot();
+            try {
+                ++requestAttemptCount;
+                let response = await fetch(url, {
+                    // Keep statistics requests anonymous. Pixiv applies a longer
+                    // cooldown to account-scoped limits than to anonymous ones.
+                    credentials: 'omit',
+                    headers: { 'Accept': 'application/json' },
+                    cache: 'no-store',
+                });
+
+                if (response.status === 429 || response.status === 403) {
+                    if (retryCount < maxRetryCount) {
+                        let retryDelay = slowDownAfterRateLimit(response, retryCount, illustId);
+                        iLog.w('Pixiv API limited illust ' + illustId + ' (HTTP ' + response.status + '), retry in ' + retryDelay + 'ms.');
+                        continue;
+                    }
+                    throw new Error('HTTP ' + response.status);
+                }
+
+                if (response.status >= 500) {
+                    if (retryCount < maxRetryCount) {
+                        let retryDelay = getRetryDelay(response, retryCount);
+                        rateLimitUntil = Math.max(rateLimitUntil, Date.now() + retryDelay);
+                        iLog.w('Pixiv API unavailable for illust ' + illustId + ' (HTTP ' + response.status + '), retry in ' + retryDelay + 'ms.');
+                        continue;
+                    }
+                    throw new Error('HTTP ' + response.status);
+                }
+
+                if (!response.ok) {
+                    throw new Error('HTTP ' + response.status);
+                }
+
+                let json = await response.json();
+                if (!json || json.error || !json.body) {
+                    throw new Error(json && json.message ? json.message : 'Invalid response');
+                }
+
+                works[index].bookmarkCount = json.body.bookmarkCount;
+                works[index].likeCount = json.body.likeCount;
+                works[index].viewCount = json.body.viewCount;
+                speedUpAfterSuccess();
+                iLog.d('IllustId: ' + illustId + ', bookmarkCount: ' + works[index].bookmarkCount);
+                return true;
+            } catch (err) {
+                if (retryCount < maxRetryCount && err instanceof TypeError) {
+                    let retryDelay = getRetryDelay(null, retryCount);
+                    rateLimitUntil = Math.max(rateLimitUntil, Date.now() + retryDelay);
+                    iLog.w('Fetch failed for illustId ' + illustId + ', retry in ' + retryDelay + 'ms: ' + err);
+                    continue;
+                }
+                iLog.e('Fetch failed for illustId ' + illustId + ': ' + err);
+                return false;
+            }
+        }
+        return false;
+    }
+
+    async function bookmarkCountWorker() {
+        while (true) {
+            let index = nextWorkIndex++;
+            if (index >= works.length) {
+                return;
+            }
+
+            if (!await getArtworkCount(index)) {
+                works[index].bookmarkCount = 0;
+                works[index].likeCount = 0;
+                works[index].viewCount = 0;
+                ++failCount;
+            }
+
+            let text = Texts[g_language].sort_getBookmarkCount.replace('%1', ++completeCount).replace('%2', works.length);
+            if (failCount > 0) {
+                text += ' (' + failCount + ' failed)';
+            }
+            $('#loading').find('#progress').text(text);
+        }
+    }
+
+    let GetBookmarkCountUsingFetch = function () {
+        let concurrency = Math.min(Math.max(parseInt(g_maxXhr) || 4, 1), 8);
+        let workers = [];
+        for (let i = 0; i < Math.min(concurrency, works.length); i++) {
+            workers.push(bookmarkCountWorker());
+        }
+        Promise.all(workers).then(clearAndUpdateWorks);
     }
 
     /*
@@ -5529,7 +5652,7 @@ function Load() {
     };
 
     // 读取设置
-    g_maxXhr = parseInt(GMC.get('maxXhr'));
+    g_maxXhr = Math.min(Math.max(parseInt(GMC.get('maxXhr')) || 4, 1), 8);
     g_settings = GetSettings();
 
     if ($('#pp-sort').length === 0 && !(g_settings?.enableSort)) {
