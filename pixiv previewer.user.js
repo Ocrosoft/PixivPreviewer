@@ -2981,6 +2981,11 @@ function gmcInit() {
                 type: "checkbox",
                 default: false,
             },
+            novelHideFollowed: {
+                label: Texts[g_language].nsort_hideFollowed,
+                type: "checkbox",
+                default: false,
+            },
         },
     });
 }
@@ -3651,6 +3656,73 @@ function PixivPreview() {
 }
 /* ---------------------------------------- 排序 ---------------------------------------- */
 let imageElementTemplate = null;
+function getFollowingOfType(user_id, type, offset) {
+    return new Promise(function (resolve, reject) {
+        if (offset == null) {
+            offset = 0;
+        }
+        let limit = 100;
+        let following_show = [];
+        $.ajax('https://www.pixiv.net/ajax/user/' + user_id + '/following?offset=' + offset + '&limit=' + limit + '&rest=' + type, {
+            async: true,
+            success: function (data) {
+                if (data == null || data.error) {
+                    iLog.e('Following response contains an error.');
+                    resolve([]);
+                    return;
+                }
+                if (data.body.users.length == 0) {
+                    resolve([]);
+                    return;
+                }
+                $.each(data.body.users, function (i, user) {
+                    following_show.push(user.userId);
+                });
+                getFollowingOfType(user_id, type, offset + limit).then(function (members) {
+                    resolve(following_show.concat(members));
+                    return;
+                });
+            },
+            error: function () {
+                iLog.e('Request following failed.');
+                resolve([]);
+            }
+        });
+    });
+}
+
+function getFollowingOfCurrentUser() {
+    return new Promise(function (resolve, reject) {
+        let user_id = '';
+
+        try {
+            user_id = dataLayer[0].user_id;
+        } catch (ex) {
+            iLog.e('Get user id failed.');
+            resolve([]);
+            return;
+        }
+
+        // show/hide
+        $('#progress').text(Texts[g_language].sort_getPublicFollowing);
+
+        let following = GetLocalStorage('followingOfUid-' + user_id);
+        if (following != null && following != 'null') {
+            resolve(JSON.parse(following));
+            return;
+        }
+
+        getFollowingOfType(user_id, 'show').then(function (members) {
+            $('#progress').text(Texts[g_language].sort_getPrivateFollowing);
+            getFollowingOfType(user_id, 'hide').then(function (members2) {
+                let following = members.concat(members2);
+                SetLocalStorage('followingOfUid-' + user_id, following);
+                resolve(following);
+            });
+        });
+    });
+}
+
 function PixivSK(callback) {
     // 不合理的设定
     if (g_settings.pageCount < 1 || g_settings.favFilter < 0) {
@@ -3763,73 +3835,6 @@ function PixivSK(callback) {
 
         req.send(null);
     };
-
-    function getFollowingOfType(user_id, type, offset) {
-        return new Promise(function (resolve, reject) {
-            if (offset == null) {
-                offset = 0;
-            }
-            let limit = 100;
-            let following_show = [];
-            $.ajax('https://www.pixiv.net/ajax/user/' + user_id + '/following?offset=' + offset + '&limit=' + limit + '&rest=' + type, {
-                async: true,
-                success: function (data) {
-                    if (data == null || data.error) {
-                        iLog.e('Following response contains an error.');
-                        resolve([]);
-                        return;
-                    }
-                    if (data.body.users.length == 0) {
-                        resolve([]);
-                        return;
-                    }
-                    $.each(data.body.users, function (i, user) {
-                        following_show.push(user.userId);
-                    });
-                    getFollowingOfType(user_id, type, offset + limit).then(function (members) {
-                        resolve(following_show.concat(members));
-                        return;
-                    });
-                },
-                error: function () {
-                    iLog.e('Request following failed.');
-                    resolve([]);
-                }
-            });
-        });
-    }
-
-    function getFollowingOfCurrentUser() {
-        return new Promise(function (resolve, reject) {
-            let user_id = '';
-
-            try {
-                user_id = dataLayer[0].user_id;
-            } catch (ex) {
-                iLog.e('Get user id failed.');
-                resolve([]);
-                return;
-            }
-
-            // show/hide
-            $('#progress').text(Texts[g_language].sort_getPublicFollowing);
-
-            let following = GetLocalStorage('followingOfUid-' + user_id);
-            if (following != null && following != 'null') {
-                resolve(JSON.parse(following));
-                return;
-            }
-
-            getFollowingOfType(user_id, 'show').then(function (members) {
-                $('#progress').text(Texts[g_language].sort_getPrivateFollowing);
-                getFollowingOfType(user_id, 'hide').then(function (members2) {
-                    let following = members.concat(members2);
-                    SetLocalStorage('followingOfUid-' + user_id, following);
-                    resolve(following);
-                });
-            });
-        });
-    }
 
     // 筛选已关注画师作品
     let filterByUser = function () {
@@ -4822,7 +4827,7 @@ function PixivNS(callback) {
         });
     }
 
-    function sortNovel(list) {
+    function sortNovel(list, followedUsers) {
         updateProgress(Texts[g_language].nsort_sorting);
         // 排序
         list.sort(function (a, b) {
@@ -4856,6 +4861,13 @@ function PixivNS(callback) {
             // 已收藏筛选
             if (g_settings.novelHideFavorite && e.bookmarkData) {
                 return true;
+            }
+            if (g_settings.novelHideFollowed) {
+                for (let j = 0; j < followedUsers.length; j++) {
+                    if (followedUsers[j] == e.userId) {
+                        return true;
+                    }
+                }
             }
             filteredList.push(e);
         });
@@ -5073,7 +5085,13 @@ function PixivNS(callback) {
         changePageSelector();
         listnerToKeyBoard();
         getNovelByPage(keyWord, currentPage, currentPage + g_settings.novelPageCount).then(function (novelList) {
-            rearrangeNovel(sortNovel(novelList));
+            let followedUsersPromise = Promise.resolve([]);
+            if (g_settings.novelHideFollowed) {
+                followedUsersPromise = getFollowingOfCurrentUser();
+            }
+            followedUsersPromise.then(function (followedUsers) {
+                rearrangeNovel(sortNovel(novelList, followedUsers));
+            });
         });
     }
 
@@ -5156,6 +5174,7 @@ function ConvertSettingsFromGMC() {
         'novelPageCount': parseInt(GMC.get('novelPageCount')) || 3,
         'novelFavFilter': parseInt(GMC.get('novelFavFilter')) || 0,
         'novelHideFavorite': GMC.get('novelHideFavorite'),
+        'novelHideFollowed': GMC.get('novelHideFollowed'),
         'previewFullScreen': GMC.get('previewFullScreen'),
         'previewKey': 17,
         'scrollLockWhenPreview': GMC.get('scrollLockWhenPreview'),
@@ -5190,6 +5209,7 @@ function MigrateFromOldSetting() {
             GMC.set('novelPageCount', settings.novelPageCount);
             GMC.set('novelFavFilter', settings.novelFavFilter);
             GMC.set('novelHideFavorite', settings.novelHideFavorite);
+            GMC.set('novelHideFollowed', settings.novelHideFollowed);
             let langString = 'PixivPreviewLang';
             SetLocalStorage(langString, parseInt(settings.lang));
             SetLocalStorage('PixivPreview', null);
