@@ -2296,6 +2296,10 @@ function disableScroll() {
 function enableScroll() {
     window.removeEventListener(wheelEvent, preventDefault, wheelOpt);
 }
+function removePreviewDiv() {
+    $('.pp-main').remove();
+    enableScroll();
+}
 
 /* ---------------------------------------- 配置 ---------------------------------------- */
 function gmcBuildFrame() {
@@ -3275,7 +3279,7 @@ function PixivPreview() {
                     'display': 'none', 'text-align': 'center'
                 });
             // 添加到 body
-            $('.pp-main').remove();
+            removePreviewDiv();
             $('body').append(previewDiv);
 
             if (g_settings.previewFullScreen) {
@@ -3327,7 +3331,7 @@ function PixivPreview() {
                 if (g_settings.previewFullScreen) {
                     return;
                 }
-                $(this).remove();
+                removePreviewDiv();
             });
 
             let url = '';
@@ -3423,10 +3427,7 @@ function PixivPreview() {
             }
             if (!isMoveToPreviewElement) {
                 // 非预览图上
-                $('.pp-main').remove();
-                if (g_settings.scrollLockWhenPreview) {
-                    enableScroll();
-                }
+                removePreviewDiv();
             }
         });
 
@@ -3467,6 +3468,8 @@ function PixivPreview() {
 
     // 关闭预览功能，不是给外部用的
     function DeactivePreview() {
+        removePreviewDiv();
+
         let returnMap = Pages[g_pageType].GetProcessedPageElements();
         if (!returnMap.loadingComplete) {
             iLog.e('Page not load, should not call Preview!');
@@ -3687,14 +3690,6 @@ function PixivPreview() {
                 });
             }
 
-            //  scrollLock
-            if (!g_settings.scrollLockWhenPreview) {
-                $('.pp-image').mouseenter(disableScroll);
-            }
-            $(".pp-image").mouseleave(function () {
-                enableScroll();
-            });
-
             // 图片预加载完成
             $('.pp-image').on('load', function () {
                 // 显示图片前也判断一下是不是目标图片
@@ -3743,14 +3738,6 @@ function PixivPreview() {
 
         g_settings.original = isShowOriginal;
 
-        if (!g_settings.previewFullScreen) {
-            $(".pp-image").mouseenter(function () {
-                disableScroll()
-            }).mouseleave(function () {
-                enableScroll()
-            });
-        }
-
         if (g_ugoriaPlayer) {
             g_ugoriaPlayer.stop();
         }
@@ -3760,12 +3747,6 @@ function PixivPreview() {
                 mime_type: mime,
                 frames: frames,
             },
-        });
-        // scrollLock
-        $(g_ugoriaPlayer.canvas).mouseenter(function () {
-            disableScroll();
-        }).mouseleave(function () {
-            enableScroll();
         });
         $(g_ugoriaPlayer).on("frameLoaded", function (ev, frame) {
             if (displayTargetIllustId != previewTargetIllustId) {
@@ -5787,9 +5768,7 @@ function StartLoad() {
                 return;
             }
             // fix 主页预览图出现后点击图片，进到详情页，预览图不消失的问题
-            if ($('.pp-main').length > 0) {
-                $('.pp-main').remove();
-            }
+            removePreviewDiv();
             initialUrl = location.href;
             clearInterval(loadInterval);
             clearInterval(itv);
