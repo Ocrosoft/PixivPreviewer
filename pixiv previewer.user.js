@@ -858,7 +858,7 @@ Texts[Lang.zh_CN] = {
     setting_logLevel: '日志等级',
     setting_novelSection: '小说排序',
     setting_close: '关闭',
-    setting_maxXhr: '收藏数请求并发（推荐 4，最大 8）',
+    setting_maxXhr: '收藏数请求并发（默认 8，范围 1～16）',
     setting_minRequestInterval: '收藏数请求最小间隔（毫秒，1～5000）',
     setting_hideByCountLessThan: '隐藏图片张数少于设定值的作品',
     setting_hideByCountMoreThan: '隐藏图片张数多于设定值的作品',
@@ -924,7 +924,7 @@ Texts[Lang.en_US] = {
     setting_logLevel: 'Log Level',
     setting_novelSection: 'Novel Sorting',
     setting_close: 'Close',
-    setting_maxXhr: 'Bookmark count concurrency (recommended 4, maximum 8)',
+    setting_maxXhr: 'Bookmark count concurrency (default 8, range 1–16)',
     setting_minRequestInterval: 'Minimum interval between bookmark-count requests (ms, 1–5000)',
     setting_hideByCountLessThan: 'Hide works with image count less than set value',
     setting_hideByCountMoreThan: 'Hide works with image count more than set value',
@@ -987,7 +987,7 @@ Texts[Lang.ru_RU] = {
     setting_scrollLockWhenPreview: 'Блокировать прокрутку страницы при предпросмотре',
     setting_novelSection: 'Сортировка (Роман)',
     setting_close: 'Закрыть',
-    setting_maxXhr: 'Параллельные запросы закладок (рекомендуется 4, максимум 8)',
+    setting_maxXhr: 'Параллельные запросы закладок (по умолчанию 8, диапазон 1–16)',
     setting_minRequestInterval: 'Минимальный интервал между запросами количества закладок (мс, 1–5000)',
     setting_hideByCountLessThan: 'Скрыть работы с количеством изображений меньше установленного значения',
     setting_hideByCountMoreThan: 'Скрыть работы с количеством изображений больше установленного значения',
@@ -1049,7 +1049,7 @@ Texts[Lang.ja_JP] = {
     setting_scrollLockWhenPreview: 'プレビュー時にページのスクロールをロックする',
     setting_novelSection: 'ソート（小説）',
     setting_close: '閉じる',
-    setting_maxXhr: 'ブックマーク数の同時リクエスト数（推奨4、最大8）',
+    setting_maxXhr: 'ブックマーク数の同時リクエスト数（初期値8、範囲1～16）',
     setting_minRequestInterval: 'ブックマーク数リクエストの最小間隔（ミリ秒、1～5000）',
     setting_hideByCountLessThan: '画像数が設定値未満の作品を非表示',
     setting_hideByCountMoreThan: '画像数が設定値を超える作品を非表示',
@@ -1098,7 +1098,7 @@ let initialUrl = location.href;
 // 设置
 let g_settings;
 // 排序时同时请求收藏量的 Request 数量。Pixiv 会对高频请求限流。
-let g_maxXhr = 4;
+let g_maxXhr = 8;
 // 排序是否完成（如果排序时页面出现了非刷新切换，强制刷新）
 let g_sortComplete = true;
 
@@ -3123,12 +3123,12 @@ function gmcInit() {
             maxXhr: {
                 label: Texts[g_language].setting_maxXhr,
                 type: 'text',
-                default: 4,
+                default: 8,
             },
             minRequestInterval: {
                 label: Texts[g_language].setting_minRequestInterval,
                 type: 'text',
-                default: 50,
+                default: 10,
             },
 
             enableNovelSort: {
@@ -4340,7 +4340,7 @@ function PixivSK(callback) {
 
     const minRequestInterval = g_settings.minRequestInterval;
     const maxRequestInterval = 5000;
-    const maxRetryCount = 3;
+    const maxRetryCount = 2;
     let completeCount = 0;
     let failCount = 0;
     let nextWorkIndex = 0;
@@ -4501,7 +4501,7 @@ function PixivSK(callback) {
     }
 
     let GetBookmarkCountUsingFetch = function () {
-        let concurrency = Math.min(Math.max(parseInt(g_maxXhr) || 4, 1), 8);
+        let concurrency = Math.min(Math.max(parseInt(g_maxXhr) || 8, 1), 16);
         let workers = [];
         for (let i = 0; i < Math.min(concurrency, works.length); i++) {
             workers.push(bookmarkCountWorker());
@@ -5450,7 +5450,7 @@ function ConvertSettingsFromGMC() {
         'hideCountMoreThan': parseInt(GMC.get('hideCountMoreThan')) || 0,
         'linkBlank': GMC.get('linkBlank'),
         'pageByKey': GMC.get('pageByKey'),
-        'minRequestInterval': Math.min(Math.max(parseInt(GMC.get('minRequestInterval')) || 50, 1), 5000),
+        'minRequestInterval': Math.min(Math.max(parseInt(GMC.get('minRequestInterval')) || 10, 1), 5000),
         'fullSizeThumb': GMC.get('fullSizeThumb'),
         'enableNovelSort': GMC.get('enableNovelSort'),
         'novelPageCount': parseInt(GMC.get('novelPageCount')) || 3,
@@ -5643,7 +5643,7 @@ function Load() {
     };
 
     // 读取设置
-    g_maxXhr = Math.min(Math.max(parseInt(GMC.get('maxXhr')) || 4, 1), 8);
+    g_maxXhr = Math.min(Math.max(parseInt(GMC.get('maxXhr')) || 8, 1), 16);
     g_settings = GetSettings();
 
     if ($('#pp-sort').length === 0 && !(g_settings?.enableSort)) {
