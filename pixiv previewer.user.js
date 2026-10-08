@@ -4497,7 +4497,7 @@ function PixivSK(callback) {
         for (let i = 0; i < Math.min(concurrency, works.length); i++) {
             workers.push(bookmarkCountWorker());
         }
-        Promise.all(workers).then(clearAndUpdateWorks);
+        Promise.all(workers).then(() => clearAndUpdateWorks());
     }
 
     /*
