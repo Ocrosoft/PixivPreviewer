@@ -2988,10 +2988,9 @@ function gmcInit() {
                 type: 'button',
                 click: () => {
                     if (confirm(Texts[g_language].setting_resetHint)) {
-                        return;
+                        SetLocalStorage('gmc-frame', '');
+                        location.href = location.href;
                     }
-                    SetLocalStorage('gmc-frame', '');
-                    location.href = location.href;
                 },
             },
             clearFollowedUserCache: {
