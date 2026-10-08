@@ -4360,7 +4360,7 @@ function PixivSK(callback) {
         while (true) {
             let now = Date.now();
             let startAt = Math.max(now, nextRequestAt, rateLimitUntil);
-            nextRequestAt = startAt + requestInterval + Math.floor(Math.random() * 51);
+            nextRequestAt = startAt + requestInterval;
             if (startAt > now) {
                 await sleep(startAt - now);
             }
