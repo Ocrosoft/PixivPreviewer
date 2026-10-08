@@ -4340,14 +4340,35 @@ function PixivSK(callback) {
     const minRequestInterval = g_settings.minRequestInterval;
     const maxRequestInterval = 5000;
     const maxRetryCount = 2;
+    const requestRateStateKey = 'PixivPreviewerRequestRateState';
     let completeCount = 0;
     let failCount = 0;
     let nextWorkIndex = 0;
     let nextRequestAt = 0;
-    let rateLimitUntil = 0;
-    let requestInterval = minRequestInterval;
+    let requestRateState = loadRequestRateState();
+    let rateLimitUntil = requestRateState.rateLimitUntil;
+    let requestInterval = requestRateState.requestInterval;
     let successStreak = 0;
     let requestAttemptCount = 0;
+
+    function loadRequestRateState() {
+        try {
+            let state = JSON.parse(sessionStorage.getItem(requestRateStateKey));
+            return {
+                requestInterval: Math.min(Math.max(Number(state?.requestInterval) || minRequestInterval, minRequestInterval), maxRequestInterval),
+                rateLimitUntil: Number(state?.rateLimitUntil) || 0,
+            };
+        } catch (err) {
+            return { requestInterval: minRequestInterval, rateLimitUntil: 0 };
+        }
+    }
+
+    function saveRequestRateState() {
+        sessionStorage.setItem(requestRateStateKey, JSON.stringify({
+            requestInterval: requestInterval,
+            rateLimitUntil: rateLimitUntil,
+        }));
+    }
 
     function sleep(ms) {
         return new Promise(resolve => setTimeout(resolve, ms));
@@ -4393,6 +4414,7 @@ function PixivSK(callback) {
         successStreak = 0;
         requestInterval = Math.min(Math.ceil(requestInterval * 2), maxRequestInterval);
         rateLimitUntil = Math.max(rateLimitUntil, Date.now() + retryDelay);
+        saveRequestRateState();
         console.warn('[Pixiv Previewer] API rate limited', {
             illustId: illustId,
             status: response.status,
@@ -4411,6 +4433,7 @@ function PixivSK(callback) {
         }
         successStreak = 0;
         requestInterval = Math.max(requestInterval - 50, minRequestInterval);
+        saveRequestRateState();
     }
 
     async function getArtworkCount(index) {
@@ -4442,6 +4465,7 @@ function PixivSK(callback) {
                     if (retryCount < maxRetryCount) {
                         let retryDelay = getRetryDelay(response, retryCount);
                         rateLimitUntil = Math.max(rateLimitUntil, Date.now() + retryDelay);
+                        saveRequestRateState();
                         iLog.w('Pixiv API unavailable for illust ' + illustId + ' (HTTP ' + response.status + '), retry in ' + retryDelay + 'ms.');
                         continue;
                     }
@@ -4467,6 +4491,7 @@ function PixivSK(callback) {
                 if (retryCount < maxRetryCount && err instanceof TypeError) {
                     let retryDelay = getRetryDelay(null, retryCount);
                     rateLimitUntil = Math.max(rateLimitUntil, Date.now() + retryDelay);
+                    saveRequestRateState();
                     iLog.w('Fetch failed for illustId ' + illustId + ', retry in ' + retryDelay + 'ms: ' + err);
                     continue;
                 }
