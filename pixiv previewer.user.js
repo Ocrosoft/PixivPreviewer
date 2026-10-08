@@ -859,6 +859,7 @@ Texts[Lang.zh_CN] = {
     setting_novelSection: '小说排序',
     setting_close: '关闭',
     setting_maxXhr: '收藏数请求并发（推荐 4，最大 8）',
+    setting_minRequestInterval: '收藏数请求最小间隔（毫秒，1～5000）',
     setting_hideByCountLessThan: '隐藏图片张数少于设定值的作品',
     setting_hideByCountMoreThan: '隐藏图片张数多于设定值的作品',
     // 搜索时过滤值太高
@@ -924,6 +925,7 @@ Texts[Lang.en_US] = {
     setting_novelSection: 'Novel Sorting',
     setting_close: 'Close',
     setting_maxXhr: 'Bookmark count concurrency (recommended 4, maximum 8)',
+    setting_minRequestInterval: 'Minimum interval between bookmark-count requests (ms, 1–5000)',
     setting_hideByCountLessThan: 'Hide works with image count less than set value',
     setting_hideByCountMoreThan: 'Hide works with image count more than set value',
     sort_noWork: 'No works to display (%1 works hideen)',
@@ -986,6 +988,7 @@ Texts[Lang.ru_RU] = {
     setting_novelSection: 'Сортировка (Роман)',
     setting_close: 'Закрыть',
     setting_maxXhr: 'Параллельные запросы закладок (рекомендуется 4, максимум 8)',
+    setting_minRequestInterval: 'Минимальный интервал между запросами количества закладок (мс, 1–5000)',
     setting_hideByCountLessThan: 'Скрыть работы с количеством изображений меньше установленного значения',
     setting_hideByCountMoreThan: 'Скрыть работы с количеством изображений больше установленного значения',
     sort_noWork: 'Нет работ для отображения (%1 works hidden)',
@@ -1047,6 +1050,7 @@ Texts[Lang.ja_JP] = {
     setting_novelSection: 'ソート（小説）',
     setting_close: '閉じる',
     setting_maxXhr: 'ブックマーク数の同時リクエスト数（推奨4、最大8）',
+    setting_minRequestInterval: 'ブックマーク数リクエストの最小間隔（ミリ秒、1～5000）',
     setting_hideByCountLessThan: '画像数が設定値未満の作品を非表示',
     setting_hideByCountMoreThan: '画像数が設定値を超える作品を非表示',
     sort_noWork: '表示する作品がありません（%1 作品が非表示）',
@@ -3121,6 +3125,11 @@ function gmcInit() {
                 type: 'text',
                 default: 4,
             },
+            minRequestInterval: {
+                label: Texts[g_language].setting_minRequestInterval,
+                type: 'text',
+                default: 50,
+            },
 
             enableNovelSort: {
                 label: Texts[g_language].setting_novelSort,
@@ -4329,17 +4338,17 @@ function PixivSK(callback) {
         getWorks(onloadCallback);
     }
 
+    const minRequestInterval = g_settings.minRequestInterval;
+    const maxRequestInterval = 5000;
+    const maxRetryCount = 3;
     let completeCount = 0;
     let failCount = 0;
     let nextWorkIndex = 0;
     let nextRequestAt = 0;
     let rateLimitUntil = 0;
-    let requestInterval = 700;
+    let requestInterval = minRequestInterval;
     let successStreak = 0;
     let requestAttemptCount = 0;
-    const minRequestInterval = 400;
-    const maxRequestInterval = 5000;
-    const maxRetryCount = 4;
 
     function sleep(ms) {
         return new Promise(resolve => setTimeout(resolve, ms));
@@ -5441,6 +5450,7 @@ function ConvertSettingsFromGMC() {
         'hideCountMoreThan': parseInt(GMC.get('hideCountMoreThan')) || 0,
         'linkBlank': GMC.get('linkBlank'),
         'pageByKey': GMC.get('pageByKey'),
+        'minRequestInterval': Math.min(Math.max(parseInt(GMC.get('minRequestInterval')) || 50, 1), 5000),
         'fullSizeThumb': GMC.get('fullSizeThumb'),
         'enableNovelSort': GMC.get('enableNovelSort'),
         'novelPageCount': parseInt(GMC.get('novelPageCount')) || 3,
