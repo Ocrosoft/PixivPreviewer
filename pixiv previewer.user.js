@@ -4561,18 +4561,28 @@ function PixivSK(callback) {
                 // 清理模板
                 // image
                 let control = $(imageElementTemplate).find('.pp-control');
-                if (control == null) {
+                if (control.length == 0) {
                     iLog.w('Cannot found some elements!');
                     return;
                 }
                 let imageLink = control.find('a:first');
                 let img = imageLink.find('img:first');
-                let imageDiv = img.parent();
+                // 后台加载完成时，原卡片可能还停留在 lazyload 占位状态。
+                // 克隆节点不会继承 Pixiv 的加载回调，需要由脚本创建并显示图片。
+                let imageDiv = img.length > 0 ? img.parent() : imageLink.children('div:first');
                 let imageLinkDiv = imageLink.parent();
                 let titleLinkParent = control.next();
-                if (img == null || imageDiv == null || imageLink == null || imageLinkDiv == null || titleLinkParent == null) {
+                if (imageDiv.length == 0 || imageLink.length == 0 || imageLinkDiv.length == 0 || titleLinkParent.length == 0) {
                     iLog.e('Can not found some elements!');
+                    return;
                 }
+                if (img.length == 0) {
+                    img = $('<img>').css({ 'width': '100%', 'height': '100%' });
+                    imageDiv.append(img);
+                }
+                img.removeAttr('srcset sizes').attr('loading', 'eager').css({
+                    'opacity': '1', 'visibility': 'visible', 'display': 'block'
+                });
                 let titleLink = $('<a></a>');
                 if (titleLinkParent.children().length == 0) {
                     titleLinkParent.append(titleLink);
