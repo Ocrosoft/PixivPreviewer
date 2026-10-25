@@ -4561,36 +4561,26 @@ function PixivSK(callback) {
                 // 清理模板
                 // image
                 let control = $(imageElementTemplate).find('.pp-control');
-                if (control.length == 0) {
+                if (control == null) {
                     iLog.w('Cannot found some elements!');
                     return;
                 }
                 let imageLink = control.find('a:first');
                 let img = imageLink.find('img:first');
-                // 后台加载完成时，原卡片可能还停留在 lazyload 占位状态。
-                // 克隆节点不会继承 Pixiv 的加载回调，需要由脚本创建并显示图片。
-                let imageDiv = img.length > 0 ? img.parent() : imageLink.children('div:first');
-                let imageLinkDiv = imageLink.parent();
-                let titleLinkParent = control.next();
-                if (imageDiv.length == 0 || imageLink.length == 0 || imageLinkDiv.length == 0 || titleLinkParent.length == 0) {
-                    iLog.e('Can not found some elements!');
-                    return;
-                }
+                // 后台克隆时可能只有 figure 占位，需原位替换，避免追加的图片被卡片裁掉。
                 if (img.length == 0) {
-                    img = $('<img>').css({ 'width': '100%', 'height': '100%' });
                     let placeholder = imageLink.find('figure:first');
                     if (placeholder.length > 0) {
-                        // 替换内层占位，避免追加到容器末尾后被卡片裁掉。
-                        img.attr('class', placeholder.attr('class'));
+                        img = $('<img>').attr('class', placeholder.attr('class')).css({ 'width': '100%', 'height': '100%' });
                         placeholder.replaceWith(img);
-                        imageDiv = img.parent();
-                    } else {
-                        imageDiv.append(img);
                     }
                 }
-                img.removeAttr('srcset sizes').attr('loading', 'eager').css({
-                    'opacity': '1', 'visibility': 'visible', 'display': 'block'
-                });
+                let imageDiv = img.parent();
+                let imageLinkDiv = imageLink.parent();
+                let titleLinkParent = control.next();
+                if (img == null || imageDiv == null || imageLink == null || imageLinkDiv == null || titleLinkParent == null) {
+                    iLog.e('Can not found some elements!');
+                }
                 let titleLink = $('<a></a>');
                 if (titleLinkParent.children().length == 0) {
                     titleLinkParent.append(titleLink);
@@ -4607,7 +4597,7 @@ function PixivSK(callback) {
                 if (authorImage.length == 0) {
                     let placeholder = authorLinkProfileImage.find('figure:first');
                     if (placeholder.length > 0) {
-                        authorImage = $('<img>').attr('loading', 'eager').css({
+                        authorImage = $('<img>').css({
                             'width': '100%', 'height': '100%', 'object-fit': 'cover'
                         });
                         placeholder.replaceWith(authorImage);
