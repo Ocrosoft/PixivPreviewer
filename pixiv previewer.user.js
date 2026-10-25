@@ -4617,11 +4617,9 @@ function PixivSK(callback) {
                 // others
                 let bookmarkDiv = imageLink.next();
                 let bookmarkSvg = bookmarkDiv.find('svg');
-                // 模板可能来自已处理的卡片，先移除旧计数，避免被当作标签区再次克隆。
-                imageLink.children('.ppBookmarkCount').remove();
                 let additionTagDiv = imageLink.children('div:last');
 
-                let bookmarkCountDiv = additionTagDiv.clone().removeClass('ppAdditionTag');
+                let bookmarkCountDiv = additionTagDiv.clone();
                 bookmarkCountDiv.css({ 'top': 'auto', 'bottom': '0px', 'width': '65%' });
                 additionTagDiv.parent().append(bookmarkCountDiv);
 
@@ -4633,7 +4631,7 @@ function PixivSK(callback) {
                 authorLink.addClass('ppAuthorLink');
                 authorName.addClass('ppAuthorName');
                 authorImage.addClass('ppAuthorImage');
-                bookmarkSvg.each((i, svg) => svg.classList.add('ppBookmarkSvg'));
+                bookmarkSvg.attr('class', bookmarkSvg.attr('class') + ' ppBookmarkSvg');
                 additionTagDiv.addClass('ppAdditionTag');
                 bookmarkCountDiv.addClass('ppBookmarkCount');
 
