@@ -4578,7 +4578,15 @@ function PixivSK(callback) {
                 }
                 if (img.length == 0) {
                     img = $('<img>').css({ 'width': '100%', 'height': '100%' });
-                    imageDiv.append(img);
+                    let placeholder = imageLink.find('figure:first');
+                    if (placeholder.length > 0) {
+                        // 替换内层占位，避免追加到容器末尾后被卡片裁掉。
+                        img.attr('class', placeholder.attr('class'));
+                        placeholder.replaceWith(img);
+                        imageDiv = img.parent();
+                    } else {
+                        imageDiv.append(img);
+                    }
                 }
                 img.removeAttr('srcset sizes').attr('loading', 'eager').css({
                     'opacity': '1', 'visibility': 'visible', 'display': 'block'
@@ -4596,6 +4604,15 @@ function PixivSK(callback) {
                 let authorLink = authorDiv.find('a:last');
                 let authorName = authorLink;
                 let authorImage = $(authorDiv.find('img').get(0));
+                if (authorImage.length == 0) {
+                    let placeholder = authorLinkProfileImage.find('figure:first');
+                    if (placeholder.length > 0) {
+                        authorImage = $('<img>').attr('loading', 'eager').css({
+                            'width': '100%', 'height': '100%', 'object-fit': 'cover'
+                        });
+                        placeholder.replaceWith(authorImage);
+                    }
+                }
 
                 // others
                 let bookmarkDiv = imageLink.next();
