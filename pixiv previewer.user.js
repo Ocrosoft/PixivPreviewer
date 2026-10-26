@@ -4567,6 +4567,14 @@ function PixivSK(callback) {
                 }
                 let imageLink = control.find('a:first');
                 let img = imageLink.find('img:first');
+                // 后台克隆时可能只有 figure 占位，需原位替换，避免追加的图片被卡片裁掉。
+                if (img.length == 0) {
+                    let placeholder = imageLink.find('figure:first');
+                    if (placeholder.length > 0) {
+                        img = $('<img>').attr('class', placeholder.attr('class')).css({ 'width': '100%', 'height': '100%' });
+                        placeholder.replaceWith(img);
+                    }
+                }
                 let imageDiv = img.parent();
                 let imageLinkDiv = imageLink.parent();
                 let titleLinkParent = control.next();
@@ -4586,6 +4594,15 @@ function PixivSK(callback) {
                 let authorLink = authorDiv.find('a:last');
                 let authorName = authorLink;
                 let authorImage = $(authorDiv.find('img').get(0));
+                if (authorImage.length == 0) {
+                    let placeholder = authorLinkProfileImage.find('figure:first');
+                    if (placeholder.length > 0) {
+                        authorImage = $('<img>').css({
+                            'width': '100%', 'height': '100%', 'object-fit': 'cover'
+                        });
+                        placeholder.replaceWith(authorImage);
+                    }
+                }
 
                 // others
                 let bookmarkDiv = imageLink.next();
