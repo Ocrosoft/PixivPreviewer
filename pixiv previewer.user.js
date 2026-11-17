@@ -4664,9 +4664,11 @@ function PixivSK(callback) {
                     li.find('.ppBookmarkSvg').find('path').css('fill', 'rgb(255, 64, 96)');
                     li.find('.ppBookmarkSvg').attr('bookmarkId', works[i].bookmarkData.id);
                 }
-                if (works[i].xRestrict !== 0) {
-                    let R18HTML = '<div style="margin-top: 2px; margin-left: 2px;"><div style="color: rgb(255, 255, 255);font-weight: bold;font-size: 10px;line-height: 1;padding: 3px 6px;border-radius: 3px;background: rgb(255, 64, 96);">R-18</div></div>';
-                    li.find('.ppAdditionTag').append(R18HTML);
+                const restriction = works[i].xRestrict;
+                if (restriction === 1 || restriction === 2) {
+                    const label = restriction === 1 ? 'R-18' : 'R-18G';
+                    const badgeHTML = '<div style="margin-top: 2px; margin-left: 2px;"><div style="color: rgb(255, 255, 255);font-weight: bold;font-size: 10px;line-height: 1;padding: 3px 6px;border-radius: 3px;background: rgb(255, 64, 96);">' + label + '</div></div>';
+                    li.find('.ppAdditionTag').append(badgeHTML);
                 }
                 if (works[i].pageCount > 1) {
                     let pageCountHTML = '<div style="display: flex;-webkit-box-align: center;align-items: center;box-sizing: border-box;margin-left: auto;height: 20px;color: rgb(255, 255, 255);font-size: 10px;line-height: 12px;font-weight: bold;flex: 0 0 auto;padding: 4px 6px;background: rgba(0, 0, 0, 0.32);border-radius: 10px;">\<svg viewBox="0 0 9 10" width="9" height="10" style="stroke: none;line-height: 0;font-size: 0px;fill: currentcolor;"><path d="M8,3 C8.55228475,3 9,3.44771525 9,4 L9,9 C9,9.55228475 8.55228475,10 8,10 L3,10 C2.44771525,10 2,9.55228475 2,9 L6,9 C7.1045695,9 8,8.1045695 8,7 L8,3 Z M1,1 L6,1 C6.55228475,1 7,1.44771525 7,2 L7,7 C7,7.55228475 6.55228475,8 6,8 L1,8 C0.44771525,8 0,7.55228475 0,7 L0,2 C0,1.44771525 0.44771525,1 1,1 Z"></path></svg><span style="margin-left: 2px;">' + works[i].pageCount + '</span></div>';
