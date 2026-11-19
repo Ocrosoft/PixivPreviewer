@@ -3878,8 +3878,9 @@ function PixivSK(callback) {
         }
         apiParams.set('lang', pageLang || 'zh');
 
-        if (apiType == 'illustrations') {
-            let pageType = pageParams.get('type');
+        if (apiType == 'illustrations' || apiType == 'ugoira') {
+            let pageType = apiType == 'ugoira' ? 'ugoira' : pageParams.get('type');
+            apiType = 'illustrations';
             let illustrationTypeMap = {
                 'illust_ugoira': 'illust_and_ugoira',
                 'illustrations': 'illust_and_ugoira',
@@ -4109,7 +4110,7 @@ function PixivSK(callback) {
         let searchWord = '';
         let apiType = 'artworks';
         let useLegacyUrlRule = false;
-        let tagsMatch = location.pathname.match(/\/tags\/([^/]+)\/(artworks|illustrations|manga)/);
+        let tagsMatch = location.pathname.match(/\/tags\/([^/]+)\/(artworks|illustrations|manga|ugoira)/);
         if (tagsMatch) {
             searchWord = decodeURIComponent(tagsMatch[1]);
             apiType = tagsMatch[2];
