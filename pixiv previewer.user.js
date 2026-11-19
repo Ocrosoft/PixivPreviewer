@@ -4731,15 +4731,14 @@ function PixivSK(callback) {
                 if (isFollowed) {
                     pres.find('.ppa-follow').get(0).outerHTML = '<button type="button" class="ppa-follow followed" data-click-action="click" data-click-label="follow" style="padding: 9px 25px;line-height: 1;border: none;border-radius: 16px;font-size: 14px;font-weight: 700;cursor: pointer;">关注中</button>';
                 }
-                pres.find('.ppa-follow').attr('userId', _this.attr('userId'));
                 pres.on('mouseleave', function (e) {
                     $(this).remove();
                 }).on('mouseenter', function () {
                     $(this).addClass('mouseenter');
                 });
 
-                pres.find('.ppa-follow').on('click', function () {
-                    let userId = $(this).attr('userId');
+                pres.on('click', '.ppa-follow', function () {
+                    let userId = _this.attr('userId');
                     if ($(this).hasClass('followed')) {
                         // 取关
                         $.ajax('https://www.pixiv.net/rpc_group_setting.php', {
@@ -4751,7 +4750,7 @@ function PixivSK(callback) {
                                 iLog.d(data);
 
                                 if (data.type == 'bookuser') {
-                                    $('.ppa-follow').get(0).outerHTML = '<button type="button"class="ppa-follow"style=" padding: 9px 25px; line-height: 1; border: none; border-radius: 16px; font-weight: 700; background-color: #0096fa; color: #fff; cursor: pointer;"><span style="margin-right: 4px;"><svg viewBox="0 0 8 8"width="10"height="10"class=""style=" stroke: rgb(255, 255, 255); stroke-linecap: round; stroke-width: 2;"><line x1="1"y1="4"x2="7"y2="4"></line><line x1="4"y1="1"x2="4"y2="7"></line></svg></span>关注</button>';
+                                    pres.find('.ppa-follow').get(0).outerHTML = '<button type="button"class="ppa-follow"style=" padding: 9px 25px; line-height: 1; border: none; border-radius: 16px; font-weight: 700; background-color: #0096fa; color: #fff; cursor: pointer;"><span style="margin-right: 4px;"><svg viewBox="0 0 8 8"width="10"height="10"class=""style=" stroke: rgb(255, 255, 255); stroke-linecap: round; stroke-width: 2;"><line x1="1"y1="4"x2="7"y2="4"></line><line x1="4"y1="1"x2="4"y2="7"></line></svg></span>关注</button>';
                                 }
                                 else {
                                     iLog.e('Delete follow failed!');
@@ -4769,7 +4768,7 @@ function PixivSK(callback) {
                                 iLog.d(data);
                                 // success
                                 if (data.length === 0) {
-                                    $('.ppa-follow').get(0).outerHTML = '<button type="button" class="ppa-follow followed" data-click-action="click" data-click-label="follow" style="padding: 9px 25px;line-height: 1;border: none;border-radius: 16px;font-size: 14px;font-weight: 700;cursor: pointer;">关注中</button>';
+                                    pres.find('.ppa-follow').get(0).outerHTML = '<button type="button" class="ppa-follow followed" data-click-action="click" data-click-label="follow" style="padding: 9px 25px;line-height: 1;border: none;border-radius: 16px;font-size: 14px;font-weight: 700;cursor: pointer;">关注中</button>';
                                 } else {
                                     iLog.e('Follow failed!');
                                 }
