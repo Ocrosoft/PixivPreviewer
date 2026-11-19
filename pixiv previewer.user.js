@@ -1749,17 +1749,14 @@ Pages[PageType.NewIllust] = {
     },
 };
 Pages[PageType.R18] = {
+    ...Pages[PageType.Home],
     PageTypeString: 'R18Page',
     CheckUrl: function (url) {
         return /^https?:\/\/www.pixiv.net\/cate_r18.php.*/.test(url);
     },
-    ProcessPageElements: function () {
-        //
+    private: {
+        returnMap: null,
     },
-    GetToolBar: function () {
-        //
-    },
-    HasAutoLoad: false,
 };
 Pages[PageType.BookMark] = {
     PageTypeString: 'BookMarkPage',
