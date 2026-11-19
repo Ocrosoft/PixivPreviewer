@@ -13,7 +13,13 @@ concurrency:
   queue: max
 
 jobs:
+  tests:
+    uses: ./.github/workflows/test.yml
+    permissions:
+      contents: read
+
   publish:
+    needs: tests
     if: (github.event_name == 'workflow_dispatch' && github.ref == 'refs/heads/master') || (github.event.created && !github.event.deleted)
     runs-on: ubuntu-latest
     env:
