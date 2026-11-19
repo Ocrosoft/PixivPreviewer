@@ -10,12 +10,15 @@ test('Pixiv 线上标签页能识别作品并加载静态预览', async ({ page 
     await installUserscript(page);
     await page.goto('https://www.pixiv.net/tags/landscape', { waitUntil: 'domcontentloaded' });
     await page.locator('#pps-close').click();
-    const card = page.locator('.pp-control[illusttype="0"]').first();
-    await expect(card).toBeVisible();
-    const id = await card.getAttribute('illustid');
-    expect(id).toMatch(/^[1-9]\d*$/);
+    const link = page.locator('a[href*="/artworks/"]:has(img):not(.ugoku-illust)').filter({
+        hasNot: page.locator(':scope > div:first-child svg, pixiv-icon[name="24/Play"]'),
+    }).first();
+    await expect(link).toBeVisible();
+    const href = new URL(await link.getAttribute('href'), page.url());
+    expect(href.pathname).toMatch(/\/artworks\/[1-9]\d*\/?$/);
+    const id = href.pathname.match(/\/artworks\/(\d+)/)[1];
     const response = page.waitForResponse(r => new URL(r.url()).pathname === '/ajax/illust/' + id + '/pages');
-    await card.dispatchEvent('mouseover');
+    await link.locator('img').first().hover();
     expect((await response).ok()).toBeTruthy();
     const image = page.locator('.pp-main img.pp-image');
     await expect(image).toBeVisible();

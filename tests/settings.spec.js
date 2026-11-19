@@ -43,7 +43,7 @@ test('设置可关闭、切换语言、保存并在重载后生效', async ({ pa
     await expect(page.locator('#gmc-frame_closeBtn')).toHaveText('Close');
     await expect(page.locator('#gmc-frame_field_enablePreview')).not.toBeChecked();
     await page.locator('#gmc-frame_closeBtn').click();
-    await page.locator('.pp-control').hover();
+    await page.locator('a[href="/artworks/101"] img').hover();
     await expect(page.locator('.pp-main')).toHaveCount(0);
     await expect(page.locator('.pp-control a').first()).not.toHaveAttribute('target');
 });

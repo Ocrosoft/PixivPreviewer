@@ -26,10 +26,9 @@ for (const [name, path, body] of [
             json: { error: false, body: [0, 1, 2].map(i => ({ urls: { regular: '/r' + i + '.jpg', original: '/o' + i + '.png' } })) },
         }));
         await openPage(page, { path, body });
-        const control = page.locator('[illustid="101"]');
-        await expect(control).toHaveAttribute('pagecount', '3');
-        // jQuery implements mouseenter using the native mouseover event.
-        await control.dispatchEvent('mouseover');
+        const link = page.locator('a[href="/artworks/101"], a[href="/member_illust.php?illust_id=101"]').first();
+        await expect(link).toHaveAttribute('target', '_blank');
+        await link.dispatchEvent('mousemove');
         await expect(page.locator('.pp-image')).toHaveAttribute('src', '/r0.jpg');
         await expect(page.locator('.pp-page')).toHaveText('1/3');
     });

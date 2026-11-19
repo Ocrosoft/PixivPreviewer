@@ -29,7 +29,7 @@ test('悬停动图会读取 ZIP 并在画布播放不同的帧', async ({ page }
     await page.route('**/ajax/illust/101/ugoira_meta', r => r.fulfill({ json: { error: false, body: metadata } }));
     const requests = await serveZip(page, '**/regular.zip', true);
     await openPage(page, { body: searchBody(card(101, { tag: 'div', animation: true })) });
-    await page.locator('.pp-control').hover();
+    await page.getByRole('link', { name: 'Seed 101' }).hover();
     const canvas = page.locator('canvas.pp-image');
     await expect(canvas).toBeVisible();
     await expect(canvas).toHaveAttribute('width', '16');
