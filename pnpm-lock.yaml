@@ -12,8 +12,8 @@ importers:
         specifier: 1.65.1
         version: 1.65.1
       jquery:
-        specifier: 2.1.4
-        version: 2.1.4
+        specifier: 3.5.0
+        version: 3.5.0
       omggif:
         specifier: 1.0.10
         version: 1.0.10
@@ -25,9 +25,8 @@ packages:
     engines: {node: '>=20'}
     hasBin: true
 
-  jquery@2.1.4:
-    resolution: {integrity: sha512-wWR+eCq/T/Qt0NcFyM+QVho0ZVzWxFYANijmSMImXiM5mjr1aOaf4SF0eOEPc92bbK2L2vDpxw3lIszus7eO8Q==}
-    deprecated: This version is deprecated. Please upgrade to the latest version or find support at https://www.herodevs.com/support/jquery-nes or https://tuxcare.com/lp/click-jquery-support/.
+  jquery@3.5.0:
+    resolution: {integrity: sha512-Xb7SVYMvygPxbFMpTFQiHh1J7HClEaThguL15N/Gg37Lri/qKyhRGZYzHRyLH8Stq3Aow0LsHO2O2ci86fCrNQ==}
 
   omggif@1.0.10:
     resolution: {integrity: sha512-LMJTtvgc/nugXj0Vcrrs68Mn2D1r0zf630VNtqtpI1FEO7e+O9FP4gqs9AcnBaSEeoHIPm28u6qgPR0oyEpGSw==}
@@ -48,7 +47,7 @@ snapshots:
     dependencies:
       playwright: 1.65.1
 
-  jquery@2.1.4: {}
+  jquery@3.5.0: {}
 
   omggif@1.0.10: {}
 
