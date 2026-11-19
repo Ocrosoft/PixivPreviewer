@@ -4961,15 +4961,15 @@ function PixivNS(callback) {
         detailDiv.find('.gtm-novel-searchpage-result-user:last').addClass('pns-author');
         let tagDiv = detailDiv.children().eq(2).children().eq(0);
         let bookmarkDiv = tagDiv.children().eq(2);
-        bookmarkDiv.find('span:first').addClass('pns-text-count');
         if (bookmarkDiv.find('span').length < 3) {
             let lastSpan = bookmarkDiv.find('span:last');
             let newSpan = $('<span class="sc-a2e4344e-0 jYWqxI"><span><div class="sc-a2e4344e-1 qwlUc"><span class="sc-64133715-0 jVVkEz"><svg viewBox="0 0 12 12" size="12" class="sc-64133715-1 iNnScV"><path fill-rule="evenodd" clip-rule="evenodd" d="M9 0.75C10.6569 0.75 12 2.09315 12 3.75C12 7.71703 7.33709 10.7126 6.23256 11.3666C6.08717 11.4526 5.91283 11.4526 5.76744  11.3666C4.6629 10.7126 0 7.71703 0 3.75C0 2.09315 1.34315 0.75 3   0.75C4.1265 0.75 5.33911 1.60202 6 2.66823C6.66089 1.60202 7.8735 0.75 9 0.75Z"></path></svg></span><span class="pns-bookmark-count sc-a2e4344e-2 jjOPpe">1</span></div></span></span>');
-            newSpan.addClass(lastSpan.get(0).className);
+            newSpan.addClass(lastSpan.get(0).className).addClass('pns-bookmark-div');
             lastSpan.after(newSpan);
         } else {
             bookmarkDiv.find('span:last').addClass('pns-bookmark-count').parent().addClass('pns-bookmark-div');
         }
+        bookmarkDiv.find('span:first').addClass('pns-text-count');
         tagDiv.children().eq(0).empty().addClass('pns-tag-list');
         let descDiv = tagDiv.children().eq(1);
         descDiv.children().eq(0).addClass('pns-desc');
