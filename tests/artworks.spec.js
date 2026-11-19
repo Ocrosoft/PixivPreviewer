@@ -95,10 +95,11 @@ test('插画私密收藏与取消收藏发送正确的作品 ID 和令牌', asyn
     });
     await openPage(page, { settings: { enableSort: true, pageCount: 1, enablePreview: false } });
     const icon = page.locator('.ppBookmarkSvg');
+    const heart = icon.locator('path').last();
     await icon.locator('..').click({ modifiers: ['Control'] });
-    await expect(icon).toHaveAttribute('bookmarkid', '801');
+    await expect(heart).toHaveCSS('fill', 'rgb(255, 64, 96)');
     await icon.locator('..').click();
-    await expect(icon).toHaveAttribute('bookmarkid', '');
+    await expect(heart).toHaveCSS('fill', 'rgb(255, 255, 255)');
 });
 
 test('排序卡片上的画师资料支持关注及取消关注', async ({ page }) => {
