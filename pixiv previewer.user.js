@@ -5449,33 +5449,26 @@ function MigrateFromOldSetting() {
     if (oldSettings && oldSettings != 'null') {
         let settings = JSON.parse(oldSettings);
         if (settings) {
-            // 迁移设置
-            GMC.set('enablePreview', settings.enablePreview);
-            GMC.set('enableAnimePreview', settings.enableAnimePreview);
-            GMC.set('enableSort', settings.enableSort);
-            GMC.set('enableAnimeDownload', settings.enableAnimeDownload);
-            GMC.set('original', settings.original);
-            GMC.set('previewDelay', settings.previewDelay);
-            GMC.set('previewByKey', settings.previewByKey);
-            GMC.set('pageCount', settings.pageCount);
-            GMC.set('favFilter', settings.favFilter);
-            GMC.set('aiFilter', settings.aiFilter);
-            GMC.set('aiOnly', settings.aiOnly);
-            GMC.set('hideFavorite', settings.hideFavorite);
-            GMC.set('hideFollowed', settings.hideFollowed);
-            GMC.set('hideByTag', settings.hideByTag);
-            GMC.set('hideByTagRegex', settings.hideByTagRegex);
-            GMC.set('linkBlank', settings.linkBlank);
-            GMC.set('pageByKey', settings.pageByKey);
-            GMC.set('fullSizeThumb', settings.fullSizeThumb);
-            GMC.set('enableNovelSort', settings.enableNovelSort);
-            GMC.set('novelPageCount', settings.novelPageCount);
-            GMC.set('novelFavFilter', settings.novelFavFilter);
-            GMC.set('novelHideFavorite', settings.novelHideFavorite);
-            GMC.set('novelHideFollowed', settings.novelHideFollowed);
-            let langString = 'PixivPreviewLang';
-            SetLocalStorage(langString, parseInt(settings.lang));
-            SetLocalStorage('PixivPreview', null);
+            let migrated = {};
+            for (const [key, value] of Object.entries(settings)) {
+                if (key !== 'lang' && GMC.fields[key]?.save) {
+                    migrated[key] = value;
+                }
+            }
+            const language = MigrationLanguage();
+            migrated.lang = GMC.fields.lang.settings.options[language + 1];
+            for (const [key, value] of Object.entries(migrated)) {
+                GMC.set(key, value);
+            }
+            SetLocalStorage('PixivPreviewLang', language);
+            // Persist without firing the settings dialog's save-and-reload handler.
+            GMC.write(null, null, () => {
+                GMC.read(null, stored => {
+                    if (Object.keys(migrated).every(key => stored[key] === migrated[key])) {
+                        SetLocalStorage('PixivPreview', null);
+                    }
+                });
+            });
             return true;
         }
     }
@@ -5561,7 +5554,7 @@ function MigrationLanguage() {
     let oldSettings = GetLocalStorage('PixivPreview');
     if (oldSettings && oldSettings != 'null') {
         let settings = JSON.parse(oldSettings);
-        if (settings) {
+        if (settings && Object.values(Lang).includes(parseInt(settings.lang))) {
             return parseInt(settings.lang);
         }
     }
@@ -5571,7 +5564,8 @@ function MigrationLanguage() {
     if (langData == null || langData == 'null') {
         return Lang.auto;
     } else {
-        return parseInt(langData);
+        let language = parseInt(langData);
+        return Object.values(Lang).includes(language) ? language : Lang.auto;
     }
 }
 function AutoDetectLanguage() {
