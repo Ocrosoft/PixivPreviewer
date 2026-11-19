@@ -5292,7 +5292,7 @@ function PixivNS(callback) {
             left.attr('hidden', 'hidden');
         }
         pager.empty();
-        let lp = page - g_settings.novelPageCount;
+        let lp = Math.max(1, page - g_settings.novelPageCount);
         left.attr('href', href.replace('?p=' + page, '?p=' + lp).replace('&p=' + page, '&p=' + lp));
         pager.append(left);
         let s = 'Previewer';
