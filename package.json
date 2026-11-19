@@ -1,0 +1,14 @@
+{
+  "name": "pixiv-previewer",
+  "private": true,
+  "packageManager": "pnpm@11.25.0",
+  "scripts": {
+    "test": "playwright test",
+    "test:live": "playwright test --config=playwright.live.config.js"
+  },
+  "devDependencies": {
+    "@playwright/test": "1.65.1",
+    "jquery": "2.1.4",
+    "omggif": "1.0.10"
+  }
+}
