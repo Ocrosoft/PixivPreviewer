@@ -8,7 +8,7 @@
   },
   "devDependencies": {
     "@playwright/test": "1.65.1",
-    "jquery": "2.1.4",
+    "jquery": "3.5.0",
     "omggif": "1.0.10"
   }
 }

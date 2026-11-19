@@ -734,12 +734,13 @@ function DownloadBlob(blob, fileName) {
 
 // https://greasyfork.org/zh-CN/scripts/417760-checkjquery
 var checkJQuery = function () {
-    let jqueryCdns = [
-        'http://code.jquery.com/jquery-2.1.4.min.js',
-        'https://ajax.aspnetcdn.com/ajax/jquery/jquery-2.1.4.min.js',
-        'https://ajax.googleapis.com/ajax/libs/jquery/2.1.4/jquery.min.js',
-        'https://cdn.staticfile.org/jquery/2.1.4/jquery.min.js',
-        'https://apps.bdimg.com/libs/jquery/2.1.4/jquery.min.js',
+    const jqueryVersion = '3.5.0';
+    const jqueryCdns = [
+        `https://code.jquery.com/jquery-${jqueryVersion}.min.js`,
+        `https://ajax.aspnetcdn.com/ajax/jquery/jquery-${jqueryVersion}.min.js`,
+        `https://ajax.googleapis.com/ajax/libs/jquery/${jqueryVersion}/jquery.min.js`,
+        `https://cdn.staticfile.org/jquery/${jqueryVersion}/jquery.min.js`,
+        `https://cdn.jsdelivr.net/npm/jquery@${jqueryVersion}/dist/jquery.min.js`,
     ];
     function isJQueryValid() {
         try {
@@ -759,24 +760,13 @@ var checkJQuery = function () {
         document.head.appendChild(script);
         return script;
     }
-    function converProtocolIfNeeded(url) {
-        let isHttps = location.href.indexOf('https://') != -1;
-        let urlIsHttps = url.indexOf('https://') != -1;
-
-        if (isHttps && !urlIsHttps) {
-            return url.replace('http://', 'https://');
-        } else if (!isHttps && urlIsHttps) {
-            return url.replace('https://', 'http://');
-        }
-        return url;
-    }
     function waitAndCheckJQuery(cdnIndex, resolve) {
         if (cdnIndex >= jqueryCdns.length) {
             iLog.e('无法加载 JQuery，正在退出。');
             resolve(false);
             return;
         }
-        let url = converProtocolIfNeeded(jqueryCdns[cdnIndex]);
+        let url = jqueryCdns[cdnIndex];
         iLog.i('尝试第 ' + (cdnIndex + 1) + ' 个 JQuery CDN：' + url + '。');
         let script = insertJQuery(url);
         setTimeout(function () {

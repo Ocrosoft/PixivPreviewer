@@ -1,6 +1,7 @@
 const { test: base, expect } = require('@playwright/test');
 const { installUserscript, jquerySource } = require('./install');
 
+const jqueryCdnUrl = `https://code.jquery.com/jquery-${require('jquery/package.json').version}.min.js`;
 const origin = 'https://www.pixiv.net';
 const token = '0123456789abcdef0123456789abcdef';
 const thumbnail = 'https://i.pximg.net/c/128x128/img-master/img/2020/01/01/00/00/00/101_p0_square1200.jpg';
@@ -53,7 +54,7 @@ async function openPage(page, {
             (request.isNavigationRequest() || url.href === page.url())) {
             return route.fulfill({ contentType: 'text/html; charset=utf-8', body: html });
         }
-        if (url.href === 'https://code.jquery.com/jquery-2.1.4.min.js') {
+        if (url.href === jqueryCdnUrl) {
             return route.fulfill({ contentType: 'application/javascript', body: jquerySource() });
         }
         errorsByPage.get(page).push(request.method() + ' ' + url.href);
@@ -75,4 +76,4 @@ async function openPage(page, {
     }
 }
 
-module.exports = { test, expect, openPage, card, searchBody, pager, origin, thumbnail, token };
+module.exports = { test, expect, openPage, card, searchBody, pager, origin, thumbnail, token, jqueryCdnUrl };

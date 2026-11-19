@@ -1,9 +1,10 @@
-const { test, expect, openPage, searchBody } = require('./support/pixiv');
+const { test, expect, openPage, searchBody, jqueryCdnUrl } = require('./support/pixiv');
 
 test('首次安装、缺少 jQuery 时回退到 CDN，欢迎提示只显示一次', async ({ page }) => {
-    const cdn = page.waitForRequest('https://code.jquery.com/jquery-2.1.4.min.js');
+    const cdn = page.waitForRequest(jqueryCdnUrl);
     await openPage(page, { jquery: false, dismissNotice: false });
     await cdn;
+    expect(await page.evaluate(() => window.jQuery.fn.jquery)).toBe(require('jquery/package.json').version);
     await expect(page.locator('#pp-bg')).toContainText('欢迎使用');
     await page.locator('#pps-close').click();
     await page.reload();
