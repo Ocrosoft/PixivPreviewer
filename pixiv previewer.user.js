@@ -3304,13 +3304,23 @@ function PixivPreview() {
                 hoveredArtwork.link.href === hoveredArtwork.href;
         }
 
+        function getArtworkId(link) {
+            if (link?.origin !== location.origin) {
+                return null;
+            }
+            if (link.pathname === '/member_illust.php') {
+                const id = new URLSearchParams(link.search).get('illust_id');
+                return id !== null && /^\d+$/.test(id) ? id : null;
+            }
+            return link.pathname.match(artworkPathPattern)?.[1] ?? null;
+        }
+
         function isUgoiraArtwork(link, illustId) {
-            // 标题和缩略图链接使用同一作品的动图标记。
-            const card = link.querySelector('img') ? null : link.closest('li');
+            // DIV 卡片的标题容器与缩略图容器同级。
+            const card = link.querySelector('img') ? null :
+                (link.closest('li') ?? link.parentElement?.parentElement);
             const thumbnail = card && Array.from(card.querySelectorAll('a[href]')).find(candidate =>
-                candidate.origin === link.origin &&
-                candidate.pathname.match(artworkPathPattern)?.[1] === illustId &&
-                candidate.querySelector('img')
+                getArtworkId(candidate) === illustId && candidate.querySelector('img')
             );
             const $link = $(thumbnail || link);
             return $link.hasClass('ugoku-illust') ||
@@ -3355,17 +3365,14 @@ function PixivPreview() {
             }
 
             const link = e.target.closest?.('a[href]');
-            if (!link || link.origin !== location.origin || link.closest('.pp-main')) {
-                return;
-            }
-            const artwork = link.pathname.match(artworkPathPattern);
-            if (!artwork) {
+            const illustId = getArtworkId(link);
+            if (!illustId || link.closest('.pp-main')) {
                 return;
             }
 
             const href = link.href;
             hoveredArtwork = { link, href };
-            const isUgoira = isUgoiraArtwork(link, artwork[1]);
+            const isUgoira = isUgoiraArtwork(link, illustId);
             if (isUgoira && !g_settings.enableAnimePreview) {
                 iLog.d('Anime preview disabled.');
                 return;
@@ -3374,12 +3381,12 @@ function PixivPreview() {
             g_mousePos = { x: e.pageX, y: e.pageY };
             const delay = parseInt(g_settings.previewDelay) || 0;
             if (g_settings.previewByKey || delay <= 0) {
-                openPreview(artwork[1], isUgoira);
+                openPreview(illustId, isUgoira);
             } else {
                 hoverTimer = setTimeout(() => {
                     hoverTimer = null;
                     if (link.isConnected && link.href === href) {
-                        openPreview(artwork[1], isUgoira);
+                        openPreview(illustId, isUgoira);
                     }
                 }, delay);
             }
